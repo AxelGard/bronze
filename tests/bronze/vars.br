@@ -1,0 +1,2 @@
+let var_1: num = 10                 # a number
+let var_2: str = "Hello, world!"    # a string

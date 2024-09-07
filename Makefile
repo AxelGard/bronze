@@ -1,4 +1,4 @@
-CXX = g++
+CXX = g++ -std=c++17
 
 # Directories
 SRC_DIR = src
@@ -9,7 +9,7 @@ INCLUDE_DIR = include
 CXXFLAGS = -Wall -I$(INCLUDE_DIR)
 
 # Target executable
-TARGET = Bronze 
+TARGET = bronzec
 
 # Source files
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)
