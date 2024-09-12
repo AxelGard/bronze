@@ -2,6 +2,7 @@
 #define LEXER_H
 #include <string>
 #include <vector>
+#include "util.hh"
 
 
 enum TokenType
@@ -12,7 +13,6 @@ enum TokenType
     OpenParen,
     CloseParan,
     BinaryOperator,
-    Let,
     Unknown,
 };
 
@@ -27,7 +27,6 @@ struct Token
 };
 
 
-std::vector<std::string> split(std::string str, char on = ' ');
 std::vector<Token> tokenize(std::string& sourceCode);
 
 

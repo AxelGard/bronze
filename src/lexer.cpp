@@ -1,27 +1,5 @@
 #include "lexer.hh"
 
-std::vector<std::string> split(std::string str, char on)
-{
-    std::vector<std::string> words;
-    std::string word{};
-    for (char ch : str)
-    {
-        if (ch != ' ')
-        {
-            word += ch;
-        } 
-        else if (!word.empty())
-        {
-            words.push_back(word);
-            words.clear();
-        }
-    }
-    if (!word.empty())
-    {
-        words.push_back(word);
-    }
-    return words;
-}
 
 std::vector<Token> tokenize(std::string& sourceCode)
 {
@@ -42,6 +20,23 @@ std::vector<Token> tokenize(std::string& sourceCode)
         {
             tokens.push_back(Token(t, TokenType::CloseParan));
         }
+        else if (t == "=")
+        {
+            tokens.push_back(Token(t, TokenType::Equals));
+        }
+        else if (t == "+")
+        {
+            tokens.push_back(Token(t, TokenType::BinaryOperator));
+        }
+        else if (isNumber(t)) 
+        {
+            tokens.push_back(Token(t, TokenType::Number));
+        }
+        else
+        {
+            tokens.push_back(Token(t, TokenType::Unknown));
+        }
+        
 
         src.erase(src.begin());
     }

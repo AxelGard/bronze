@@ -8,7 +8,11 @@ int main(int argc, char *argv[]){
     std::string file(*(argv+1));
     std::ifstream input(file);
     for (std::string line; std::getline(input, line);){
-        std::cout << line << std::endl;
+        for (Token t : tokenize(line))
+        {
+            std::cout << "(" << t.type << ")"; 
+        }
+        std::cout << std::endl;
     }
     return 0;
 }
