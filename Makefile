@@ -9,7 +9,7 @@ INCLUDE_DIR = include
 CXXFLAGS = -Wall -I$(INCLUDE_DIR)
 
 # Target executable
-TARGET = bronzec
+TARGET = bronze
 
 # Source files
 SRCS = $(wildcard $(SRC_DIR)/*.cpp)

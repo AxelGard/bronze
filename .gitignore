@@ -1,5 +1,8 @@
 
 bronzec
+bronze
+.vscode
+build/
 
 # Prerequisites
 *.d

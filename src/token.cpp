@@ -32,3 +32,10 @@ enum class ReservedToken : std::uint8_t
 
     Count
 };
+
+
+
+struct StringifiedToken
+{
+    //std::string_veiw token;
+};
