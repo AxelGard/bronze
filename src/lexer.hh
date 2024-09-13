@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "util.hh"
+#include <map>
 
 
 enum TokenType
@@ -14,13 +15,33 @@ enum TokenType
     CloseParan,
     BinaryOperator,
     Unknown,
+    Keywords,
 };
 
+
+enum Keyword
+{
+    Func,
+    If,
+    Else,
+    For,
+    Import,
+
+};
+
+std::map<std::string, Keyword> keywordsMap = {
+    {"func",Keyword::Func},
+    {"if",Keyword::If},
+    {"else",Keyword::Else},
+    {"for",Keyword::For},
+    {"import",Keyword::Import},
+};
 
 struct Token
 {
     std::string value;
     TokenType type; 
+    
     Token(std::string value, TokenType type)
         : value{value}, type{type}
         {}
@@ -28,6 +49,6 @@ struct Token
 
 
 std::vector<Token> tokenize(std::string& sourceCode);
-
+bool isKeyword(std::string word);
 
 #endif
