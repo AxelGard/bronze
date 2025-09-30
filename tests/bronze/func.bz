@@ -1,6 +1,0 @@
-def add(a: num, b: num) -> num:
-    return a + b
-
-# Following instructions are executed on program start
-let var = add(4, 5)
-print(var)

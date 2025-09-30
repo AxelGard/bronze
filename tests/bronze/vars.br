@@ -1,3 +1,0 @@
-var = 10
-var_1: num = 10                 # a number
-var_2: str = "Hello, world!"    # a string

@@ -1,57 +1,40 @@
-#include "lexer.hh"
+#include "lexer.h"
+#include "utils.h"
+#include <string>
 
+namespace {
 
-bool isKeyword(std::string word)
+bool isSpace(char c)
 {
-    for (auto const& w : keywordsMap)
-    {
-        if (w.first == word) return true;
-    }
-    return false;
+    std::string spaces = " \f\n\r\t\v";
+    return spaces.find(c) != std::string::npos;
 }
 
-std::vector<Token> tokenize(std::string& sourceCode)
+} // namespace 
+
+namespace bronze
 {
-    std::vector<Token> tokens;
-    std::vector<std::string> src = split(sourceCode);
-    while (! src.empty())
+
+Token Lexer::getNextToken()
+{
+    char currentChar = eatNextChar();
+
+    while (isSpace(currentChar))
     {
-        std::string t = src.front();
-        if ( t == "(")
-        {
-            tokens.push_back(Token(t, TokenType::OpenParen));
-        }
-        else if (t == ")")
-        {
-            tokens.push_back(Token(t, TokenType::CloseParan));
-        }
-        else if (t == ")")
-        {
-            tokens.push_back(Token(t, TokenType::CloseParan));
-        }
-        else if (t == "=")
-        {
-            tokens.push_back(Token(t, TokenType::Equals));
-        }
-        else if (t == "+")
-        {
-            tokens.push_back(Token(t, TokenType::BinaryOperator));
-        }
-        else if (isKeyword(t))
-        {
-            tokens.push_back(Token(t, TokenType::Keywords));
-        }
-        else if (isNumber(t)) 
-        {
-            tokens.push_back(Token(t, TokenType::Number));
-        }
-        else
-        {
-            tokens.push_back(Token(t, TokenType::Unknown));
-        }
-        
-        src.erase(src.begin());
+        currentChar = eatNextChar();
     }
 
-    return tokens;
+    SourceLocation tokenStartLocation{source->path, this->line, this->column};
+    
+    for (auto &&c : singleCharTokens)
+    {
+        if (c == currentChar)
+        {
+            return Token{tokenStartLocation, static_cast<TokenKind>(c)};
+        }
+    }
+
+    if (currentChar == '/')
 }
+
+} // namespace bronze
