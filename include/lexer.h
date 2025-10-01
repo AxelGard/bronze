@@ -18,7 +18,7 @@ enum class TokenKind : char
     Unknown = -128,
     Slash,
 
-    SetEqual,
+    Assignment,
     Equivalent,
     And,
     Or,
@@ -56,11 +56,10 @@ enum class TokenKind : char
 };
 
 const std::unordered_map<std::string_view, TokenKind> keywords = {
-    {"any", TokenKind::KwAny},      {"func", TokenKind::KwFunc},   {"int", TokenKind::KwInt},
-    {"if", TokenKind::KwIf},        {"else", TokenKind::KwElse},   {"const", TokenKind::KwConst},
-    {"mut", TokenKind::KwMut},      {"while", TokenKind::KwWhile}, {"return", TokenKind::KwReturn},
-    {"and", TokenKind::And}, {"or", TokenKind::Or},
-    {"struct", TokenKind::KwStruct}};
+    {"any", TokenKind::KwAny}, {"func", TokenKind::KwFunc},   {"int", TokenKind::KwInt},
+    {"if", TokenKind::KwIf},   {"else", TokenKind::KwElse},   {"const", TokenKind::KwConst},
+    {"mut", TokenKind::KwMut}, {"while", TokenKind::KwWhile}, {"return", TokenKind::KwReturn},
+    {"and", TokenKind::And},   {"or", TokenKind::Or},         {"struct", TokenKind::KwStruct}};
 
 struct Token
 {

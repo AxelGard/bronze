@@ -24,6 +24,18 @@ struct SourceLocation {
     int col;
 };
 
+std::nullptr_t report(SourceLocation location,
+                      std::string_view message,
+                      bool isWarning = false);
+
+template <typename Ty> class ConstantValueContainer {
+  std::optional<Ty> value = std::nullopt;
+
+public:
+  void setConstantValue(std::optional<Ty> val) { value = std::move(val); }
+  std::optional<Ty> getConstantValue() const { return value; }
+};
+
 } // namespace bronze
 
 #endif

@@ -1,0 +1,689 @@
+#ifndef BRONZE_AST_H
+#define BRONZE_AST_H
+
+#include <algorithm>
+#include <llvm/Support/ErrorHandling.h>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "lexer.h"
+#include "utils.h"
+
+namespace bronze
+{
+
+struct Type
+{
+    enum class Kind
+    {
+        Any,
+        Int,
+        Float,
+        Custom,
+        Struct
+    };
+
+    Kind kind;
+    std::string name;
+
+    static Type builtinAny()
+    {
+        return {Kind::Any, "Any"};
+    }
+    static Type builtinInt()
+    {
+        return {Kind::Int, "Int"};
+    }
+    static Type builtinFloat()
+    {
+        return {Kind::Float, "Float"};
+    }
+    static Type custom(const std::string &name)
+    {
+        return {Kind::Custom, name};
+    }
+    static Type structType(const std::string &id)
+    {
+        return {Kind::Struct, id};
+    }
+
+  private:
+    Type(Kind kind, std::string name) : kind(kind), name(std::move(name)) {};
+};
+
+struct Decl
+{
+    SourceLocation location;
+    std::string identifier;
+
+    Decl(SourceLocation location, std::string identifier) : location(location), identifier(identifier)
+    {
+    }
+
+    virtual ~Decl() = default;
+    virtual void dump(size_t level = 0) const = 0;
+};
+
+struct Stmt
+{
+    SourceLocation location;
+
+    Stmt(SourceLocation location) : location(location)
+    {
+    }
+
+    virtual ~Stmt() = default;
+    virtual void dump(size_t level = 0) const = 0;
+};
+
+struct Expr : public Stmt
+{
+    Expr(SourceLocation location) : Stmt(location)
+    {
+    }
+};
+
+struct Block
+{
+    SourceLocation location;
+    std::vector<std::unique_ptr<Stmt>> statements;
+
+    Block(SourceLocation location, std::vector<std::unique_ptr<Stmt>> statements)
+        : location(location), statements(std::move(statements))
+    {
+    }
+
+    void dump(size_t level = 0) const;
+};
+
+struct IfStmt : public Stmt
+{
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Block> trueBlock;
+    std::unique_ptr<Block> falseBlock;
+
+    IfStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> trueBlock,
+           std::unique_ptr<Block> falseBlock = nullptr)
+        : Stmt(location), condition(std::move(condition)), trueBlock(std::move(trueBlock)),
+          falseBlock(std::move(falseBlock))
+    {
+    }
+
+    void dump(size_t level = 0) const;
+};
+
+struct WhileStmt : public Stmt
+{
+
+    std::unique_ptr<Expr> condition;
+    std::unique_ptr<Block> body;
+
+    WhileStmt(SourceLocation location, std::unique_ptr<Expr> condition, std::unique_ptr<Block> body)
+        : Stmt(location), condition(std::move(condition)), body(std::move(body))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ReturnStmt : public Stmt
+{
+    std::unique_ptr<Expr> expr;
+
+    ReturnStmt(SourceLocation location, std::unique_ptr<Expr> expr = nullptr) : Stmt(location), expr(std::move(expr))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct FieldInitStmt : public Stmt
+{
+    std::string identifier;
+    std::unique_ptr<Expr> initializer;
+
+    FieldInitStmt(SourceLocation location, std::string identifier, std::unique_ptr<Expr> initializer)
+        : Stmt(location), identifier(identifier), initializer(std::move(initializer))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct StructInstantiationExpr : public Expr
+{
+    std::string identifier;
+    std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers;
+
+    StructInstantiationExpr(SourceLocation location, std::string identifier,
+                            std::vector<std::unique_ptr<FieldInitStmt>> fieldInitializers)
+        : Expr(location), identifier(identifier), fieldInitializers(std::move(fieldInitializers))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct IntLiteral : public Expr
+{
+    std::string value;
+
+    IntLiteral(SourceLocation location, std::string value) : Expr(location), value(value)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct FloatLiteral : public Expr
+{
+    std::string value;
+
+    FloatLiteral(SourceLocation location, std::string value) : Expr(location), value(value)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct CallExpr : public Expr
+{
+    std::unique_ptr<Expr> callee;
+    std::vector<std::unique_ptr<Expr>> arguments;
+
+    CallExpr(SourceLocation location, std::unique_ptr<Expr> callee, std::vector<std::unique_ptr<Expr>> arguments)
+        : Expr(location), callee(std::move(callee)), arguments(std::move(arguments))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct AssignableExpr : public Expr
+{
+    AssignableExpr(SourceLocation location) : Expr(location)
+    {
+    }
+};
+
+struct DeclRefExpr : public AssignableExpr
+{
+    std::string identifier;
+
+    DeclRefExpr(SourceLocation location, std::string identifier) : AssignableExpr(location), identifier(identifier)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct MemberExpr : public AssignableExpr
+{
+    std::unique_ptr<Expr> base;
+    std::string field;
+
+    MemberExpr(SourceLocation location, std::unique_ptr<Expr> base, std::string field)
+        : AssignableExpr(location), base(std::move(base)), field(std::move(field))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct GroupingExpr : public Expr
+{
+    std::unique_ptr<Expr> expr;
+
+    GroupingExpr(SourceLocation location, std::unique_ptr<Expr> expr) : Expr(location), expr(std::move(expr))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct BinaryOperator : public Expr
+{
+
+    std::unique_ptr<Expr> lhs;
+    std::unique_ptr<Expr> rhs;
+    TokenKind op;
+
+    BinaryOperator(SourceLocation location, std::unique_ptr<Expr> lhs, std::unique_ptr<Expr> rhs, TokenKind op)
+        : Expr(location), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct UnaryOperator : public Expr
+{
+    std::unique_ptr<Expr> operand;
+    TokenKind op;
+
+    UnaryOperator(SourceLocation location, std::unique_ptr<Expr> operand, TokenKind op)
+        : Expr(location), operand(std::move(operand)), op(op)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct FieldDecl : public Decl
+{
+    Type type;
+
+    FieldDecl(SourceLocation location, std::string identifier, Type type)
+        : Decl(location, std::move(identifier)), type(std::move(type))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct StructDecl : public Decl
+{
+    std::vector<std::unique_ptr<FieldDecl>> fields;
+
+    StructDecl(SourceLocation location, std::string identifier, std::vector<std::unique_ptr<FieldDecl>> fields)
+        : Decl(location, std::move(identifier)), fields(std::move(fields))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ParamDecl : public Decl
+{
+    Type type;
+    bool isMutable;
+
+    ParamDecl(SourceLocation location, std::string identifier, Type type, bool isMutable)
+        : Decl(location, std::move(identifier)), type(std::move(type)), isMutable(isMutable)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct VarDecl : public Decl
+{
+    std::optional<Type> type;
+    std::unique_ptr<Expr> initializer;
+    bool isMutable;
+
+    VarDecl(SourceLocation location, std::string identifier, std::optional<Type> type, bool isMutable,
+            std::unique_ptr<Expr> initializer = nullptr)
+        : Decl(location, std::move(identifier)), type(std::move(type)), initializer(std::move(initializer)),
+          isMutable(isMutable)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct FunctionDecl : public Decl
+{
+    Type type;
+    std::vector<std::unique_ptr<ParamDecl>> params;
+    std::unique_ptr<Block> body;
+
+    FunctionDecl(SourceLocation location, std::string identifier, Type type,
+                 std::vector<std::unique_ptr<ParamDecl>> params, std::unique_ptr<Block> body)
+        : Decl(location, std::move(identifier)), type(std::move(type)), params(std::move(params)), body(std::move(body))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct DeclStmt : public Stmt
+{
+    std::unique_ptr<VarDecl> varDecl;
+
+    DeclStmt(SourceLocation location, std::unique_ptr<VarDecl> varDecl) : Stmt(location), varDecl(std::move(varDecl))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct Assignment : public Stmt
+{
+    std::unique_ptr<AssignableExpr> assignee;
+    std::unique_ptr<Expr> expr;
+
+    Assignment(SourceLocation location, std::unique_ptr<AssignableExpr> assignee, std::unique_ptr<Expr> expr)
+        : Stmt(location), assignee(std::move(assignee)), expr(std::move(expr))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedStmt
+{
+    SourceLocation location;
+
+    ResolvedStmt(SourceLocation location) : location(location)
+    {
+    }
+
+    virtual ~ResolvedStmt() = default;
+
+    virtual void dump(size_t level = 0) const = 0;
+};
+
+struct ResolvedExpr : public ConstantValueContainer<double>, public ResolvedStmt
+{
+    Type type;
+
+    ResolvedExpr(SourceLocation location, Type type) : ResolvedStmt(location), type(type)
+    {
+    }
+
+    virtual ~ResolvedExpr() = default;
+};
+
+struct ResolvedDecl
+{
+    SourceLocation location;
+    std::string identifier;
+    Type type;
+    bool isMutable;
+
+    ResolvedDecl(SourceLocation location, std::string identifier, Type type, bool isMutable)
+        : location(location), identifier(std::move(identifier)), type(type), isMutable(isMutable)
+    {
+    }
+    virtual ~ResolvedDecl() = default;
+
+    virtual void dump(size_t level = 0) const = 0;
+};
+
+struct ResolvedBlock
+{
+    SourceLocation location;
+    std::vector<std::unique_ptr<ResolvedStmt>> statements;
+
+    ResolvedBlock(SourceLocation location, std::vector<std::unique_ptr<ResolvedStmt>> statements)
+        : location(location), statements(std::move(statements))
+    {
+    }
+
+    void dump(size_t level = 0) const;
+};
+
+struct ResolvedIfStmt : public ResolvedStmt
+{
+    std::unique_ptr<ResolvedExpr> condition;
+    std::unique_ptr<ResolvedBlock> trueBlock;
+    std::unique_ptr<ResolvedBlock> falseBlock;
+
+    ResolvedIfStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
+                   std::unique_ptr<ResolvedBlock> trueBlock, std::unique_ptr<ResolvedBlock> falseBlock = nullptr)
+        : ResolvedStmt(location), condition(std::move(condition)), trueBlock(std::move(trueBlock)),
+          falseBlock(std::move(falseBlock))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedWhileStmt : public ResolvedStmt
+{
+    std::unique_ptr<ResolvedExpr> condition;
+    std::unique_ptr<ResolvedBlock> body;
+
+    ResolvedWhileStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> condition,
+                      std::unique_ptr<ResolvedBlock> body)
+        : ResolvedStmt(location), condition(std::move(condition)), body(std::move(body))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedParamDecl : public ResolvedDecl
+{
+    ResolvedParamDecl(SourceLocation location, std::string identifier, Type type, bool isMutable)
+        : ResolvedDecl(location, std::move(identifier), type, isMutable)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedFieldDecl : public ResolvedDecl
+{
+    unsigned index;
+
+    ResolvedFieldDecl(SourceLocation location, std::string identifier, Type type, unsigned index)
+        : ResolvedDecl(location, std::move(identifier), type, false), index(index)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedVarDecl : public ResolvedDecl
+{
+    std::unique_ptr<ResolvedExpr> initializer;
+
+    ResolvedVarDecl(SourceLocation location, std::string identifier, Type type, bool isMutable,
+                    std::unique_ptr<ResolvedExpr> initializer = nullptr)
+        : ResolvedDecl(location, std::move(identifier), type, isMutable), initializer(std::move(initializer))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedFunctionDecl : public ResolvedDecl
+{
+    std::vector<std::unique_ptr<ResolvedParamDecl>> params;
+    std::unique_ptr<ResolvedBlock> body;
+
+    ResolvedFunctionDecl(SourceLocation location, std::string identifier, Type type,
+                         std::vector<std::unique_ptr<ResolvedParamDecl>> params, std::unique_ptr<ResolvedBlock> body)
+        : ResolvedDecl(location, std::move(identifier), type, false), params(std::move(params)), body(std::move(body))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedStructDecl : public ResolvedDecl
+{
+    std::vector<std::unique_ptr<ResolvedFieldDecl>> fields;
+
+    ResolvedStructDecl(SourceLocation location, std::string identifier, Type type,
+                       std::vector<std::unique_ptr<ResolvedFieldDecl>> fields)
+        : ResolvedDecl(location, std::move(identifier), type, false), fields(std::move(fields))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedIntLiteral : public ResolvedExpr
+{
+    double value;
+
+    ResolvedIntLiteral(SourceLocation location, double value) : ResolvedExpr(location, Type::builtinInt()), value(value)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedFloatLiteral : public ResolvedExpr
+{
+    double value;
+
+    ResolvedFloatLiteral(SourceLocation location, double value)
+        : ResolvedExpr(location, Type::builtinInt()), value(value)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedCallExpr : public ResolvedExpr
+{
+    const ResolvedFunctionDecl *callee;
+    std::vector<std::unique_ptr<ResolvedExpr>> arguments;
+
+    ResolvedCallExpr(SourceLocation location, const ResolvedFunctionDecl &callee,
+                     std::vector<std::unique_ptr<ResolvedExpr>> arguments)
+        : ResolvedExpr(location, callee.type), callee(&callee), arguments(std::move(arguments))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedAssignableExpr : public ResolvedExpr
+{
+    ResolvedAssignableExpr(SourceLocation location, Type type) : ResolvedExpr(location, type)
+    {
+    }
+};
+
+struct ResolvedDeclRefExpr : public ResolvedAssignableExpr
+{
+    const ResolvedDecl *decl;
+
+    ResolvedDeclRefExpr(SourceLocation location, ResolvedDecl &decl)
+        : ResolvedAssignableExpr(location, decl.type), decl(&decl)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedMemberExpr : public ResolvedAssignableExpr
+{
+    std::unique_ptr<ResolvedExpr> base;
+    const ResolvedFieldDecl *field;
+
+    ResolvedMemberExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> base, const ResolvedFieldDecl &field)
+        : ResolvedAssignableExpr(location, field.type), base(std::move(base)), field(&field)
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedGroupingExpr : public ResolvedExpr
+{
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedGroupingExpr(SourceLocation location, std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedExpr(location, expr->type), expr(std::move(expr))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedBinaryOperator : public ResolvedExpr
+{
+    TokenKind op;
+    std::unique_ptr<ResolvedExpr> lhs;
+    std::unique_ptr<ResolvedExpr> rhs;
+
+    ResolvedBinaryOperator(SourceLocation location, TokenKind op, std::unique_ptr<ResolvedExpr> lhs,
+                           std::unique_ptr<ResolvedExpr> rhs)
+        : ResolvedExpr(location, lhs->type), op(op), lhs(std::move(lhs)), rhs(std::move(rhs))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedUnaryOperator : public ResolvedExpr
+{
+    TokenKind op;
+    std::unique_ptr<ResolvedExpr> operand;
+
+    ResolvedUnaryOperator(SourceLocation location, TokenKind op, std::unique_ptr<ResolvedExpr> operand)
+        : ResolvedExpr(location, operand->type), op(op), operand(std::move(operand))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedDeclStmt : public ResolvedStmt
+{
+    std::unique_ptr<ResolvedVarDecl> varDecl;
+
+    ResolvedDeclStmt(SourceLocation location, std::unique_ptr<ResolvedVarDecl> varDecl)
+        : ResolvedStmt(location), varDecl(std::move(varDecl))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedAssignment : public ResolvedStmt
+{
+    std::unique_ptr<ResolvedAssignableExpr> assignee;
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedAssignment(SourceLocation location, std::unique_ptr<ResolvedAssignableExpr> assignee,
+                       std::unique_ptr<ResolvedExpr> expr)
+        : ResolvedStmt(location), assignee(std::move(assignee)), expr(std::move(expr))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedReturnStmt : public ResolvedStmt
+{
+    std::unique_ptr<ResolvedExpr> expr;
+
+    ResolvedReturnStmt(SourceLocation location, std::unique_ptr<ResolvedExpr> expr = nullptr)
+        : ResolvedStmt(location), expr(std::move(expr))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedFieldInitStmt : public ResolvedStmt
+{
+    const ResolvedFieldDecl *field;
+    std::unique_ptr<ResolvedExpr> initializer;
+
+    ResolvedFieldInitStmt(SourceLocation location, const ResolvedFieldDecl &field,
+                          std::unique_ptr<ResolvedExpr> initializer)
+        : ResolvedStmt(location), field(&field), initializer(std::move(initializer))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+struct ResolvedStructInstantiationExpr : public ResolvedExpr
+{
+    const ResolvedStructDecl *structDecl;
+    std::vector<std::unique_ptr<ResolvedFieldInitStmt>> fieldInitializers;
+
+    ResolvedStructInstantiationExpr(SourceLocation location, const ResolvedStructDecl &structDecl,
+                                    std::vector<std::unique_ptr<ResolvedFieldInitStmt>> fieldInitializers)
+        : ResolvedExpr(location, structDecl.type), structDecl(&structDecl),
+          fieldInitializers(std::move(fieldInitializers))
+    {
+    }
+
+    void dump(size_t level = 0) const override;
+};
+
+} // namespace bronze
+
+#endif

@@ -70,7 +70,7 @@ Token Lexer::getNextToken()
             eatNextChar();
             return Token{tokenStartLocation, TokenKind::Equivalent};
         }
-        return Token{tokenStartLocation, TokenKind::SetEqual};
+        return Token{tokenStartLocation, TokenKind::Assignment};
     }
 
     if (currentChar == '&' && this->peekNextChar() == '&')
@@ -85,24 +85,24 @@ Token Lexer::getNextToken()
         return Token{tokenStartLocation, TokenKind::And};
     }
 
-    if (isAlpha(currentChar)) 
+    if (isAlpha(currentChar))
     {
         std::string value{currentChar};
         while (isAlpha(this->peekNextChar()))
         {
             value += eatNextChar();
         }
-        if (bronze::keywords.count(value)) // if word is keyword 
+        if (bronze::keywords.count(value)) // if word is keyword
         {
             return Token{tokenStartLocation, bronze::keywords.at(value), std::move(value)};
         }
         return Token{tokenStartLocation, TokenKind::Identifier, std::move(value)};
     }
 
-    if (isNum(currentChar)) // is int or float ?? 
+    if (isNum(currentChar)) // is int or float ??
     {
         std::string value{currentChar};
-        while(isNum(this->peekNextChar()))
+        while (isNum(this->peekNextChar()))
         {
             value += eatNextChar();
         }
@@ -111,7 +111,7 @@ Token Lexer::getNextToken()
             return Token{tokenStartLocation, TokenKind::KwInt, value};
         }
 
-        value += eatNextChar(); 
+        value += eatNextChar();
 
         if (!isNum(this->peekNextChar())) // is float??
         {
