@@ -15,19 +15,20 @@ constexpr char singleCharTokens[] = {'\0', '(', ')', '{', '}', ':', '\n', ',', '
 enum class TokenKind : char
 {
 
-    Unk = -128,
+    Unknown = -128,
     Slash,
 
-    Equal,
-    EqualEqual,
-    AmpAmp,
-    PipePipe,
+    SetEqual,
+    Equivalent,
+    And,
+    Or,
 
     Identifier,
     Number,
 
     KwFunc,
     KwInt,
+    KwFloat,
     KwAny,
     KwIf,
     KwElse,
@@ -58,6 +59,7 @@ const std::unordered_map<std::string_view, TokenKind> keywords = {
     {"any", TokenKind::KwAny},      {"func", TokenKind::KwFunc},   {"int", TokenKind::KwInt},
     {"if", TokenKind::KwIf},        {"else", TokenKind::KwElse},   {"const", TokenKind::KwConst},
     {"mut", TokenKind::KwMut},      {"while", TokenKind::KwWhile}, {"return", TokenKind::KwReturn},
+    {"and", TokenKind::And}, {"or", TokenKind::Or},
     {"struct", TokenKind::KwStruct}};
 
 struct Token
