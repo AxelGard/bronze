@@ -42,4 +42,24 @@ std::string indent(size_t level)
 }
 } // namespace
 
+void bronze::Block::dump(size_t level) const {
+    std::cerr << indent(level) << "Block\n";
+
+    for (auto &&stmt : statements)
+    {
+        stmt->dump(level + 1);
+    }
+}
+
+void IfStmt::dump(size_t level) const {
+    std::cerr << indent(level) << "IfStmt\n";
+
+    condition->dump(level + 1);
+    trueBlock->dump(level + 1);
+    if (falseBlock)
+    {
+        falseBlock->dump(level + 1);
+    }
+}
+
 } // namespace bronze
