@@ -1,5 +1,7 @@
 #include "ast.h"
 #include "lexer.h"
+#include <cstddef>
+#include <iostream>
 #include <llvm-14/llvm/Support/ErrorHandling.h>
 
 namespace bronze
@@ -32,8 +34,9 @@ std::string_view getOpStr(bronze::TokenKind op)
         return ">";
     case bronze::TokenKind::Excl:
         return "!";
+    default:
+        llvm_unreachable("unexpected operator");
     }
-    llvm_unreachable("unexpected operator");
 }
 
 std::string indent(size_t level)
@@ -42,7 +45,8 @@ std::string indent(size_t level)
 }
 } // namespace
 
-void bronze::Block::dump(size_t level) const {
+void bronze::Block::dump(size_t level) const
+{
     std::cerr << indent(level) << "Block\n";
 
     for (auto &&stmt : statements)
@@ -51,7 +55,8 @@ void bronze::Block::dump(size_t level) const {
     }
 }
 
-void IfStmt::dump(size_t level) const {
+void IfStmt::dump(size_t level) const
+{
     std::cerr << indent(level) << "IfStmt\n";
 
     condition->dump(level + 1);
@@ -61,5 +66,33 @@ void IfStmt::dump(size_t level) const {
         falseBlock->dump(level + 1);
     }
 }
+
+
+void WhileStmt::dump(size_t level) const 
+{
+    std::cerr << indent(level) << "WhileStmt\n";
+    condition->dump();
+    body->dump();
+}
+
+
+void ReturnStmt::dump(size_t level) const 
+{
+    std::cerr << indent(level) << "ReturnStmt\n";
+    if (this->expr)
+    {
+        this->expr->dump();
+    }
+}
+
+
+void FieldInitStmt::dump(size_t level) const 
+{
+    std::cerr << indent(level) << "FiledInitStmt: " << this->identifier << '\n';
+    this->initializer->dump(level + 1);
+}
+
+
+
 
 } // namespace bronze

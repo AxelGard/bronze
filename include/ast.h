@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <llvm/Support/ErrorHandling.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
