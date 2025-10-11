@@ -67,16 +67,14 @@ void IfStmt::dump(size_t level) const
     }
 }
 
-
-void WhileStmt::dump(size_t level) const 
+void WhileStmt::dump(size_t level) const
 {
     std::cerr << indent(level) << "WhileStmt\n";
     condition->dump();
     body->dump();
 }
 
-
-void ReturnStmt::dump(size_t level) const 
+void ReturnStmt::dump(size_t level) const
 {
     std::cerr << indent(level) << "ReturnStmt\n";
     if (this->expr)
@@ -85,14 +83,30 @@ void ReturnStmt::dump(size_t level) const
     }
 }
 
-
-void FieldInitStmt::dump(size_t level) const 
+void FieldInitStmt::dump(size_t level) const
 {
     std::cerr << indent(level) << "FiledInitStmt: " << this->identifier << '\n';
     this->initializer->dump(level + 1);
 }
 
+void StructInstantiationExpr::dump(size_t level) const
+{
+    std::cerr << indent(level) << "StructInstantiationExpr: " << this->identifier << '\n';
 
+    for (auto &&field : fieldInitializers)
+    {
+        field->dump(level + 1);
+    }
+}
 
+void IntLiteral::dump(size_t level) const
+{
+    std::cerr << indent(level) << "NumberLiteral: '" << this->value << "'\n";
+}
+
+void FloatLiteral::dump(size_t level) const
+{
+    std::cerr << indent(level) << "NumberLiteral: '" << this->value << "'\n";
+}
 
 } // namespace bronze
