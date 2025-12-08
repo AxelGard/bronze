@@ -1,27 +1,25 @@
-#ifndef BRONZE_UTILS_H
-#define BRONZE_UTILS_H
+#ifndef HOW_TO_COMPILE_YOUR_LANGUAGE_UTILS_H
+#define HOW_TO_COMPILE_YOUR_LANGUAGE_UTILS_H
 
-#include <cstddef>
-#include <string_view>
 #define varOrReturn(var, init)                                                 \
-    auto var = (init);                                                         \
-    if (!var)                                                                  \
-        return nullptr;
+  auto var = (init);                                                           \
+  if (!var)                                                                    \
+    return nullptr;
 
 #include <optional>
 #include <string>
 
-namespace bronze {
+namespace yl {
 
 struct SourceFile {
-    std::string_view path;
-    std::string buffer;
+  std::string_view path;
+  std::string buffer;
 };
 
 struct SourceLocation {
-    std::string_view filepath;
-    int line;
-    int col;
+  std::string_view filepath;
+  int line;
+  int col;
 };
 
 std::nullptr_t report(SourceLocation location,
@@ -35,7 +33,6 @@ public:
   void setConstantValue(std::optional<Ty> val) { value = std::move(val); }
   std::optional<Ty> getConstantValue() const { return value; }
 };
+} // namespace yl
 
-} // namespace bronze
-
-#endif
+#endif // HOW_TO_COMPILE_YOUR_LANGUAGE_UTILS_H

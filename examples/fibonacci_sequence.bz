@@ -1,4 +1,4 @@
-fn fib(n: number): number {
+fun fib(n: number): number {
     if n == 0 || n == 1 {
         return n;
     }
@@ -6,10 +6,10 @@ fn fib(n: number): number {
     return fib(n - 1) + fib(n - 2);
 }
 
-fn main(): void {
-    var i = 0;
+fun main(): void {
+    mut i = 0;
     while i < 20 {
-        println(fib(i));
+        print(fib(i));
         i = i + 1;
     }
 }

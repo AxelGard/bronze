@@ -1,131 +1,92 @@
 #include "lexer.h"
-#include "utils.h"
-#include <string>
-#include <utility>
 
-namespace
-{
-
-bool isSpace(char c)
-{
-    std::string spaces = " \f\n\r\t\v";
-    return spaces.find(c) != std::string::npos;
+namespace {
+bool isSpace(char c) {
+  return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' ||
+         c == '\v';
 }
 
-bool isAlpha(char c)
-{
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+bool isAlpha(char c) {
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
 }
-
-bool isNum(char c)
-{
-    return '0' <= c && c <= '9';
-}
-bool isAlnum(char c)
-{
-    return isAlpha(c) || isNum(c);
-}
-
+bool isNum(char c) { return '0' <= c && c <= '9'; }
+bool isAlnum(char c) { return isAlpha(c) || isNum(c); }
 } // namespace
 
-namespace bronze
-{
+namespace yl {
+Token Lexer::getNextToken() {
+  char currentChar = eatNextChar();
 
-Token Lexer::getNextToken()
-{
-    char currentChar = eatNextChar();
+  while (isSpace(currentChar))
+    currentChar = eatNextChar();
 
-    while (isSpace(currentChar))
-    {
-        currentChar = eatNextChar();
-    }
+  SourceLocation tokenStartLocation{source->path, line, column};
 
-    SourceLocation tokenStartLocation{source->path, this->line, this->column};
+  for (auto &&c : singleCharTokens)
+    if (c == currentChar)
+      return Token{tokenStartLocation, static_cast<TokenKind>(c)};
 
-    for (auto &&c : singleCharTokens)
-    {
-        if (c == currentChar)
-        {
-            return Token{tokenStartLocation, static_cast<TokenKind>(c)};
-        }
-    }
+  if (currentChar == '/') {
+    if (peekNextChar() != '/')
+      return Token{tokenStartLocation, TokenKind::Slash};
 
-    if (currentChar == '/')
-    {
-        if (this->peekNextChar() != '/')
-        {
-            return Token{tokenStartLocation, TokenKind::Slash};
-        }
-        while (this->peekNextChar() != '\n' && this->peekNextChar() != '\0') // read in comment
-        {
-            this->eatNextChar();
-        }
-        return getNextToken();
-    }
+    while (peekNextChar() != '\n' && peekNextChar() != '\0')
+      eatNextChar();
 
-    if (currentChar == '=')
-    {
-        if (this->peekNextChar() == '=')
-        {
-            eatNextChar();
-            return Token{tokenStartLocation, TokenKind::Equivalent};
-        }
-        return Token{tokenStartLocation, TokenKind::Assignment};
-    }
+    return getNextToken();
+  }
 
-    if (currentChar == '&' && this->peekNextChar() == '&')
-    {
-        this->eatNextChar();
-        return Token{tokenStartLocation, TokenKind::And};
-    }
+  if (currentChar == '=') {
+    if (peekNextChar() != '=')
+      return Token{tokenStartLocation, TokenKind::Equal};
 
-    if (currentChar == '|' && this->peekNextChar() == '|')
-    {
-        this->eatNextChar();
-        return Token{tokenStartLocation, TokenKind::And};
-    }
+    eatNextChar();
+    return Token{tokenStartLocation, TokenKind::EqualEqual};
+  }
 
-    if (isAlpha(currentChar))
-    {
-        std::string value{currentChar};
-        while (isAlpha(this->peekNextChar()))
-        {
-            value += eatNextChar();
-        }
-        if (bronze::keywords.count(value)) // if word is keyword
-        {
-            return Token{tokenStartLocation, bronze::keywords.at(value), std::move(value)};
-        }
-        return Token{tokenStartLocation, TokenKind::Identifier, std::move(value)};
-    }
+  if (currentChar == '&' && peekNextChar() == '&') {
+    eatNextChar();
+    return Token{tokenStartLocation, TokenKind::AmpAmp};
+  }
 
-    if (isNum(currentChar)) // is int or float ??
-    {
-        std::string value{currentChar};
-        while (isNum(this->peekNextChar()))
-        {
-            value += eatNextChar();
-        }
-        if (peekNextChar() != '.')
-        {
-            return Token{tokenStartLocation, TokenKind::KwInt, value};
-        }
+  if (currentChar == '|' && peekNextChar() == '|') {
+    eatNextChar();
+    return Token{tokenStartLocation, TokenKind::PipePipe};
+  }
 
-        value += eatNextChar();
+  if (isAlpha(currentChar)) {
+    std::string value{currentChar};
 
-        if (!isNum(this->peekNextChar())) // is float??
-        {
-            return Token{tokenStartLocation, TokenKind::Unknown};
-        }
-        while (isNum(this->peekNextChar()))
-        {
-            value += this->eatNextChar();
-        }
+    while (isAlnum(peekNextChar()))
+      value += eatNextChar();
 
-        return Token{tokenStartLocation, TokenKind::KwFloat, value};
-    }
+    if (keywords.count(value))
+      return Token{tokenStartLocation, keywords.at(value), std::move(value)};
 
-    return Token{tokenStartLocation, TokenKind::Unknown};
+    return Token{tokenStartLocation, TokenKind::Identifier, std::move(value)};
+  }
+
+  // [0-9]+ (. [0-9]+)?
+  if (isNum(currentChar)) {
+    std::string value{currentChar};
+
+    while (isNum(peekNextChar()))
+      value += eatNextChar();
+
+    if (peekNextChar() != '.')
+      return Token{tokenStartLocation, TokenKind::Number, value};
+
+    value += eatNextChar();
+
+    if (!isNum(peekNextChar()))
+      return Token{tokenStartLocation, TokenKind::Unk};
+
+    while (isNum(peekNextChar()))
+      value += eatNextChar();
+
+    return Token{tokenStartLocation, TokenKind::Number, value};
+  }
+
+  return Token{tokenStartLocation, TokenKind::Unk};
 }
-
-} // namespace bronze
+} // namespace yl
