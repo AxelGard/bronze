@@ -1,4 +1,4 @@
-fn divides(n: number, divisor: number): number {
+fun divides(n: number, divisor: number): number {
     var i = 1;
     while !(i > n) {
         let d = divisor * i;
@@ -13,7 +13,7 @@ fn divides(n: number, divisor: number): number {
     return 0.0;
 }
 
-fn isPrime(x: number): number {
+fun isPrime(x: number): number {
     if x == 0 || x == 1 {
         return 0;
     }
@@ -30,7 +30,7 @@ fn isPrime(x: number): number {
     return 1;
 }
 
-fn main(): void {
+fun main(): void {
     var n = 1;
     var cnt = 0;
 
