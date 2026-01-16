@@ -2,3 +2,111 @@ func main(): any
     mut x = (1 + 2) * 3 - -4
     print(x)
 
+
+
+func main(): int32 
+{
+    mut x =  (1 + 2) * 3 - -4
+    print(x)
+}
+
+
+
+func squre_evens(x: int32): int32, Error
+    if x % 2 == 0:
+        return x ** 2, null
+    return 0, Error.Value_Error 
+
+
+
+
+// a intrface is a contract that the a given object will contain this atributes and methods 
+interface I_Person 
+{
+    func talk(message: str): str // just a signature no decleration of implmention 
+}
+
+class Person inherits [I_Person] 
+{
+    
+}
+
+enum Error
+    not = null
+    value_error = 1
+
+
+class Adult inherits [Person]
+{
+    
+    contstructor(name: str, age: uint32): Adult
+    {
+        
+    }
+
+    func talk(message: str): str // just a signature no decleration of implmention 
+    {
+
+    }
+
+}
+        
+
+
+struct My_Sct inherits [Parrent_Sct,]
+{
+    a: int64
+    b: float32
+}
+
+class My_Cls inherits [Parrent_Cls_1, Parrent_Cls_2, My_Sct]
+
+    foo: int32
+    private
+        baz: int32
+
+    func constructor(): *My_Cls
+        this.foo = 10 // will assume int32 
+
+    func bar(x:int32): int32 
+        return this.foo * 2 + this.a
+
+
+    
+
+
+alias Num = int32
+
+type Foo
+    constructor(): Foo
+        this.v = 0
+
+    contract(): bool
+        return  -1 < this.v < 1 
+        
+
+import web, math 
+from "sklearn/svm" import SVC
+import pandas as pd
+
+alias HTML = string 
+   
+@web.route("/")
+func home(): HTML
+    return "<h1>Home</h1>"
+
+
+
+class Home inherits [web.Route]
+{
+    constructor()
+    {
+        this.url = "/"
+    }
+
+    get(): Html
+    {
+       return Html("<h1>Home</h1>") 
+    }
+
+}
