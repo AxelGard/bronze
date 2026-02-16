@@ -19,6 +19,12 @@ func squre_evens(x: int32): int32, Error
 
 
 
+class Obj
+{
+	
+}
+
+
 
 // a intrface is a contract that the a given object will contain this atributes and methods 
 interface I_Person 
@@ -32,10 +38,13 @@ class Person inherits [I_Person]
 }
 
 enum Error
-    not = null
-    value_error = 1
+{
+    not = null,
+    value_error = 1,
+}
 
 
+// class Adult inherits [] 
 class Adult inherits [Person]
 {
     
@@ -110,3 +119,17 @@ class Home inherits [web.Route]
     }
 
 }
+
+
+func is_big_num(seq: list<int32>, comp: [](elm: int32){return elm > 32;})
+{
+    for e in seq
+    {
+       if not comp(e)
+       {
+            return false
+       }
+    }
+}
+
+

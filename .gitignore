@@ -3,3 +3,4 @@
 build
 *.yl
 !examples/*.yl
+env/
