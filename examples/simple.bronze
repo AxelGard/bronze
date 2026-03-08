@@ -1,16 +1,67 @@
-func main(): any 
+func main(): int
+    const pi = 3.14
     mut x = (1 + 2) * 3 - -4
     print(x)
-
+    return 0
 
 
 func main(): int32 
 {
-    mut x =  (1 + 2) * 3 - -4
+    x: mut<int32> = (1 + 2) * 3 - -4
+    pi: con<float32> = 3.14
     print(x)
+    return 0
 }
 
 
+mut, let, var, 
+const, con, static, fixed 
+
+int, float, uint, lint, bool
+int32, float32, usinged32
+
+i32, f32, u32, i64, b2
+
+type int = i32
+type float = f32
+
+const false = 0
+const true = 1     
+
+// list
+
+mut my_list: list[int] = [1,2,3]
+mut my_list = [1,2,3] // will be type of list[int]
+
+mut my_list: list<int> = [1,2,3]
+mut my_list: [int] = [1,2,3]
+mut my_list: List[Int] = [1,2,3]
+
+// map / dict 
+
+mut my_map: map[string, int] = { "fiz":1, "buz": 2 }
+mut my_map = { "fiz":1, "buz": 2 }
+
+
+// set 
+
+mut my_set: set[int] = [1,2,3]
+mut my_set = set([1,2,3])
+
+
+// string 
+
+con my_char = 'A'
+con my_str = "Hello, world!"
+
+string == list[char]
+
+
+
+
+compile {
+      
+}
 
 func squre_evens(x: int32): int32, Error
     if x % 2 == 0:
@@ -35,6 +86,15 @@ enum Error
     not = null
     value_error = 1
 
+enum Error: int
+{
+    non = 0,
+    value_error = 1,
+}
+
+Error(0) == Error.non
+0 == int(Error.non)
+0 != Error.non
 
 class Adult inherits [Person]
 {
@@ -46,7 +106,8 @@ class Adult inherits [Person]
 
     func talk(message: str): str // just a signature no decleration of implmention 
     {
-
+        // todo, but will compile since this full fils the interface
+        return ""
     }
 
 }
