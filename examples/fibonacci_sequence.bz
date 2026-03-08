@@ -1,4 +1,4 @@
-fun fib(n: number): number {
+fun fib(n: number as const): number {
     if n == 0 || n == 1 {
         return n;
     }
@@ -7,9 +7,9 @@ fun fib(n: number): number {
 }
 
 fun main(): void {
-    mut i = 0;
+    mut i = 0
     while i < 20 {
         print(fib(i));
-        i = i + 1;
+        i = i + 1
     }
 }
