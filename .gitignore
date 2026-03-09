@@ -4,3 +4,5 @@ build
 *.yl
 !examples/*.yl
 env/
+
+./src/bronze
