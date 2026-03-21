@@ -13,6 +13,7 @@ func main(): int32
     return 0
 }
 
+func fun def function
 
 mut, let, var, 
 const, con, static, fixed 
@@ -54,7 +55,7 @@ mut my_set = set([1,2,3])
 con my_char = 'A'
 con my_str = "Hello, world!"
 
-string == list[char]
+string ~~== list[char] 
 
 
 
@@ -67,6 +68,88 @@ func squre_evens(x: int32): int32, Error
     if x % 2 == 0:
         return x ** 2, null
     return 0, Error.Value_Error 
+
+
+
+fib_list: list[i32] = [0,1]
+
+fun fib(x: i32): list[i32], error
+    global fib_list
+    if x < 0: 
+        retrun [], error.Range_Error("needs to be 0-inf") 
+    else if x < len(fib_list):
+        return fib_list[x], null
+    else: 
+        fib_list.add(fib(x-1) + fib(x-2))
+        return fib_list[x]
+        
+
+
+
+mut fib_list: list[int] = [0, 1]
+
+fun fib(x: int): int, Err 
+{
+    global fib_list
+
+    // will return 0, Err.Range_Error
+    assert(x > 0, Error::Range_Error("needs to be 0-inf")) 
+
+    if x < fib_list.size()
+    {
+        return fib_list[x], Err::not
+    }
+    else
+    {
+        fib_list.add(fib(x-1) + fib(x-2))
+        return fib_list[x]
+    }
+}
+
+fun main()
+{
+    global fib_lsit
+
+    print(fib(20))
+    print(fib_list)
+
+    rertun Err.not
+}
+
+
+type int = i32
+type uint = u32
+type float = f32
+
+namespace Err 
+{
+    class ErrorTemplate
+    {
+        this.msg = ""
+    }
+
+    class Not inherites [ErrorTemplate]
+    {
+        
+    }
+
+    class Range_Error
+    { 
+        fun Range_Error(msg:String = "")
+        {
+            this.msg = msg
+        }
+    }
+}
+
+enum Err: uint 
+{
+    not = 0,
+    range_error, 
+    ...
+}
+
+
 
 
 
