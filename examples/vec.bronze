@@ -1,0 +1,126 @@
+
+@template[T]
+interface Collection
+{
+    this.values: Array[T] = []
+    fun size(): uint
+    fun copy(): Collection[T]
+    fun at(index: int): T
+        
+}
+
+
+@template[type T]
+class List[T] inherits [Collection]
+{
+    this.values: Array[T] = []
+    private this._size: uint = 0
+
+    fun list():List
+    {
+        
+    }
+
+    fun List(values:Array[T]) 
+    {
+        this.values = values 
+        this._size = values.size()
+    }
+
+    fun size(): uint
+    {
+        return this._size
+    }
+
+    fun at(index: int): T, Error
+    {
+        this.values[index]
+    }
+
+    fun add(item: T): this
+    {
+        this.values = this.values + [item]
+    }
+
+    fun add_front(item: T): this
+    { 
+        this.values = [item] + this.values 
+    }
+
+    fun pop(index:int = 0): T
+    {
+        mut item = this.values[index]
+        this.values = this.values[:index] + this.values[index:]
+        return item
+    }
+
+    fun copy(): List[T]
+    {
+        mut c: List[T]
+        for v in this.values
+        {
+            c.add(v)
+        }
+        return c
+    }
+
+
+    fun sort(): this
+    {
+        const n = this.size() 
+        for i in range(0, n - 1)
+        {
+            for j in range(0, n - i - 1)
+            {
+                if this.values[j] > this.values[j + 1]
+                {
+                    this.values[j], this.values[j + 1] = this.values[j + 1], this.values[j]
+                }
+            }
+        }
+        return this
+    }
+
+}
+
+
+fun range(end:int, step:int = 1) = range(0, end, step)
+fun range(start: int, end: int, step:int = 1): List[int]
+{
+    mut col = List[int]
+    for int i = 0; i < end; i += step
+    {
+        col.add(i)
+    }
+    return const(col)
+}
+
+
+@template[type T] 
+fun search(col: Collection[T], lambda: *(fun(T): bool)): List[T], Error
+{
+    mut found: List[T] = []
+    for item in col
+    {
+        if lambda(item) 
+        {
+            found.add(item)
+        }
+    }
+    return const(found)
+}
+
+
+
+const is_pos_l = lam (x:int){return x > 0}
+fun is_pos_f(x:int)
+{
+    return x > 0
+} 
+
+search(range(200), (x: int){return x == 187})
+search(range(200), lam (x: int){return x == 187 })
+search(range(-200, 200), is_pos_l) == search(range(-200, 200), is_pos_f) 
+
+
+

@@ -1,0 +1,22 @@
+from "web" import html, Http, Requst
+from "sqlite" import SQL_Client
+
+mut http = Http.app() 
+
+const db = SQL_Client() 
+
+@http.route("/")
+fun home(): html
+{
+    return "<h1> Hello web!</h1>"
+}
+
+
+@http.post("/login")
+fun login_post(req: Request)
+{
+    global db
+}
+
+
+

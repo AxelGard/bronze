@@ -1,0 +1,17 @@
+
+type Error
+{
+    code: uint,
+    message: string,
+}
+
+struct RunTimeError inherits [Error] 
+{
+    this.code = 1
+    this.message = "run time error "
+}
+
+
+
+
+
