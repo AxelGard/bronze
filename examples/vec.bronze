@@ -81,6 +81,21 @@ class List[T] inherits [Collection]
         return this
     }
 
+    
+    fun where(lmd: fun(T): bool)
+    {
+        mut found: List[T] = []
+        for itm in this.value
+        {
+           if lmd(itm)
+           {
+                found.add(itm)
+           }
+        }
+        return found
+    }
+
+
 }
 
 
