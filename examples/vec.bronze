@@ -99,7 +99,7 @@ class List[T] inherits [Collection]
 }
 
 
-fun range(end:int, step:int = 1) = range(0, end, step)
+fun range(end:int) = range(0, end, 1)
 fun range(start: int, end: int, step:int = 1): List[int]
 {
     mut col = List[int]

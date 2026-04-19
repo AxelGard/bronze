@@ -1,0 +1,140 @@
+
+
+mut name: String = "Axel"
+mut name2 = "Axel"
+
+
+fun can_change(x: mut String): mut String
+{
+    x[0] = "h"
+    return x 
+}
+
+fun can_not_change(x: const String): const String
+{
+    print(x)
+    return x 
+}
+
+
+// basic types
+
+// num types 
+
+i4, i8, i16, i32, i64, i128
+u4, u8, u16, u32, u64, u128
+f4, f8, f16, f32, f64, f128
+
+alias int = i32
+alias float = f32
+
+
+
+
+// Union type
+
+fun print_id(id: int or String)
+{
+    print(f"Your ID is: {id}")
+}
+
+// OK
+print_id(101)
+// OK
+print_id("202")
+// Error
+print_id(3.14)
+
+
+fun print_num(x: int or List[int])
+{
+    if typeof(x, int)\ print(x)
+    else {
+        for itm in x
+        {
+            print(itm)
+        }
+    }
+}
+
+
+
+// Type Alias
+
+alias int = i32
+alias float = f32
+
+// alt 
+type int = i32
+type float = f32
+
+
+type Point = struct {
+    const x: f32,
+    const y: f32,
+    const z: f32 = 0, 
+}
+
+fun print_pt(p: Point)
+{
+    print(f"x:{p.x}, y:{p.y}")
+}
+
+
+// alt interfaces 
+
+interface I_Point 
+{
+    x: f32
+    y: f32 
+}
+
+
+// Type cast 
+
+3.14 as int
+int(3.14)
+
+
+// enums 
+
+enum Alphabet_Num 
+{
+    a, // 0
+    b, // 1
+    c, // 2
+    // has no defualt
+}
+
+enum Alphabet_Char
+{
+    a = 'A',
+    b = 'B',
+    c = 'C',
+    defualt = a
+}
+
+struct Letter
+{
+    value: String
+}
+
+enum Alphabet_Struct
+{
+    a = Letter("A"),
+    b = Letter("B"),
+}
+
+// anon enums 
+
+fun print(alignment: "left" or "right" or "center")
+{
+    // ...
+}
+
+fun pick_alignment(): "left" or "right" or "center"
+{
+    // ...
+}
+
+
