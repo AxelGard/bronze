@@ -1,0 +1,86 @@
+
+
+
+class My_Class 
+{
+    func init(): My_Class
+    {
+        
+    }
+}
+
+
+class Point
+{
+    mut x: float = 0.0
+    mut y: float = 0.0
+
+    func init():Point
+
+    func init(x:float, y:flot): Point
+    {
+        this.x = x
+        this.y = y
+    }
+
+}
+
+
+struct Point
+{
+    mut x: float = 0.0
+    mut y: float = 0.0 
+}
+
+class Point
+{
+    mut x: float = 0.0
+    mut y: float = 0.0 
+}
+
+
+
+
+
+
+
+interface I_File
+{
+    mut path: String
+    mut size: Uint
+
+    func remove(): Error
+    func read(): String, Error
+    func write(text: String): Error, Uint
+}
+
+class TextFile inheret [ I_File ]
+{
+
+    func init(path:string, text: String): Error
+    {
+        this.path = path
+        error, size = write(text) 
+        if error; return error
+        this.size = size
+    }
+
+    overide func remove(): Error
+    {
+        error, _ = system.cmd("rm -rf {this.path}")
+        return error 
+    }
+
+    overide func read(): Error, String
+    {
+        error, content = system.cmd("cat {this.path}")
+        return error, content
+    }
+
+}
+
+
+
+
+
+

@@ -1,0 +1,32 @@
+
+
+name := "Axel"
+
+
+name[:2] == "Ax"
+name[-1] == "l"
+
+name += " "
+
+name.remove("x") == "Ael"
+
+
+class string 
+{
+    this.value: array[char]()
+
+    func remove(x: string)
+    {
+        for i, v in this.value.
+        {
+            if
+        }
+    }
+
+}
+
+
+type string = list[char]
+
+
+
