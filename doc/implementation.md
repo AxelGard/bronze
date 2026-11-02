@@ -19,7 +19,7 @@ The compiler/interpreter would be written in Go. That gives Bronze:
 
 1. Lexer and parser with error recovery and source locations
 2. Name resolution, then a minimal LSP (go to definition, rename)
-3. **Tree-walking interpreter** (no VM: runs the syntax tree directly) until [`core.brz`](../exampels/core.brz) runs
+3. **Tree-walking interpreter** (no VM: runs the syntax tree directly) until [`core.brz`](../examples/core.brz) runs
 4. Type checker
 5. Standard library by wrapping Go
 6. Later, if wanted: **transpile to Go** for native single-file binaries that can import any Go package, or emit LLVM IR

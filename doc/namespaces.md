@@ -1,6 +1,6 @@
 # Namespaces and visibility
 
-Example: [`namespaces.brz`](../exampels/namespaces.brz).
+Example: [`namespaces.brz`](../examples/namespaces.brz).
 
 ## Namespaces
 

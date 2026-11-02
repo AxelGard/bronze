@@ -1,6 +1,6 @@
 # Syntax
 
-The basics. Everything here is used in [`core.brz`](../exampels/core.brz).
+The basics. Everything here is used in [`core.brz`](../examples/core.brz).
 
 ## Blocks and statements
 

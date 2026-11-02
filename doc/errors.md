@@ -1,6 +1,6 @@
 # Errors and null
 
-Example: [`errors.brz`](../exampels/errors.brz).
+Example: [`errors.brz`](../examples/errors.brz).
 
 ## Errors are values
 

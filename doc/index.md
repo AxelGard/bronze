@@ -18,10 +18,10 @@ Everything decided about Bronze so far.
 
 | File | Shows |
 |---|---|
-| [`core.brz`](../exampels/core.brz) | The target for the first compiler. Uses only decided syntax. |
-| [`basic.brz`](../exampels/basic.brz) | Classes, multiple inheritance, diamonds, `super(A)`, `static` |
-| [`tour.brz`](../exampels/tour.brz) | A tour of the whole language, including a small backend |
-| [`errors.brz`](../exampels/errors.brz) | Errors as values, null |
-| [`namespaces.brz`](../exampels/namespaces.brz) | Data classes, namespaces, visibility |
+| [`core.brz`](../examples/core.brz) | The target for the first compiler. Uses only decided syntax. |
+| [`basic.brz`](../examples/basic.brz) | Classes, multiple inheritance, diamonds, `super(A)`, `static` |
+| [`tour.brz`](../examples/tour.brz) | A tour of the whole language, including a small backend |
+| [`errors.brz`](../examples/errors.brz) | Errors as values, null |
+| [`namespaces.brz`](../examples/namespaces.brz) | Data classes, namespaces, visibility |
 
 The examples outside `core.brz` also contain syntax that is not decided yet.
