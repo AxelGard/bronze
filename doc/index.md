@@ -1,0 +1,27 @@
+# Bronze docs
+
+Everything decided about Bronze so far.
+
+| Page | Contents |
+|---|---|
+| [Vision](vision.md) | What Bronze is for, the big decisions, guiding principles |
+| [Core values](core-values.md) | Tooling, packaging, batteries included, shell commands |
+| [Syntax](syntax.md) | Functions, variables, types, comments, control flow, entry point |
+| [Classes](classes.md) | Classes, inheritance, interfaces, constructors, data classes |
+| [Namespaces and visibility](namespaces.md) | Grouping code, `public` / `private` / `protected` |
+| [Errors and null](errors.md) | Errors as values, `if err != null`, null safety |
+| [Implementation](implementation.md) | How Bronze will run: current thinking (not decided) |
+| [Milestones](milestones.md) | What each compiler milestone must be able to run |
+| [Open questions](open-questions.md) | What we still need to decide |
+
+## Examples
+
+| File | Shows |
+|---|---|
+| [`core.brz`](../exampels/core.brz) | The target for the first compiler. Uses only decided syntax. |
+| [`basic.brz`](../exampels/basic.brz) | Classes, multiple inheritance, diamonds, `super(A)`, `static` |
+| [`tour.brz`](../exampels/tour.brz) | A tour of the whole language, including a small backend |
+| [`errors.brz`](../exampels/errors.brz) | Errors as values, null |
+| [`namespaces.brz`](../exampels/namespaces.brz) | Data classes, namespaces, visibility |
+
+The examples outside `core.brz` also contain syntax that is not decided yet.

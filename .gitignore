@@ -8,3 +8,4 @@ env/
 ./llvm-3.4/
 
 ./src/bronze
+.DS_Store

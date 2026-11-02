@@ -1,0 +1,231 @@
+/*
+    Namespaces and data classes                               [proposal]
+
+    That Bronze HAS namespaces and data classes is decided.
+    All syntax below is a proposal to react to.
+*/
+
+
+/* ------------------------------------------------------------------
+    1. Data classes
+
+    A data class is a class that mostly holds data. You get for free:
+      - a constructor taking every field, in order
+      - equality by value:  Money(5, "EUR") == Money(5, "EUR")  is true
+      - a readable print:   Money(amount: 5, currency: "EUR")
+      - copy with changes:  price.with(amount: 10)
+    Short form: all fields are `con`.
+    Long form: each field is marked `con` or `mut`.
+------------------------------------------------------------------ */
+
+/* short form: just the fields, all con */
+data Money(amount: Int, currency: String)
+
+/* long form: each field is con or mut */
+data Wallet
+{
+    mut amount: Int 
+    con currency: String
+}
+
+
+
+/* long form: fields plus methods */
+data Email(value: String)
+{
+    func domain() -> String
+    {
+        return this.value.split("@").last()
+    }
+}
+
+
+func data_demo()
+{
+    con a = Money(500, "EUR")
+    con b = Money(500, "EUR")
+
+    print(a == b)                 /* true: same values */
+    print(a)                      /* Money(amount: 500, currency: "EUR") */
+
+    con c = a.with(amount: 750)   /* new Money, a is unchanged */
+
+    /* a.amount = 1   <- compile error: short-form fields are con */
+
+    con Money(amount, currency) = c   /* destructuring */
+    print("{amount} {currency}")
+}
+
+
+/* A data class can `use` interfaces */
+interface Priced
+{
+    func price() -> Money
+}
+
+
+data Book(title: String, cost: Money) use Priced
+{
+    func price() -> Money
+    {
+        return this.cost
+    }
+}
+
+
+/* Errors could be data classes too, which keeps them short */
+data NotFound(id: Int) use Error
+{
+    func message() -> String
+    {
+        return "no row with id {this.id}"
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    2. Namespaces: block form
+
+    Groups classes, data classes, functions and constants under one name.
+    Good fit for DDD: one namespace per bounded context.
+------------------------------------------------------------------ */
+
+namespace billing
+{
+    con VAT = 0.25
+
+    data LineItem(name: String, price: Money, count: Int)
+
+    class Invoice
+    {
+        mut items: List<LineItem> = []
+
+        func add(item: LineItem)
+        {
+            this.items.add(item)
+        }
+
+        func total() -> Money
+        {
+            return sum(this.items)
+        }
+    }
+
+    /* inside the namespace, names are used without a prefix */
+    func sum(items: List<LineItem>) -> Money
+    {
+        mut total = 0
+        for item in items
+        {
+            total = total + item.price.amount * item.count
+        }
+        return Money(total, "EUR")
+    }
+}
+
+
+/* namespaces can be nested */
+namespace shop.catalog
+{
+    data Product(id: Int, name: String, price: Money)
+}
+
+
+/* ------------------------------------------------------------------
+    3. Namespaces: file form
+
+    Instead of a block, a file can start with
+
+        namespace billing
+
+    and then everything in the file belongs to `billing`, with no extra
+    indentation. Several files can add to the same namespace.
+------------------------------------------------------------------ */
+
+
+/* ------------------------------------------------------------------
+    4. Using a namespace from outside
+------------------------------------------------------------------ */
+
+func full_name()
+{
+    con invoice = billing.Invoice()
+    invoice.add(billing.LineItem("coffee", Money(30, "EUR"), 2))
+    print(billing.VAT)
+}
+
+
+import billing                      /* now usable without the prefix */
+import shop.catalog as cat          /* or under a short name */
+import billing.{Invoice, LineItem}  /* or only some names */
+
+
+func imported()
+{
+    con invoice = Invoice()
+    con p = cat.Product(1, "mug", Money(100, "EUR"))
+}
+
+
+/* ------------------------------------------------------------------
+    5. Visibility                                             [decided]
+
+    Everything is public unless marked `private` (this class only)
+    or `protected` (this class and its children).
+------------------------------------------------------------------ */
+
+namespace accounts
+{
+    class Account
+    {
+        mut balance = 0            /* public */
+        private mut pin = ""       /* only inside Account */
+
+        func check(pin: String) -> Bool
+        {
+            return this.pin == pin
+        }
+
+        private func audit()       /* only inside Account */
+        {
+            print("checked")
+        }
+
+        protected func fee() -> Int   /* Account and its children */
+        {
+            return 0
+        }
+    }
+
+    class SavingsAccount use Account
+    {
+        /* no init: the empty init() runs, then Account's init() automatically */
+
+        override func fee() -> Int    /* can see and override fee() */
+        {
+            return 5
+        }
+
+        /* this.pin  <- compile error: pin is private to Account */
+    }
+
+    data Password(hash: String)
+    {
+        private func salt() -> String     /* only inside Password */
+        {
+            return this.hash.substring(0, 8)
+        }
+    }
+
+    func open_account() -> Account            /* public: accounts.open_account() */
+    {
+        log("opening account")
+        return Account()
+    }
+
+    private func log(msg: String)             /* only inside accounts */
+    {
+        print(msg)
+    }
+}
+

@@ -1,0 +1,251 @@
+/*
+    Errors as values, Go style                                [proposal]
+
+    The idea:
+      - An error is a normal object. It is RETURNED, never thrown.
+      - A function that can fail says so in its return type: `-> User ! DbError`
+        ("returns a User, or a DbError").
+      - The caller gets TWO values back and checks the error with a plain `if`:
+
+            con user, err = find_user(id)
+            if err != null
+            {
+                return err
+            }
+
+      - The compiler makes sure you check `err` before using `user`.
+      - Bugs (index out of range, division by zero) are not errors; they crash
+        the program (a "panic"). Errors are for things that can go wrong in
+        normal operation: bad input, missing rows, network failures.
+*/
+
+
+/* ------------------------------------------------------------------
+    1. Errors are classes
+
+    Every error `use`s the built-in Error class (which has `message`).
+    Inheritance groups them: NotFound and ConnectionLost are both DbErrors.
+------------------------------------------------------------------ */
+
+class DbError use Error
+{
+}
+
+
+class NotFound use DbError
+{
+    mut id = 0
+
+    func init(id: Int) -> NotFound
+    {
+        this.id = id
+        this.message = "no row with id {id}"
+    }
+}
+
+
+class ConnectionLost use DbError
+{
+    func init() -> ConnectionLost
+    {
+        this.message = "connection lost"
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    2. Returning an error
+
+    `T ! E` is the return type: a T on success, an E on failure.
+    You return ONE thing, either the value or the error.
+    (No `return null, err` like in Go.)
+------------------------------------------------------------------ */
+
+func find_user(id: Int) -> User ! DbError
+{
+    if id <= 0
+    {
+        return NotFound(id)
+    }
+
+    return User(id, "ada@example.com")
+}
+
+
+/* ------------------------------------------------------------------
+    3. Checking an error: `if err != null`
+
+    The caller receives two values. `err` has the type `DbError?`,
+    so it is either null (success) or an error.
+------------------------------------------------------------------ */
+
+/* pass the error up to my caller */
+func get_email(id: Int) -> String ! DbError
+{
+    con user, err = find_user(id)
+    if err != null
+    {
+        return err
+    }
+
+    return user.email
+}
+
+
+/* handle it here, with a fallback */
+func get_email_or_default(id: Int) -> String
+{
+    con user, err = find_user(id)
+    if err != null
+    {
+        print("lookup failed: {err.message}")
+        return "unknown"
+    }
+
+    return user.email
+}
+
+
+/* different handling for different errors, using `is` */
+func status_for(id: Int) -> Int
+{
+    con user, err = find_user(id)
+    if err is NotFound
+    {
+        return 404
+    }
+    if err is ConnectionLost
+    {
+        return 503
+    }
+
+    return 200
+}
+
+
+/* ------------------------------------------------------------------
+    4. Errors are just values
+
+    Because an error is a normal object, you can store it, put it in a
+    list, pass it to a function, and look at it later.
+------------------------------------------------------------------ */
+
+func check_many(ids: List<Int>) -> List<DbError>
+{
+    mut errors: List<DbError> = []
+
+    for id in ids
+    {
+        con user, err = find_user(id)
+        if err != null
+        {
+            errors.add(err)
+        }
+    }
+
+    return errors
+}
+
+
+/* ------------------------------------------------------------------
+    5. Adding context when passing an error up
+------------------------------------------------------------------ */
+
+class ConfigError use Error
+{
+    func init(message: String, cause: Error) -> ConfigError
+    {
+        this.message = message
+        this.cause = cause
+    }
+}
+
+
+func load_port(path: String) -> Int ! ConfigError
+{
+    con text, read_err = read_file(path)
+    if read_err != null
+    {
+        return ConfigError("could not read {path}", read_err)
+    }
+
+    con port, parse_err = Int.parse(text)
+    if parse_err != null
+    {
+        return ConfigError("{path} does not contain a number", parse_err)
+    }
+
+    return port
+}
+
+
+/* ------------------------------------------------------------------
+    6. What the compiler stops
+
+    Go lets you forget the check. Bronze doesn't.
+------------------------------------------------------------------ */
+
+func mistakes()
+{
+    find_user(1)
+    /* compile error: find_user can fail, and the error is ignored */
+
+    con user, err = find_user(1)
+    print(user.email)
+    /* compile error: `user` used before `err` was checked */
+
+    con user2 = find_user(1)
+    /* compile error: find_user can fail, so you must take `err` too */
+}
+
+
+/* ------------------------------------------------------------------
+    7. Missing values: null
+
+    `User?` = maybe a User, maybe null. Only `?` types can be null;
+    a plain `User` can never be null. The compiler forces a check.
+------------------------------------------------------------------ */
+
+func find_email(user_id: Int) -> String?
+{
+    if user_id == 1
+    {
+        return "ada@example.com"
+    }
+
+    return null
+}
+
+
+func null_demo()
+{
+    con email = find_email(2)
+
+    if email != null
+    {
+        print(email.length())     /* fine: the compiler knows it's not null here */
+    }
+
+    con shown = find_email(2) ?? "unknown"    /* default if null */
+}
+
+
+/* Both together: the query may fail, and if it works it may find nothing */
+func find_by_email(email: String) -> User? ! DbError
+{
+    con row, err = db.query_one("select * from users where email = $1", email)
+    if err != null
+    {
+        return err
+    }
+
+    if row == null
+    {
+        return null
+    }
+
+    return User(row.int("id"), row.string("email"))
+}
+
+
+

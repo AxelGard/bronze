@@ -1,0 +1,434 @@
+/*
+    A tour of Bronze
+
+    This file is for getting a feel for the language.
+    Every section is marked:
+
+        [decided]   matches doc/
+        [proposal]  syntax we have NOT decided yet, written here so you can react to it
+*/
+
+
+/* ------------------------------------------------------------------
+    1. Functions                                              [decided]
+------------------------------------------------------------------ */
+
+func square(x: Int) -> Int
+{
+    return x * x
+}
+
+
+func greet(name: String, greeting: String = "Hello") -> String
+{
+    return "{greeting}, {name}"
+}
+
+
+func average(a: Int, b: Int) -> Float
+{
+    /* no silent Int -> Float, you convert explicitly */
+    return Float(a + b) / 2.0
+}
+
+
+/* ------------------------------------------------------------------
+    2. Local variables                                        [decided]
+
+    `con` declares a constant (can't be reassigned),
+    `mut` declares a variable that can change (same as fields).
+------------------------------------------------------------------ */
+
+func locals() -> Int
+{
+    con limit = 10            /* inferred as Int, can't be changed */
+    mut total = 0               /* can be changed */
+    con ratio: Float = 0.5    /* explicit type */
+
+    total = total + limit
+    /* limit = 11   <- compile error: limit is not mut */
+
+    return total
+}
+
+
+/* ------------------------------------------------------------------
+    3. Control flow                                          [proposal]
+------------------------------------------------------------------ */
+
+func classify(n: Int) -> String
+{
+    if n < 0
+    {
+        return "negative"
+    }
+    else if n == 0; return "zero"
+    return "positive"
+}
+
+
+func sum_to(n: Int) -> Int
+{
+    mut sum = 0
+
+    for i in range(1, n) 
+    {
+        sum += i
+    }
+
+    return sum
+}
+
+
+func countdown(from: Int)
+{
+    mut i = from
+
+    while i > 0
+    {
+        print("{i}...")     /* string interpolation with {} */
+        i = i - 1
+    }
+
+    print("liftoff")
+}
+
+
+/* ------------------------------------------------------------------
+    4. Lists and lambdas                                     [proposal]
+------------------------------------------------------------------ */
+
+func evens_squared(numbers: List<Int>) -> List<Int>
+{
+    return numbers
+        .filter((n) => n % 2 == 0)
+        .map((n) => n * n)
+}
+
+
+func list_demo()
+{
+    con nums = [1, 2, 3, 4, 5, 6]
+    con result = evens_squared(nums)     /* [4, 16, 36] */
+
+    for n in result
+    {
+        print(n)
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    5. Classes                                                [decided]
+       (except creating objects with My_Class(...), which is a proposal)
+------------------------------------------------------------------ */
+
+class Animal
+{
+    mut name = ""
+
+    func init(name: String) -> Animal
+    {
+        this.name = name
+    }
+
+    func speak() -> String
+    {
+        return "..."
+    }
+
+    func describe() -> String
+    {
+        return this.name + " says " + this.speak()
+    }
+}
+
+
+class Dog use Animal
+{
+    func init(name: String) -> Dog
+    {
+        super(Animal).init(name)
+    }
+
+    override func speak() -> String
+    {
+        return "Woof"
+    }
+
+    static func good_boy() -> Dog
+    {
+        return Dog("Rex")
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    6. Multiple inheritance as mixins                         [decided]
+
+    Small classes that each add one ability, combined with `use`.
+    Last wins if two of them define the same method.
+------------------------------------------------------------------ */
+
+class Timestamped
+{
+    mut created_at = 0
+
+    func touch()
+    {
+        this.created_at = time.now()     /* [proposal] std lib */
+    }
+}
+
+
+/* no init written: Named gets an empty init() for free, so Named() works */
+class Named
+{
+    mut name = ""
+
+    func label() -> String
+    {
+        return "Name: " + this.name
+    }
+}
+
+
+class Product use Named, Timestamped
+{
+    mut price = 0.0
+
+    func init(name: String, price: Float) -> Product
+    {
+        this.name = name
+        this.price = price
+        this.touch()
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    7. Interfaces                                            [proposal]
+       (that they exist and use `use` is decided; the syntax is not)
+------------------------------------------------------------------ */
+
+interface Shape
+{
+    func area() -> Float
+}
+
+
+class Circle use Shape
+{
+    mut radius = 0.0
+
+    func init(radius: Float) -> Circle
+    {
+        this.radius = radius
+    }
+
+    func area() -> Float
+    {
+        return 3.14159 * this.radius * this.radius
+    }
+}
+
+
+class Rect use Shape
+{
+    mut w = 0.0
+    mut h = 0.0
+
+    func init(w: Float, h: Float) -> Rect
+    {
+        this.w = w
+        this.h = h
+    }
+
+    func area() -> Float
+    {
+        return this.w * this.h
+    }
+}
+
+
+func total_area(shapes: List<Shape>) -> Float
+{
+    mut total = 0.0
+
+    for s in shapes
+    {
+        total = total + s.area()
+    }
+
+    return total
+}
+
+
+/* ------------------------------------------------------------------
+    8. Missing values and errors                             [proposal]
+
+    `String?`        : may be null (only `?` types can be null)
+    `-> Int ! Error` : function can fail; the caller gets the value AND an error
+    `if err != null` : check it, Go style
+    (more in errors.brz)
+------------------------------------------------------------------ */
+
+func find_email(user_id: Int) -> String?
+{
+    if user_id == 1
+    {
+        return "ada@example.com"
+    }
+
+    return null
+}
+
+
+func parse_port(text: String) -> Int ! Error
+{
+    con port, err = Int.parse(text)
+    if err != null
+    {
+        return err
+    }
+
+    if port < 1 or port > 65535
+    {
+        return Error("port out of range: {port}")
+    }
+
+    return port
+}
+
+
+func errors_demo()
+{
+    con email = find_email(2) ?? "unknown"      /* default if null */
+
+    con port, err = parse_port("8080")
+    if err != null
+    {
+        print("bad port: {err.message}")
+        return
+    }
+
+    print("{email} on port {port}")
+}
+
+
+/* ------------------------------------------------------------------
+    9. Shell commands                                         [decided]
+       (the error handling around it is a proposal)
+------------------------------------------------------------------ */
+
+func git_info() -> String ! Error
+{
+    con branch, err = shell("git branch --show-current")
+    if err != null
+    {
+        return err
+    }
+
+    con commit, err = shell("git rev-parse --short HEAD")   /* err can be reused */
+    if err != null
+    {
+        return err
+    }
+
+    return "{branch} @ {commit}"
+}
+
+
+/* ------------------------------------------------------------------
+    10. A small backend                                      [proposal]
+
+    What a typical service could look like with only the standard library.
+------------------------------------------------------------------ */
+
+import http
+import db
+import json
+
+
+class User
+{
+    mut id = 0
+    mut email = ""
+
+    func init(id: Int, email: String) -> User
+    {
+        this.id = id
+        this.email = email
+    }
+}
+
+
+class UserRepo
+{
+    mut conn: db.Connection
+
+    func init(conn: db.Connection) -> UserRepo
+    {
+        this.conn = conn
+    }
+
+    func find(id: Int) -> User? ! db.Error
+    {
+        con row, err = this.conn.query_one("select id, email from users where id = $1", id)
+        if err != null
+        {
+            return err
+        }
+
+        if row == null
+        {
+            return null
+        }
+
+        return User(row.int("id"), row.string("email"))
+    }
+}
+
+
+func get_user(req: http.Request, repo: UserRepo) -> http.Response
+{
+    con id, parse_err = Int.parse(req.param("id"))
+    if parse_err != null
+    {
+        return http.bad_request("id must be a number")
+    }
+
+    con user, db_err = repo.find(id)
+    if db_err != null
+    {
+        return http.server_error()
+    }
+
+    if user == null
+    {
+        return http.not_found()
+    }
+
+    return http.ok(json.encode(user))
+}
+
+
+func main() -> Int
+{
+    con conn, err = db.connect("postgres://localhost/app")
+    if err != null
+    {
+        print("could not connect: {err.message}")
+        return 1
+    }
+
+    con repo = UserRepo(conn)
+
+    con server = http.Server()
+    server.get("/users/{id}", (req) => get_user(req, repo))
+
+    print("listening on :8080")
+    server.listen(8080)
+
+    return 0
+}

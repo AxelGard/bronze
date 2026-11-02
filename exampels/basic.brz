@@ -1,0 +1,165 @@
+
+/* 
+    main function 
+*/
+func main() -> Int
+{  
+    print("hello, world")   
+
+    return 0
+}
+
+
+func add(a: Float, b:Float) -> Float
+{
+    return a + b
+}
+
+
+/*
+    A parent class, so that My_Cls below has something to inherit from.
+*/
+class Parrent_Cls
+{
+    mut parent_prop = 0
+
+    func funcInMyParent(y: Int, z: Int = 5) -> Int
+    {
+        return y + z
+    }
+}
+
+
+class My_Cls use Parrent_Cls
+{
+    mut x = 0.0
+
+
+    func init() -> My_Cls
+    {
+        this.x = 1.2
+    }
+
+
+    func init(x:Int) -> My_Cls
+    {
+        this.x = Float(x)
+    }
+
+    override func funcInMyParent(y: Int, z: Int = 5) -> Int
+    {
+        this.parent_prop = y * z 
+        return this.parent_prop
+    }
+
+    /*
+        static: belongs to the class, called as My_Cls.create(3)
+    */
+    static func create(x: Int) -> My_Cls
+    {
+        return My_Cls(x)
+    }
+
+}
+
+
+/*
+    Interfaces
+    NOTE: the syntax for declaring an interface is not decided yet.
+*/
+interface Greeter
+{
+    func hello() -> String
+}
+
+
+/*
+    Multiple inheritance
+
+    A and B both define hello().
+    Parents are applied left to right and the LAST one wins,
+    so C gets B's hello(). The compiler/LSP shows a hint here.
+*/
+class A
+{
+    func hello() -> String
+    {
+        return "A"
+    }
+}
+
+
+class B
+{
+    func hello() -> String
+    {
+        return "B"
+    }
+}
+
+
+class C use A, B, Greeter
+{
+    /*
+        Without this override, C().hello() would return "B".
+        super(A) / super(B) pick a specific parent.
+    */
+    override func hello() -> String
+    {
+        return super(A).hello() + super(B).hello()
+    }
+}
+
+
+/*
+    Diamond
+
+    Left and Right both use Base, but Bottom only gets ONE copy of Base,
+    so there is exactly one `id` field.
+*/
+class Base
+{
+    mut id = 0
+
+    func init(id: Int) -> Base
+    {
+        this.id = id
+    }
+}
+
+
+class Left use Base
+{
+    func side() -> String
+    {
+        return "left"
+    }
+}
+
+
+class Right use Base
+{
+    func side() -> String
+    {
+        return "right"
+    }
+}
+
+
+class Bottom use Left, Right
+{
+    func init(id: Int) -> Bottom
+    {
+        /* Base is shared, so its constructor is called once */
+        super(Base).init(id)
+    }
+
+    /*
+        side() comes from Right (last wins).
+        Both are still reachable with super(Left) and super(Right).
+    */
+    func both_sides() -> String
+    {
+        return super(Left).side() + " and " + super(Right).side()
+    }
+}
