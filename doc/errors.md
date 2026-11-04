@@ -1,41 +1,50 @@
 # Errors and null
 
-Example: [`errors.brz`](../examples/errors.brz).
+**Decided:** errors as values, handled with `or`, with the Go form for full control. Full examples in [`errors.brz`](../examples/errors.brz).
 
 ## Errors are values
 
-- An error is a normal object that is **returned, never thrown**. There are no exceptions.
-- The caller gets the value **and** the error, and checks it **Go style** with a plain `if`. Easy to read and follow.
-- `con x, err = ...` may **reuse** an existing `err` in the same function (like Go's `:=`), so you don't need `err2`, `err3` and so on.
+- An error is a normal value that is **returned, never thrown**. There are no exceptions.
+- An error is any class or data class that `use`s `Error`.
+- `-> User ! DbError` means "returns a `User`, or fails with a `DbError`". `-> ! Error` means "returns nothing, can fail".
+- A function returns **either** the value **or** the error. No dummy values.
+
+## Handling errors with `or`
+
+| Form | Meaning |
+|---|---|
+| `f() or return` | pass the error up unchanged |
+| `f() or return x` | return `x` from the current function instead (e.g. `or return http.not_found()`) |
+| `f() or (e) return Wrap(e)` | pass it up with context |
+| `f() or value` | use a fallback value |
+| `f() or (e) { ... }` | full block. It must leave (`return`, `break`, `continue`, `panic`). |
+| `f() or continue` / `or break` | skip or stop in a loop |
+| `f() or panic("...")` | crash: this must not fail |
+
+```
+func load_port(path: String) -> Int ! ConfigError
+{
+    con text = read_file(path) or (e) return ConfigError("could not read {path}", e)
+    con port = Int.parse(text) or (e) return ConfigError("{path} is not a number", e)
+    return port
+}
+```
+
+`or` is also logical or. The compiler decides by type: if the left side can fail (`T ! E`), `or` handles the error.
+
+## The Go form
+
+For full control, the Go form still works, and the error is an ordinary value:
 
 ```
 con user, err = find_user(id)
 if err != null
 {
-    return err
-}
-
-con email, err = find_email(user)   // err reused
-if err != null
-{
-    return err
+    errors.add(err)
 }
 ```
 
-Because errors are ordinary values, they can be stored, put in lists and passed around:
-
-```
-mut errors: List<DbError> = []
-
-for id in ids
-{
-    con user, err = find_user(id)
-    if err != null
-    {
-        errors.add(err)
-    }
-}
-```
+`con x, err = ...` may **reuse** an existing `err` in the same function.
 
 ## Null
 

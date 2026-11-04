@@ -1,64 +1,45 @@
 /*
-    Errors as values, Go style                                [proposal]
+    errors.brz: errors as values, with the `or` shortcut            [decided]
 
     The idea:
-      - An error is a normal object. It is RETURNED, never thrown.
-      - A function that can fail says so in its return type: `-> User ! DbError`
-        ("returns a User, or a DbError").
-      - The caller gets TWO values back and checks the error with a plain `if`:
+      - An error is a normal value. It is RETURNED, never thrown.
+      - `-> User ! DbError` means: returns a User, or fails with a DbError.
+      - The caller must deal with it, using `or`:
+
+            find_user(id) or return                  pass the error up
+            find_user(id) or return 404              return something else instead
+            find_user(id) or (e) return Wrap(e)      pass it up, wrapped
+            find_user(id) or User(0, "guest")        use a fallback value
+            find_user(id) or (e) { ... }             full block
+            find_user(id) or continue / break        skip in a loop
+            find_user(id) or panic("...")            crash: this must not fail
+
+      - For full control, the Go form still works:
 
             con user, err = find_user(id)
-            if err != null
-            {
-                return err
-            }
-
-      - The compiler makes sure you check `err` before using `user`.
-      - Bugs (index out of range, division by zero) are not errors; they crash
-        the program (a "panic"). Errors are for things that can go wrong in
-        normal operation: bad input, missing rows, network failures.
+            if err != null { ... }
 */
 
 
 /* ------------------------------------------------------------------
-    1. Errors are classes
+    1. Declaring errors
 
-    Every error `use`s the built-in Error class (which has `message`).
-    Inheritance groups them: NotFound and ConnectionLost are both DbErrors.
+    An error is any class or data class that `use`s Error.
+    Inheritance groups them.
 ------------------------------------------------------------------ */
 
-class DbError use Error
-{
-}
+class DbError use Error { }
 
+data NotFound(id: Int) use DbError
+data ConnectionLost() use DbError
 
-class NotFound use DbError
-{
-    mut id = 0
-
-    func init(id: Int) -> NotFound
-    {
-        this.id = id
-        this.message = "no row with id {id}"
-    }
-}
-
-
-class ConnectionLost use DbError
-{
-    func init() -> ConnectionLost
-    {
-        this.message = "connection lost"
-    }
-}
+data ConfigError(message: String, cause: Error?) use Error
 
 
 /* ------------------------------------------------------------------
     2. Returning an error
 
-    `T ! E` is the return type: a T on success, an E on failure.
-    You return ONE thing, either the value or the error.
-    (No `return null, err` like in Go.)
+    Return either the value or the error. No dummy values.
 ------------------------------------------------------------------ */
 
 func find_user(id: Int) -> User ! DbError
@@ -73,49 +54,77 @@ func find_user(id: Int) -> User ! DbError
 
 
 /* ------------------------------------------------------------------
-    3. Checking an error: `if err != null`
-
-    The caller receives two values. `err` has the type `DbError?`,
-    so it is either null (success) or an error.
+    3. Passing an error up: `or return`
 ------------------------------------------------------------------ */
 
-/* pass the error up to my caller */
 func get_email(id: Int) -> String ! DbError
 {
-    con user, err = find_user(id)
-    if err != null
-    {
-        return err
-    }
-
+    con user = find_user(id) or return
     return user.email
 }
 
 
-/* handle it here, with a fallback */
-func get_email_or_default(id: Int) -> String
+/* Several in a row stays short and readable */
+func send_welcome(id: Int) -> ! Error
 {
-    con user, err = find_user(id)
-    if err != null
+    con user = find_user(id) or return
+    con body = render("welcome.html", user) or return
+    mail.send(user.email, "Welcome!", body) or return
+}
+
+
+/* ------------------------------------------------------------------
+    4. Adding context: `or (e) return ...`
+------------------------------------------------------------------ */
+
+func load_port(path: String) -> Int ! ConfigError
+{
+    con text = read_file(path) or (e) return ConfigError("could not read {path}", e)
+    con port = Int.parse(text) or (e) return ConfigError("{path} is not a number", e)
+
+    if port < 1 or port > 65535
     {
-        print("lookup failed: {err.message}")
-        return "unknown"
+        return ConfigError("port {port} out of range", null)
     }
 
+    return port
+}
+
+
+/* ------------------------------------------------------------------
+    5. Fallback values: `or <value>`
+------------------------------------------------------------------ */
+
+func display_name(id: Int) -> String
+{
+    con user = find_user(id) or User(0, "guest")
     return user.email
 }
 
 
-/* different handling for different errors, using `is` */
+func timeout_seconds() -> Int
+{
+    con text = env.get("TIMEOUT") or "30"
+    return Int.parse(text) or 30
+}
+
+
+/* ------------------------------------------------------------------
+    6. Handling it here: `or (e) { ... }`
+
+    The block must leave: return, break, continue or panic.
+------------------------------------------------------------------ */
+
 func status_for(id: Int) -> Int
 {
-    con user, err = find_user(id)
-    if err is NotFound
+    con user = find_user(id) or (e)
     {
-        return 404
-    }
-    if err is ConnectionLost
-    {
+        if e is NotFound
+        {
+            return 404
+        }
+
+        log.error("database problem: {e.message}")
         return 503
     }
 
@@ -124,10 +133,9 @@ func status_for(id: Int) -> Int
 
 
 /* ------------------------------------------------------------------
-    4. Errors are just values
+    7. The Go form, for full control
 
-    Because an error is a normal object, you can store it, put it in a
-    list, pass it to a function, and look at it later.
+    Useful when you want to keep the error around as a value.
 ------------------------------------------------------------------ */
 
 func check_many(ids: List<Int>) -> List<DbError>
@@ -148,96 +156,76 @@ func check_many(ids: List<Int>) -> List<DbError>
 
 
 /* ------------------------------------------------------------------
-    5. Adding context when passing an error up
+    8. Loops: `or continue`, `or break`
 ------------------------------------------------------------------ */
 
-class ConfigError use Error
+func emails(ids: List<Int>) -> List<String>
 {
-    func init(message: String, cause: Error) -> ConfigError
+    mut out: List<String> = []
+
+    for id in ids
     {
-        this.message = message
-        this.cause = cause
+        con user = find_user(id) or continue     /* skip users that fail */
+        out.add(user.email)
     }
+
+    return out
 }
 
 
-func load_port(path: String) -> Int ! ConfigError
+func first_valid_port(lines: List<String>) -> Int?
 {
-    con text, read_err = read_file(path)
-    if read_err != null
+    for line in lines
     {
-        return ConfigError("could not read {path}", read_err)
-    }
-
-    con port, parse_err = Int.parse(text)
-    if parse_err != null
-    {
-        return ConfigError("{path} does not contain a number", parse_err)
-    }
-
-    return port
-}
-
-
-/* ------------------------------------------------------------------
-    6. What the compiler stops
-
-    Go lets you forget the check. Bronze doesn't.
------------------------------------------------------------------- */
-
-func mistakes()
-{
-    find_user(1)
-    /* compile error: find_user can fail, and the error is ignored */
-
-    con user, err = find_user(1)
-    print(user.email)
-    /* compile error: `user` used before `err` was checked */
-
-    con user2 = find_user(1)
-    /* compile error: find_user can fail, so you must take `err` too */
-}
-
-
-/* ------------------------------------------------------------------
-    7. Missing values: null
-
-    `User?` = maybe a User, maybe null. Only `?` types can be null;
-    a plain `User` can never be null. The compiler forces a check.
------------------------------------------------------------------- */
-
-func find_email(user_id: Int) -> String?
-{
-    if user_id == 1
-    {
-        return "ada@example.com"
+        con port = Int.parse(line) or continue
+        return port
     }
 
     return null
 }
 
 
-func null_demo()
+/* ------------------------------------------------------------------
+    9. Functions that return nothing but can fail: `-> ! Error`
+------------------------------------------------------------------ */
+
+func save(user: User) -> ! DbError
 {
-    con email = find_email(2)
-
-    if email != null
-    {
-        print(email.length())     /* fine: the compiler knows it's not null here */
-    }
-
-    con shown = find_email(2) ?? "unknown"    /* default if null */
+    db.exec("insert into users (id, email) values ($1, $2)", user.id, user.email) or return
 }
 
 
-/* Both together: the query may fail, and if it works it may find nothing */
+func register(email: String) -> ! Error
+{
+    con user = User(0, email)
+    save(user) or return
+    log.info("registered {email}")
+}
+
+
+/* ------------------------------------------------------------------
+    10. Startup code: `or panic`
+
+    When there is no sensible way to continue.
+------------------------------------------------------------------ */
+
+func connect() -> db.Connection
+{
+    con url = env.get("DATABASE_URL") or panic("DATABASE_URL is not set")
+    return db.connect(url) or (e) panic("could not connect: {e.message}")
+}
+
+
+/* ------------------------------------------------------------------
+    11. Errors and null together
+
+    `User? ! DbError`: the query may fail, and if it works it may find nothing.
+    `or` handles the error, `??` and `if` handle the null.
+------------------------------------------------------------------ */
+
 func find_by_email(email: String) -> User? ! DbError
 {
-    con row, err = db.query_one("select * from users where email = $1", email)
-    if err != null
-    {
-        return err
-    }
+    con row = db.query_one("select id, email from users where email = $1", email) or return
 
     if row == null
     {
@@ -248,4 +236,79 @@ func find_by_email(email: String) -> User? ! DbError
 }
 
 
+func greeting(email: String) -> String
+{
+    con user = find_by_email(email) or return "error"
+    if user == null
+    {
+        return "who are you?"
+    }
 
+    return "hello {user.email}"
+}
+
+
+/* ------------------------------------------------------------------
+    12. A full HTTP handler
+------------------------------------------------------------------ */
+
+func get_user(req: http.Request) -> http.Response
+{
+    con id = Int.parse(req.param("id")) or return http.bad_request("id must be a number")
+
+    con user = find_user(id) or (e)
+    {
+        if e is NotFound
+        {
+            return http.not_found()
+        }
+        return http.server_error()
+    }
+
+    return http.ok(json.encode(user))
+}
+
+
+func main() -> Int
+{
+    con port = load_port("config/port.txt") or (e)
+    {
+        print("bad config: {e.message}")
+        return 1
+    }
+
+    con server = http.Server()
+    server.get("/users/{id}", get_user)
+    server.listen(port) or return 1
+
+    return 0
+}
+
+
+/* ------------------------------------------------------------------
+    13. The one thing to watch: `or` on a Bool
+
+    `or` is also logical or. The compiler decides by type:
+    if the left side can fail (`T ! E`), `or` handles the error.
+------------------------------------------------------------------ */
+
+func is_admin(id: Int) -> Bool ! DbError
+{
+    con user = find_user(id) or return
+    return user.email.ends_with("@admin.com")
+}
+
+
+func can_delete(id: Int, is_owner: Bool) -> Bool
+{
+    con admin = is_admin(id) or false     /* error handling: false if the lookup fails */
+    return admin or is_owner              /* logical or: both sides are plain Bool */
+}
+
+/*
+    Open questions:
+      - Should `or` also replace `??` for null?   find_email(id) or "unknown"
+      - Can an `or (e) { }` block produce a fallback value, or must it always leave?
+      - Is `-> ! Error` the right way to write "returns nothing, can fail"?
+      - Should a mixed line like `is_admin(id) or false` give a hint in the editor?
+*/

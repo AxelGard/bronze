@@ -42,12 +42,11 @@ What we still need to decide. When something is settled, it moves into the other
 - `private` on a top-level function outside any namespace: file or folder?
 
 ## Errors
-- Return type syntax: `-> User ! DbError` or `-> User, DbError`?
-- Return one thing (`return NotFound(id)`) or Go-style two (`return null, NotFound(id)`)?
-- Should `Error` be a built-in base class, an interface, or its own `error` declaration? Or are errors simply data classes that `use Error`?
-- Checking the kind: `if err is NotFound`?
-- Should the compiler refuse unchecked errors, or only warn?
-- An optional shortcut for "if error, return it"?
+- Should `or` also replace `??` for null: `find_email(id) or "unknown"`?
+- Can an `or (e) { }` block produce a fallback value, or must it always leave?
+- Is `-> ! Error` the right way to write "returns nothing, can fail"?
+- Checking the kind: `if e is NotFound`?
+- Should the editor give a hint when `or` handles an error on a `Bool`?
 
 ## Other areas
 - **Type inference and generics**: how much do you write? Bounded generics?
