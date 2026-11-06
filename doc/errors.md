@@ -1,6 +1,6 @@
 # Errors and null
 
-**Decided:** errors as values, handled with `or`, with the Go form for full control. Full examples in [`errors.brz`](../examples/errors.brz).
+**Decided:** errors as values, handled with `else`, with the Go form for full control. Full examples in [`errors.brz`](../examples/errors.brz).
 
 ## Errors are values
 
@@ -9,28 +9,28 @@
 - `-> User ! DbError` means "returns a `User`, or fails with a `DbError`". `-> ! Error` means "returns nothing, can fail".
 - A function returns **either** the value **or** the error. No dummy values.
 
-## Handling errors with `or`
+## Handling errors with `else`
 
 | Form | Meaning |
 |---|---|
-| `f() or return` | pass the error up unchanged |
-| `f() or return x` | return `x` from the current function instead (e.g. `or return http.not_found()`) |
-| `f() or (e) return Wrap(e)` | pass it up with context |
-| `f() or value` | use a fallback value |
-| `f() or (e) { ... }` | full block. It must leave (`return`, `break`, `continue`, `panic`). |
-| `f() or continue` / `or break` | skip or stop in a loop |
-| `f() or panic("...")` | crash: this must not fail |
+| `f() else return` | pass the error up unchanged |
+| `f() else return x` | return `x` from the current function instead (e.g. `else return http.not_found()`) |
+| `f() else (e) return Wrap(e)` | pass it up with context |
+| `f() else value` | use a fallback value |
+| `f() else (e) { ... }` | full block. It must leave (`return`, `break`, `continue`, `panic`). |
+| `f() else continue` / `else break` | skip or stop in a loop |
+| `f() else panic("...")` | crash: this must not fail |
 
 ```
 func load_port(path: String) -> Int ! ConfigError
 {
-    con text = read_file(path) or (e) return ConfigError("could not read {path}", e)
-    con port = Int.parse(text) or (e) return ConfigError("{path} is not a number", e)
+    con text = read_file(path) else (e) return ConfigError("could not read {path}", e)
+    con port = Int.parse(text) else (e) return ConfigError("{path} is not a number", e)
     return port
 }
 ```
 
-`or` is also logical or. The compiler decides by type: if the left side can fail (`T ! E`), `or` handles the error.
+`if` is a statement, so its `else` always follows a closing `}`. The error `else` always follows an expression on the same line, so the two never meet. `or` is only logical or.
 
 ## The Go form
 

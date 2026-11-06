@@ -34,6 +34,50 @@ func greet(name: String, greeting: String = "Hello") -> String
 - Parameters can have **default values**.
 - Functions can live outside classes.
 
+### Multiple return values
+
+```
+func min_max(a: Int, b: Int) -> Int, Int
+{
+    if a < b
+    {
+        return a, b
+    }
+    return b, a
+}
+
+con low, high = min_max(7, 3)      // receive into new variables
+x, y = min_max(x, y)               // or assign to existing mut variables
+```
+
+- List the return types after `->`, separated by commas.
+- `return a, b` returns several values.
+- The caller receives them with `con a, b = f()` or `mut a, b = f()`, or assigns them to existing `mut` variables.
+
+## Functions as values
+
+Example: [`lambdas.brz`](../examples/lambdas.brz). The goal is **no callback soup**: named functions are the normal thing to pass around.
+
+```
+type Check = func(User) -> Bool                 // a named signature
+
+func is_active(user: User) -> Bool { return user.active }
+
+func get_user(req: http.Request) -> http.Response use Handler   // explicit match
+{
+    ...
+}
+
+con active = users.where(is_active)             // pass a named function
+con names  = users.map((u) => u.name)           // or a one-expression lambda
+```
+
+- **Function types**: `func(User) -> Bool`.
+- **Named signatures**: `type Check = func(User) -> Bool`.
+- A function **matches a signature automatically** if it has the right shape. It can also say so **explicitly** with `use Handler`, and then the compiler checks it at the declaration.
+- **Local functions**: a function declared inside another function can see the variables around it.
+- **Lambdas** are **one expression only**: `(u) => u.active`. Anything bigger must be a named function.
+
 ## Variables
 
 ```
@@ -63,7 +107,7 @@ con ratio: Float = 0.5   // explicit type
 
 ## Control flow
 
-No parentheses around conditions, and braces are always required.
+No parentheses around conditions, and braces are always required. **`if` is a statement**, not an expression: it does not produce a value.
 
 ```
 if n < 0

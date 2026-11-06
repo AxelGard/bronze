@@ -8,14 +8,14 @@ What we still need to decide. When something is settled, it moves into the other
 
 ## Syntax
 - Can block comments be nested?
-- Are `if` and `match` expressions (do they produce values)?
+- Will there be `match`, and is it an expression?
 - Naming conventions, and how strictly they are enforced
-- `for` loops: `for i in 1..=n`, `for x in list`?
 - String interpolation: `"{name}"`?
-- Lambdas: `(n) => n * n`?
 - Creating objects: `Dog("Rex")`, or `new Dog("Rex")`?
 
 ## Functions
+- Multiple return values together with errors: `-> Int, Int ! Error`? How does `else` work then?
+- Can some returned values be ignored: `con low, _ = min_max(a, b)`?
 - Overloading for all functions, or only `init`? What about clashes with default parameters?
 - Named arguments: `connect(host: "db", timeout: 5)`?
 - Static fields? Can static methods be inherited?
@@ -42,11 +42,28 @@ What we still need to decide. When something is settled, it moves into the other
 - `private` on a top-level function outside any namespace: file or folder?
 
 ## Errors
-- Should `or` also replace `??` for null: `find_email(id) or "unknown"`?
-- Can an `or (e) { }` block produce a fallback value, or must it always leave?
+- Should `else` also replace `??` for null: `find_email(id) else "unknown"`?
+- Can an `else (e) { }` block produce a fallback value, or must it always leave?
 - Is `-> ! Error` the right way to write "returns nothing, can fail"?
 - Checking the kind: `if e is NotFound`?
-- Should the editor give a hint when `or` handles an error on a `Bool`?
+
+## Lambdas and iterators
+Explored in [`lambdas.brz`](../examples/lambdas.brz).
+- Is matching a signature both automatic and explicit (`use Handler`) the right call, or should one go?
+- Parameter names in signatures: `type Handler = func(req: http.Request) -> ...`?
+- Writing iterators: generators with `yield`, an `Iterator` class with `next()`, or both?
+- Chains: eager, lazy, or lazy on `Iter` and eager on `List`?
+- Names: `where` or `filter`, `fold` or `reduce`?
+- Ranges `0..10` / `0..=10`, and `for i, x in list`?
+
+## Passing arguments
+Trying out: everything shared, with the mode on the type: `a: T` (read only), `a: mut T`, `a: copy T`, plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [`references.brz`](../examples/references.brz).
+- Mark `mut` at the call site too?
+- Can you write `x, y = y, x` directly (without a function)?
+- Does `con` on a local variable also freeze the object?
+- Can `mut T` / `copy T` be used for fields and return types?
+- Is `copy` shallow or deep?
+- Objects like DB connections: are their methods `mut`?
 
 ## Other areas
 - **Type inference and generics**: how much do you write? Bounded generics?

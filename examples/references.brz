@@ -1,0 +1,274 @@
+/*
+    references.brz: passing arguments, with the mode on the type   [trying out]
+
+    Every object is shared (passed by reference). What a function may do
+    with it is part of the parameter's TYPE:
+
+        a: Account          read only: look, don't touch
+        a: mut Account      may change the caller's object
+        a: copy Account     gets its own copy, may change it freely
+
+    Methods that change `this` are marked `mut func`, so the compiler knows
+    which methods a read-only parameter may call.
+
+    Int, Float, Bool, String and short-form data can't change at all,
+    so for them only the plain read-only form makes sense.
+
+    There is no `ref`: a function never replaces the caller's variable.
+    Return a value instead.
+*/
+
+
+/* ------------------------------------------------------------------
+    1. A class with read-only and mut methods
+------------------------------------------------------------------ */
+
+class Account
+{
+    mut balance = 0
+    mut owner = ""
+
+    mut func add(amount: Int)            /* changes this */
+    {
+        this.balance = this.balance + amount
+    }
+
+    func describe() -> String            /* read only: this can't be changed here */
+    {
+        return "{this.owner}: {this.balance}"
+        /* this.balance = 0   <- compile error: describe is not mut */
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    2. Read only (the default)
+------------------------------------------------------------------ */
+
+func show(a: Account)
+{
+    print(a.describe())                  /* fine: describe is read only */
+    print(a.balance)                     /* fine: reading a field */
+
+    /* a.balance = 0   <- compile error: a is read only */
+    /* a.add(5)        <- compile error: add is a mut func */
+}
+
+
+/* ------------------------------------------------------------------
+    3. mut: change the caller's object
+------------------------------------------------------------------ */
+
+func deposit(a: mut Account, amount: Int)
+{
+    a.add(amount)                        /* the caller sees the new balance */
+}
+
+
+func rename(a: mut Account, name: String)
+{
+    a.owner = name
+}
+
+
+/* ------------------------------------------------------------------
+    4. copy: work on your own copy
+------------------------------------------------------------------ */
+
+func simulate(a: copy Account, years: Int) -> Int
+{
+    mut i = 0
+    while i < years
+    {
+        a.add(a.balance / 20)            /* only the copy changes */
+        i = i + 1
+    }
+    return a.balance
+}
+
+
+/* ------------------------------------------------------------------
+    5. No ref: return values instead
+
+    A function can't replace the caller's variable. When you want a new
+    value, return it and assign it yourself. Then the change is always
+    visible where it happens.
+------------------------------------------------------------------ */
+
+func fresh_account(owner: String) -> Account
+{
+    con a = Account()
+    a.owner = owner
+    return a
+}
+
+
+func swapped(a: Int, b: Int) -> Int, Int     /* multiple return values */
+{
+    return b, a
+}
+
+
+/* ------------------------------------------------------------------
+    6. Calling them
+------------------------------------------------------------------ */
+
+func demo()
+{
+    mut acc = Account()
+
+    show(acc)
+    deposit(acc, 100)                    /* question: write `deposit(mut acc, 100)`? */
+    rename(acc, "Ada")
+
+    con future = simulate(acc, 10)
+    print(future)                        /* 158 */
+    print(acc.balance)                   /* still 100 */
+
+    acc = fresh_account("Bob")           /* replacing is done by the caller */
+    print(acc.balance)                   /* 0 */
+
+    mut x = 1
+    mut y = 2
+    x, y = swapped(x, y)                 /* multiple assignment */
+    print("{x} {y}")                     /* 2 1 */
+}
+
+
+/* ------------------------------------------------------------------
+    7. The compiler keeps the promise all the way down
+
+    A read-only parameter can't be handed on as mut.
+------------------------------------------------------------------ */
+
+func audit(a: Account)
+{
+    show(a)                              /* fine: read only -> read only */
+    con future = simulate(a, 5)          /* fine: copy makes its own copy */
+
+    /* deposit(a, 1)   <- compile error: a is read only, deposit wants mut Account */
+}
+
+
+/* ------------------------------------------------------------------
+    8. Lists work the same way
+------------------------------------------------------------------ */
+
+func total(items: List<Int>) -> Int
+{
+    mut sum = 0
+    for n in items
+    {
+        sum = sum + n
+    }
+    /* items.add(1)   <- compile error: items is read only */
+    return sum
+}
+
+
+func add_defaults(items: mut List<Int>)
+{
+    items.add(0)
+    items.add(1)
+}
+
+
+func sorted(items: copy List<Int>) -> List<Int>
+{
+    items.sort()                         /* sorts the copy, caller's list untouched */
+    return items
+}
+
+
+/* ------------------------------------------------------------------
+    9. A backend example
+
+    Read the signature, and you know what each function does to the order.
+------------------------------------------------------------------ */
+
+data Money(amount: Int, currency: String)
+
+data LineItem(name: String, price: Money, count: Int)
+
+class Order
+{
+    mut items: List<LineItem> = []
+    mut paid = false
+
+    mut func add(item: LineItem)
+    {
+        this.items.add(item)
+    }
+
+    mut func mark_paid()
+    {
+        this.paid = true
+    }
+
+    func total() -> Money
+    {
+        mut sum = 0
+        for item in this.items
+        {
+            sum = sum + item.price.amount * item.count
+        }
+        return Money(sum, "EUR")
+    }
+}
+
+
+func render_receipt(order: Order) -> String          /* only reads */
+{
+    return "Total: {order.total().amount}"
+}
+
+
+func checkout(order: mut Order) -> ! PaymentError    /* changes the order */
+{
+    payments.charge(order.total()) else return
+    order.mark_paid()
+}
+
+
+func preview_with_tip(order: copy Order, tip: Int) -> Money   /* plays with a copy */
+{
+    order.add(LineItem("tip", Money(tip, "EUR"), 1))
+    return order.total()
+}
+
+
+/* ------------------------------------------------------------------
+    10. Data classes
+
+    Short form can't change, so `mut Money` means nothing.
+    Long form with mut fields works like a class.
+------------------------------------------------------------------ */
+
+data Wallet
+{
+    mut amount: Int
+    con currency: String
+}
+
+
+func spend(w: mut Wallet, amount: Int)
+{
+    w.amount = w.amount - amount
+}
+
+
+/* func double(m: mut Money)   <- hint: Money has no mut fields, `mut` does nothing */
+/* func bump(n: mut Int)        <- hint: an Int can't change, `mut` does nothing   */
+
+
+/*
+    Open questions:
+      - Mark `mut` at the call site too?   deposit(mut acc, 100)
+      - Can you also write `x, y = y, x` directly?
+      - Local variables: can `con acc = Account()` call `acc.add(5)`?
+        (Is `con` only about the variable, or also the object?)
+      - Can `mut T` / `copy T` be used outside parameters: fields, return types?
+      - Is `copy` a shallow copy (fields still shared) or deep?
+      - Objects like a DB connection or HTTP server: are their methods mut?
+        If so, almost every function needs `conn: mut db.Connection`.
+*/

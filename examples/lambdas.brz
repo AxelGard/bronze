@@ -1,0 +1,397 @@
+/*
+    lambdas.brz: functions as values, and iterators
+
+    Part 1: functions as values                                  [decided]
+      - Named signatures:      type Check = func(User) -> Bool
+      - Named functions are the normal thing to pass around.
+      - A function matches a signature automatically,
+        or you can say so explicitly with `use`.
+      - Local functions for when you need nearby variables.
+      - Lambdas exist, but are ONE expression only:  (u) => u.active
+        Anything bigger must be a named function.
+        (No callback soup like in Node.)
+
+    Part 2: iterators                                        [exploration]
+      A. for-in over anything iterable
+      B. Writing your own: an Iterator class with next()
+      C. Writing your own: generators with `yield`
+      D. Chains: map / where / take, lazy or eager
+*/
+
+
+data User(name: String, age: Int, active: Bool)
+
+con users = [
+    User("Ada", 36, true),
+    User("Linus", 54, false),
+    User("Grace", 85, true),
+]
+
+
+/* ==================================================================
+    PART 1: FUNCTIONS AS VALUES
+================================================================== */
+
+/* ------------------------------------------------------------------
+    1. Function types
+
+    `func(User) -> Bool` is the type "a function from User to Bool".
+------------------------------------------------------------------ */
+
+func where(items: List<User>, test: func(User) -> Bool) -> List<User>
+{
+    mut found: List<User> = []
+    for item in items
+    {
+        if test(item)
+        {
+            found.add(item)
+        }
+    }
+    return found
+}
+
+
+/* ------------------------------------------------------------------
+    2. Named signatures
+
+    Give a signature a name once, use it everywhere.
+------------------------------------------------------------------ */
+
+type Check   = func(User) -> Bool
+type Handler = func(http.Request) -> http.Response
+type Job     = func() -> ! Error
+
+
+func count(items: List<User>, test: Check) -> Int
+{
+    mut n = 0
+    for item in items
+    {
+        if test(item)
+        {
+            n = n + 1
+        }
+    }
+    return n
+}
+
+
+/* ------------------------------------------------------------------
+    3. Passing named functions: the normal style
+------------------------------------------------------------------ */
+
+func is_active(user: User) -> Bool
+{
+    return user.active
+}
+
+
+func is_adult(user: User) -> Bool
+{
+    return user.age >= 18
+}
+
+
+func named_demo()
+{
+    con active = users.where(is_active)
+    con adults = count(users, is_adult)
+}
+
+
+/* ------------------------------------------------------------------
+    4. Matching a signature: automatic, or explicit with `use`
+------------------------------------------------------------------ */
+
+/* automatic: it has the right shape, so it fits Handler */
+func health(req: http.Request) -> http.Response
+{
+    return http.ok("up")
+}
+
+
+/* explicit: the compiler checks the shape HERE, at the declaration,
+   and the reader sees right away what this function is for */
+func get_user(req: http.Request) -> http.Response use Handler
+{
+    con id = Int.parse(req.param("id")) else return http.bad_request("bad id")
+    con user = find_user(id) else return http.not_found()
+    return http.ok(json.encode(user))
+}
+
+
+/* func broken(id: Int) -> String use Handler
+   <- compile error: broken does not match Handler (wrong parameters and return type) */
+
+
+func routes(server: mut http.Server)
+{
+    server.get("/health", health)
+    server.get("/users/{id}", get_user)
+}
+
+
+/* ------------------------------------------------------------------
+    5. Local functions
+
+    When the function needs variables from around it, declare it
+    inside. It has a name, and it can see the variables.
+------------------------------------------------------------------ */
+
+func older_than(items: List<User>, age: Int) -> List<User>
+{
+    func is_older(u: User) -> Bool
+    {
+        return u.age > age               /* can see `age` */
+    }
+
+    return items.where(is_older)
+}
+
+
+func make_counter() -> func() -> Int
+{
+    mut n = 0
+
+    func next() -> Int
+    {
+        n = n + 1
+        return n
+    }
+
+    return next
+}
+
+
+func counter_demo()
+{
+    con next = make_counter()
+    print(next())                        /* 1 */
+    print(next())                        /* 2 */
+}
+
+
+/* ------------------------------------------------------------------
+    6. Lambdas: one expression only
+
+    For small things where a named function would be noise.
+------------------------------------------------------------------ */
+
+func lambda_demo()
+{
+    con names  = users.map((u) => u.name)
+    con active = users.where((u) => u.active)
+    con total  = users.fold(0, (sum, u) => sum + u.age)
+
+    con min_age = 40
+    con older  = users.where((u) => u.age > min_age)      /* can see min_age */
+
+    con ports  = ["80", "443", "x"].map((s) => Int.parse(s) else 0)   /* [80, 443, 0] */
+
+    /*
+    con labels = users.map((u) =>
+    {
+        ...
+    })
+    <- compile error: a lambda must be one expression. Use a named function.
+    */
+}
+
+
+/* ------------------------------------------------------------------
+    7. Parameter modes work the same for function types
+------------------------------------------------------------------ */
+
+type Change = func(mut Account)
+
+
+func give_bonus(a: mut Account)
+{
+    a.add(10)
+}
+
+
+func each_mut(items: mut List<Account>, f: Change)
+{
+    for a in items
+    {
+        f(a)
+    }
+}
+
+/* each_mut(accounts, give_bonus) */
+
+
+/* ==================================================================
+    PART 2: ITERATORS
+================================================================== */
+
+/* ------------------------------------------------------------------
+    A. for-in over anything iterable
+------------------------------------------------------------------ */
+
+func loops()
+{
+    for u in users                      /* lists */
+    {
+        print(u.name)
+    }
+
+    for i, u in users                   /* with index (Go style) */
+    {
+        print("{i}: {u.name}")
+    }
+
+    for i in 0..10                      /* range: 0 to 9 */
+    {
+        print(i)
+    }
+
+    for i in 1..=10                     /* range: 1 to 10 */
+    {
+        print(i)
+    }
+
+    con ages = {"Ada": 36, "Grace": 85}
+    for name, age in ages               /* maps: key and value */
+    {
+        print("{name} is {age}")
+    }
+
+    for c in "hello"                    /* strings: characters */
+    {
+        print(c)
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    B. Writing your own: an Iterator class
+
+    A class that `use`s Iterator can be used in for-in.
+    next() returns the next value, or null when done.
+------------------------------------------------------------------ */
+
+class Countdown use Iterator<Int>
+{
+    mut current = 0
+
+    func init(from: Int) -> Countdown
+    {
+        this.current = from
+    }
+
+    mut func next() -> Int?
+    {
+        if this.current <= 0
+        {
+            return null
+        }
+        this.current = this.current - 1
+        return this.current + 1
+    }
+}
+
+
+func countdown_demo()
+{
+    for n in Countdown(3)
+    {
+        print(n)                        /* 3, 2, 1 */
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    C. Writing your own: generators with `yield`
+
+    A function that `yield`s values one at a time. Much shorter than B,
+    and the state lives in normal local variables.
+    (Go 1.23 has exactly this kind of iterator, so it maps directly.)
+------------------------------------------------------------------ */
+
+func countdown(from: Int) -> Iter<Int>
+{
+    mut n = from
+    while n > 0
+    {
+        yield n
+        n = n - 1
+    }
+}
+
+
+func fibonacci() -> Iter<Int>           /* endless: the caller decides when to stop */
+{
+    mut a = 0
+    mut b = 1
+    while true
+    {
+        yield a
+        a, b = b, a + b
+    }
+}
+
+
+func lines_of(path: String) -> Iter<String> ! IoError
+{
+    con file = open(path) else return
+    while not file.at_end()
+    {
+        yield file.read_line() else return
+    }
+}
+
+
+func generator_demo()
+{
+    for n in countdown(3)
+    {
+        print(n)                        /* 3, 2, 1 */
+    }
+
+    for f in fibonacci().take(10)
+    {
+        print(f)                        /* 0 1 1 2 3 5 8 13 21 34 */
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    D. Chains
+
+    Question: does each step build a new list right away (eager),
+    or does nothing happen until you loop or collect (lazy)?
+------------------------------------------------------------------ */
+
+func chains()
+{
+    /* eager: every step makes a new List */
+    con names = users
+        .where((u) => u.active)
+        .map((u) => u.name)
+        .sorted()
+
+    /* lazy: steps are only run when needed, works on endless iterators */
+    con first_even_fibs = fibonacci()
+        .where((n) => n % 2 == 0)
+        .take(5)
+        .to_list()                      /* [0, 2, 8, 34, 144] */
+}
+
+
+/*
+    Questions:
+
+    Functions as values
+      - Parameter names in signatures: `type Handler = func(req: http.Request) -> ...`?
+      - Should a matching function be allowed to have extra parameters with defaults?
+
+    Iterators
+      - Generators with `yield`, an Iterator class, or both?
+      - Chains: eager (Lists), lazy (Iter), or lazy on Iter and eager on List?
+      - Names: where or filter? fold or reduce?
+      - Ranges: 0..10 and 0..=10?
+      - for i, x in list (index first, like Go)?
+*/

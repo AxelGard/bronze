@@ -1,18 +1,18 @@
 /*
-    errors.brz: errors as values, with the `or` shortcut            [decided]
+    errors.brz: errors as values, with the `else` shortcut          [decided]
 
     The idea:
       - An error is a normal value. It is RETURNED, never thrown.
       - `-> User ! DbError` means: returns a User, or fails with a DbError.
-      - The caller must deal with it, using `or`:
+      - The caller must deal with it, using `else`:
 
-            find_user(id) or return                  pass the error up
-            find_user(id) or return 404              return something else instead
-            find_user(id) or (e) return Wrap(e)      pass it up, wrapped
-            find_user(id) or User(0, "guest")        use a fallback value
-            find_user(id) or (e) { ... }             full block
-            find_user(id) or continue / break        skip in a loop
-            find_user(id) or panic("...")            crash: this must not fail
+            find_user(id) else return                  pass the error up
+            find_user(id) else return 404              return something else instead
+            find_user(id) else (e) return Wrap(e)      pass it up, wrapped
+            find_user(id) else User(0, "guest")        use a fallback value
+            find_user(id) else (e) { ... }             full block
+            find_user(id) else continue / break        skip in a loop
+            find_user(id) else panic("...")            crash: this must not fail
 
       - For full control, the Go form still works:
 
@@ -54,12 +54,12 @@ func find_user(id: Int) -> User ! DbError
 
 
 /* ------------------------------------------------------------------
-    3. Passing an error up: `or return`
+    3. Passing an error up: `else return`
 ------------------------------------------------------------------ */
 
 func get_email(id: Int) -> String ! DbError
 {
-    con user = find_user(id) or return
+    con user = find_user(id) else return
     return user.email
 }
 
@@ -67,20 +67,20 @@ func get_email(id: Int) -> String ! DbError
 /* Several in a row stays short and readable */
 func send_welcome(id: Int) -> ! Error
 {
-    con user = find_user(id) or return
-    con body = render("welcome.html", user) or return
-    mail.send(user.email, "Welcome!", body) or return
+    con user = find_user(id) else return
+    con body = render("welcome.html", user) else return
+    mail.send(user.email, "Welcome!", body) else return
 }
 
 
 /* ------------------------------------------------------------------
-    4. Adding context: `or (e) return ...`
+    4. Adding context: `else (e) return ...`
 ------------------------------------------------------------------ */
 
 func load_port(path: String) -> Int ! ConfigError
 {
-    con text = read_file(path) or (e) return ConfigError("could not read {path}", e)
-    con port = Int.parse(text) or (e) return ConfigError("{path} is not a number", e)
+    con text = read_file(path) else (e) return ConfigError("could not read {path}", e)
+    con port = Int.parse(text) else (e) return ConfigError("{path} is not a number", e)
 
     if port < 1 or port > 65535
     {
@@ -92,32 +92,32 @@ func load_port(path: String) -> Int ! ConfigError
 
 
 /* ------------------------------------------------------------------
-    5. Fallback values: `or <value>`
+    5. Fallback values: `else <value>`
 ------------------------------------------------------------------ */
 
 func display_name(id: Int) -> String
 {
-    con user = find_user(id) or User(0, "guest")
+    con user = find_user(id) else User(0, "guest")
     return user.email
 }
 
 
 func timeout_seconds() -> Int
 {
-    con text = env.get("TIMEOUT") or "30"
-    return Int.parse(text) or 30
+    con text = env.get("TIMEOUT") else "30"
+    return Int.parse(text) else 30
 }
 
 
 /* ------------------------------------------------------------------
-    6. Handling it here: `or (e) { ... }`
+    6. Handling it here: `else (e) { ... }`
 
-    The block must leave: return, break, continue or panic.
+    The block must leave: return, break, continue else panic.
 ------------------------------------------------------------------ */
 
 func status_for(id: Int) -> Int
 {
-    con user = find_user(id) or (e)
+    con user = find_user(id) else (e)
     {
         if e is NotFound
         {
@@ -156,7 +156,7 @@ func check_many(ids: List<Int>) -> List<DbError>
 
 
 /* ------------------------------------------------------------------
-    8. Loops: `or continue`, `or break`
+    8. Loops: `else continue`, `else break`
 ------------------------------------------------------------------ */
 
 func emails(ids: List<Int>) -> List<String>
@@ -165,7 +165,7 @@ func emails(ids: List<Int>) -> List<String>
 
     for id in ids
     {
-        con user = find_user(id) or continue     /* skip users that fail */
+        con user = find_user(id) else continue     /* skip users that fail */
         out.add(user.email)
     }
 
@@ -177,7 +177,7 @@ func first_valid_port(lines: List<String>) -> Int?
 {
     for line in lines
     {
-        con port = Int.parse(line) or continue
+        con port = Int.parse(line) else continue
         return port
     }
 
@@ -191,28 +191,28 @@ func first_valid_port(lines: List<String>) -> Int?
 
 func save(user: User) -> ! DbError
 {
-    db.exec("insert into users (id, email) values ($1, $2)", user.id, user.email) or return
+    db.exec("insert into users (id, email) values ($1, $2)", user.id, user.email) else return
 }
 
 
 func register(email: String) -> ! Error
 {
     con user = User(0, email)
-    save(user) or return
+    save(user) else return
     log.info("registered {email}")
 }
 
 
 /* ------------------------------------------------------------------
-    10. Startup code: `or panic`
+    10. Startup code: `else panic`
 
     When there is no sensible way to continue.
 ------------------------------------------------------------------ */
 
 func connect() -> db.Connection
 {
-    con url = env.get("DATABASE_URL") or panic("DATABASE_URL is not set")
-    return db.connect(url) or (e) panic("could not connect: {e.message}")
+    con url = env.get("DATABASE_URL") else panic("DATABASE_URL is not set")
+    return db.connect(url) else (e) panic("could not connect: {e.message}")
 }
 
 
@@ -220,12 +220,12 @@ func connect() -> db.Connection
     11. Errors and null together
 
     `User? ! DbError`: the query may fail, and if it works it may find nothing.
-    `or` handles the error, `??` and `if` handle the null.
+    `else` handles the error, `??` and `if` handle the null.
 ------------------------------------------------------------------ */
 
 func find_by_email(email: String) -> User? ! DbError
 {
-    con row = db.query_one("select id, email from users where email = $1", email) or return
+    con row = db.query_one("select id, email from users where email = $1", email) else return
 
     if row == null
     {
@@ -238,7 +238,7 @@ func find_by_email(email: String) -> User? ! DbError
 
 func greeting(email: String) -> String
 {
-    con user = find_by_email(email) or return "error"
+    con user = find_by_email(email) else return "error"
     if user == null
     {
         return "who are you?"
@@ -254,9 +254,9 @@ func greeting(email: String) -> String
 
 func get_user(req: http.Request) -> http.Response
 {
-    con id = Int.parse(req.param("id")) or return http.bad_request("id must be a number")
+    con id = Int.parse(req.param("id")) else return http.bad_request("id must be a number")
 
-    con user = find_user(id) or (e)
+    con user = find_user(id) else (e)
     {
         if e is NotFound
         {
@@ -271,7 +271,7 @@ func get_user(req: http.Request) -> http.Response
 
 func main() -> Int
 {
-    con port = load_port("config/port.txt") or (e)
+    con port = load_port("config/port.txt") else (e)
     {
         print("bad config: {e.message}")
         return 1
@@ -279,36 +279,46 @@ func main() -> Int
 
     con server = http.Server()
     server.get("/users/{id}", get_user)
-    server.listen(port) or return 1
+    server.listen(port) else return 1
 
     return 0
 }
 
 
 /* ------------------------------------------------------------------
-    13. The one thing to watch: `or` on a Bool
+    13. Two kinds of else, never in the same place
 
-    `or` is also logical or. The compiler decides by type:
-    if the left side can fail (`T ! E`), `or` handles the error.
+    `if` is a statement, so its `else` always comes after a closing `}`.
+    The error `else` always comes right after an expression.
+    And `or` stays plain logical or.
 ------------------------------------------------------------------ */
 
 func is_admin(id: Int) -> Bool ! DbError
 {
-    con user = find_user(id) or return
+    con user = find_user(id) else return
     return user.email.ends_with("@admin.com")
 }
 
 
 func can_delete(id: Int, is_owner: Bool) -> Bool
 {
-    con admin = is_admin(id) or false     /* error handling: false if the lookup fails */
-    return admin or is_owner              /* logical or: both sides are plain Bool */
+    con admin = is_admin(id) else false   /* error else: false if the lookup fails */
+
+    if admin or is_owner                  /* logical or */
+    {
+        return true
+    }
+    else                                  /* if else: after the closing brace */
+    {
+        return false
+    }
 }
+
 
 /*
     Open questions:
-      - Should `or` also replace `??` for null?   find_email(id) or "unknown"
-      - Can an `or (e) { }` block produce a fallback value, or must it always leave?
+      - Should `else` also replace `??` for null?   find_email(id) else "unknown"
+      - Can an `else (e) { }` block produce a fallback value, or must it always leave?
       - Is `-> ! Error` the right way to write "returns nothing, can fail"?
-      - Should a mixed line like `is_admin(id) or false` give a hint in the editor?
+      - Should a mixed line like `is_admin(id) else false` give a hint in the editor?
 */
