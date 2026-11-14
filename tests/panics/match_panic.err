@@ -1,0 +1,3 @@
+panic: admin mode is not allowed here
+  at level (match_panic.brz:14)
+  at main  (match_panic.brz:21)

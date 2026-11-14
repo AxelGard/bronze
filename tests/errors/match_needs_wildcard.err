@@ -1,0 +1,2 @@
+error: match on Int needs a `_` arm
+  --> match_needs_wildcard.brz:3:12

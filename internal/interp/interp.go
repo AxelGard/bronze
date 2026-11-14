@@ -12,8 +12,15 @@ import (
 )
 
 // Value is a Bronze value: int64 (Int), float64 (Float), bool (Bool),
-// string (String) or *Object (an object of a class).
+// string (String), *Object (an object of a class) or *Case (an enum case).
 type Value any
+
+// Case is one case of an enum. There is one *Case per case, so `==`
+// compares cases.
+type Case struct {
+	Enum *ast.EnumDecl
+	Name string
+}
 
 // Object is an object of a class. Objects are shared: a Value holding an
 // *Object is a reference, and `==` compares identity.
@@ -76,6 +83,7 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 		out:     out,
 		funcs:   map[string]*ast.FuncDecl{},
 		classes: map[string]*class{},
+		enums:   map[string]*enum{},
 	}
 	for _, d := range file.Decls {
 		switch d := d.(type) {
@@ -91,6 +99,15 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 				}
 			}
 			in.classes[d.Name.Name] = cls
+		case *ast.EnumDecl:
+			en := &enum{cases: map[string]*Case{}, methods: map[string]*ast.FuncDecl{}}
+			for _, c := range d.Cases {
+				en.cases[c.Name] = &Case{Enum: d, Name: c.Name}
+			}
+			for _, m := range d.Methods {
+				en.methods[m.Name.Name] = m
+			}
+			in.enums[d.Name.Name] = en
 		}
 	}
 
@@ -113,7 +130,13 @@ type interp struct {
 	out     *bufio.Writer
 	funcs   map[string]*ast.FuncDecl
 	classes map[string]*class
+	enums   map[string]*enum
 	stack   []*frame
+}
+
+type enum struct {
+	cases   map[string]*Case
+	methods map[string]*ast.FuncDecl
 }
 
 type class struct {
@@ -125,7 +148,7 @@ type class struct {
 type frame struct {
 	name string // `add`, or `Counter.increment` for a method
 	line int    // the line being run
-	this *Object
+	this Value  // in a method: the object or enum case
 }
 
 type env struct {
@@ -167,7 +190,7 @@ func (in *interp) fail(span diag.Span, format string, args ...any) {
 // Calls
 
 // enter pushes a frame for a call made at span at.
-func (in *interp) enter(name string, line int, this *Object, at diag.Span) {
+func (in *interp) enter(name string, line int, this Value, at diag.Span) {
 	if len(in.stack) > 0 {
 		in.stack[len(in.stack)-1].line = at.Start.Line
 	}
@@ -180,7 +203,7 @@ func (in *interp) enter(name string, line int, this *Object, at diag.Span) {
 func (in *interp) leave() { in.stack = in.stack[:len(in.stack)-1] }
 
 // call calls a function, or a method when this is not nil.
-func (in *interp) call(name string, fn *ast.FuncDecl, this *Object, args []Value, at diag.Span) Value {
+func (in *interp) call(name string, fn *ast.FuncDecl, this Value, args []Value, at diag.Span) Value {
 	in.enter(name, fn.Name.Sp.Start.Line, this, at)
 	result := in.body(fn, args)
 	in.leave()
@@ -246,6 +269,9 @@ func (in *interp) stmt(s ast.Stmt, e *env) (bool, Value) {
 			obj.Fields[t.Name.Name] = in.expr(s.Value, e)
 		}
 	case *ast.ExprStmt:
+		if m, ok := s.X.(*ast.Match); ok {
+			return in.matchStmt(m, e)
+		}
 		in.expr(s.X, e)
 	case *ast.If:
 		if in.expr(s.Cond, e).(bool) {
@@ -296,7 +322,14 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 	case *ast.This:
 		return in.stack[len(in.stack)-1].this
 	case *ast.Member:
+		if id, ok := x.X.(*ast.Ident); ok {
+			if en, ok := in.enums[id.Name]; ok {
+				return en.cases[x.Name.Name]
+			}
+		}
 		return in.expr(x.X, e).(*Object).Fields[x.Name.Name]
+	case *ast.Match:
+		return in.match(x, e)
 	case *ast.Unary:
 		v := in.expr(x.X, e)
 		switch x.Op {
@@ -400,11 +433,19 @@ func (in *interp) args(x *ast.Call, e *env) []Value {
 
 func (in *interp) callExpr(x *ast.Call, e *env) Value {
 	if m, ok := x.Fn.(*ast.Member); ok {
-		obj := in.expr(m.X, e).(*Object)
+		recv := in.expr(m.X, e)
 		args := in.args(x, e)
-		cls := in.classes[obj.Class.Name.Name]
-		fn := cls.methods[m.Name.Name]
-		return in.call(obj.Class.Name.Name+"."+fn.Name.Name, fn, obj, args, x.Sp)
+		var typeName string
+		var fn *ast.FuncDecl
+		switch recv := recv.(type) {
+		case *Object:
+			typeName = recv.Class.Name.Name
+			fn = in.classes[typeName].methods[m.Name.Name]
+		case *Case:
+			typeName = recv.Enum.Name.Name
+			fn = in.enums[typeName].methods[m.Name.Name]
+		}
+		return in.call(typeName+"."+fn.Name.Name, fn, recv, args, x.Sp)
 	}
 	name := x.Fn.(*ast.Ident).Name
 	args := in.args(x, e)
@@ -432,4 +473,50 @@ func (in *interp) callExpr(x *ast.Call, e *env) Value {
 		return nil
 	}
 	panic("interp: unknown function " + name)
+}
+
+func (in *interp) match(m *ast.Match, e *env) Value {
+	v := in.expr(m.X, e)
+	for _, arm := range m.Arms {
+		if in.matches(arm.Pattern, v) {
+			return in.expr(arm.Value, e)
+		}
+	}
+	panic("interp: no match arm for " + Format(v)) // the checker ensures one matches
+}
+
+// matchStmt runs a match statement. A block arm can return from the
+// function.
+func (in *interp) matchStmt(m *ast.Match, e *env) (bool, Value) {
+	v := in.expr(m.X, e)
+	for _, arm := range m.Arms {
+		if !in.matches(arm.Pattern, v) {
+			continue
+		}
+		if arm.Body != nil {
+			return in.block(arm.Body, e)
+		}
+		if inner, ok := arm.Value.(*ast.Match); ok {
+			return in.matchStmt(inner, e)
+		}
+		in.expr(arm.Value, e)
+		return false, nil
+	}
+	panic("interp: no match arm for " + Format(v))
+}
+
+func (in *interp) matches(p *ast.Pattern, v Value) bool {
+	switch p.Kind {
+	case ast.PatAny:
+		return true
+	case ast.PatInt:
+		return v == Value(p.Int)
+	case ast.PatString:
+		return v == Value(p.Str)
+	case ast.PatBool:
+		return v == Value(p.Bool)
+	case ast.PatCase:
+		return v == Value(in.enums[p.Enum.Name].cases[p.Case.Name])
+	}
+	panic("interp: unknown pattern")
 }

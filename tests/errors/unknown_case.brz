@@ -1,0 +1,11 @@
+enum Color
+{
+    Red
+    Green
+}
+
+func main() -> Int
+{
+    print(Color.Blue)
+    return 0
+}

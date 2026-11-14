@@ -80,6 +80,15 @@ type Field struct {
 	Sp    diag.Span
 }
 
+// EnumDecl is `enum Name { cases and methods }`.
+type EnumDecl struct {
+	Name    *Ident
+	Cases   []*Ident
+	Methods []*FuncDecl
+	Bad     bool // some member had a syntax error
+	Sp      diag.Span
+}
+
 // BadDecl is a declaration with a syntax error.
 type BadDecl struct {
 	Name *Ident // the declared name, if it could be read
@@ -89,6 +98,7 @@ type BadDecl struct {
 func (d *FuncDecl) Span() diag.Span  { return d.Sp }
 func (d *BadDecl) Span() diag.Span   { return d.Sp }
 func (d *ClassDecl) Span() diag.Span { return d.Sp }
+func (d *EnumDecl) Span() diag.Span  { return d.Sp }
 func (f *Field) Span() diag.Span     { return f.Sp }
 func (p *Param) Span() diag.Span     { return p.Sp }
 func (t *TypeExpr) Span() diag.Span  { return t.Sp }
@@ -96,6 +106,7 @@ func (t *TypeExpr) Span() diag.Span  { return t.Sp }
 func (*FuncDecl) declNode()  {}
 func (*BadDecl) declNode()   {}
 func (*ClassDecl) declNode() {}
+func (*EnumDecl) declNode()  {}
 
 // ---------------------------------------------------------------------
 // Statements
@@ -230,6 +241,44 @@ type This struct {
 	Sp diag.Span
 }
 
+// Match is `match x { pattern => value ... }`.
+type Match struct {
+	X    Expr
+	Arms []*Arm
+	Bad  bool // some arm had a syntax error
+	Sp   diag.Span
+}
+
+// Arm is `pattern => value`, or `pattern => { block }` when the match is a
+// statement. Exactly one of Value and Body is set.
+type Arm struct {
+	Pattern *Pattern
+	Value   Expr
+	Body    *Block
+}
+
+// PatternKind is the kind of a match pattern.
+type PatternKind int
+
+const (
+	PatInt    PatternKind = iota // 42, -1
+	PatString                    // "text"
+	PatBool                      // true, false
+	PatCase                      // Enum.Case
+	PatAny                       // _
+)
+
+// Pattern is a match pattern.
+type Pattern struct {
+	Kind PatternKind
+	Int  int64
+	Str  string
+	Bool bool
+	Enum *Ident // for PatCase
+	Case *Ident // for PatCase
+	Sp   diag.Span
+}
+
 // Call is `fn(args)`.
 type Call struct {
 	Fn   Expr
@@ -258,6 +307,8 @@ func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
 func (e *Call) Span() diag.Span      { return e.Sp }
 func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
 func (e *This) Span() diag.Span      { return e.Sp }
+func (e *Match) Span() diag.Span     { return e.Sp }
+func (p *Pattern) Span() diag.Span   { return p.Sp }
 func (e *Paren) Span() diag.Span     { return e.Sp }
 func (e *BadExpr) Span() diag.Span   { return e.Sp }
 
@@ -271,5 +322,6 @@ func (*Binary) exprNode()    {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}
 func (*This) exprNode()      {}
+func (*Match) exprNode()     {}
 func (*Paren) exprNode()     {}
 func (*BadExpr) exprNode()   {}

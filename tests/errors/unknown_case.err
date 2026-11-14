@@ -1,0 +1,2 @@
+error: `Color` has no case `Blue`
+  --> unknown_case.brz:9:17

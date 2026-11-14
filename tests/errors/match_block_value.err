@@ -1,0 +1,2 @@
+error: a `{ }` arm has no value
+  --> match_block_value.brz:6:9

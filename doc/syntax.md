@@ -184,6 +184,21 @@ con size = match n
 }
 ```
 
+`match` can also be a **statement**, when only its effects matter. Then an arm can be a block, and a block can `return`:
+
+```
+match status
+{
+    Status.Pending =>
+    {
+        print("still waiting")
+        return
+    }
+    Status.Cancelled => refund(order)
+    _ => { }
+}
+```
+
 ## Top-level declarations
 
 Only **`con`** is allowed outside functions. There is no global `mut`.

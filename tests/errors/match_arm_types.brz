@@ -1,0 +1,14 @@
+func describe(n: Int) -> String
+{
+    return match n
+    {
+        0 => "zero"
+        _ => n
+    }
+}
+
+func main() -> Int
+{
+    print(describe(0))
+    return 0
+}

@@ -120,6 +120,23 @@ func TestErrors(t *testing.T) {
 			[]string{"3:17 functions that can fail are not supported yet", "10:10 `is` is not supported yet"},
 		},
 		{
+			"enum members",
+			"enum A\n{\n    Red Green\n    con x = 1\n    Blue\n}",
+			[]string{
+				"3:9 expected the end of the case, found `Green`",
+				"4:5 expected a case or a method (`func`), found `con`",
+			},
+		},
+		{
+			"match arms",
+			"func f() -> Int\n{\n    return match x\n    {\n        y => 1\n        1.5 => 2\n        1 2\n        _ => 3\n    }\n}",
+			[]string{
+				"5:9 `y` is not a pattern",
+				"6:9 Float values can't be used as patterns",
+				"7:11 expected `=>` after the pattern, found `2`",
+			},
+		},
+		{
 			"assign to call",
 			"func f()\n{\n    g() = 1\n}",
 			[]string{"3:5 cannot assign to this expression"},
@@ -136,8 +153,8 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			"not yet",
-			"enum A {}\nclass B use Error {}\nfunc f()\n{\n    con a = null\n}",
-			[]string{"1:1 enums are not supported yet", "2:9 `use Error` is not supported yet", "5:13 `null` is not supported yet"},
+			"class B use Error {}\nfunc f()\n{\n    con a = null\n}",
+			[]string{"1:9 `use Error` is not supported yet", "4:13 `null` is not supported yet"},
 		},
 	}
 	for _, tt := range tests {
@@ -186,6 +203,51 @@ func TestClass(t *testing.T) {
 	}
 	if got := body(t, "c.add(1).total = c.items.count"); got != "(block (= (. (call (. c add) 1) total) (. (. c items) count)))" {
 		t.Errorf("members: %s", got)
+	}
+}
+
+func TestEnumAndMatch(t *testing.T) {
+	src := `enum Status
+{
+    Active
+    Frozen
+
+    func label() -> String
+    {
+        return match this
+        {
+            Status.Active => "active"
+            Status.Frozen => "frozen"
+        }
+    }
+}
+`
+	f, diags := parse(t, src)
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := `(enum Status Active Frozen (func label -> String (block (return (match this (Status.Active => "active") (Status.Frozen => "frozen"))))))`
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	got := body(t, "print(match n { 0 => \"zero\"\n -1 => \"minus one\"\n \"a\" => \"\"\n true => \"\"\n _ => \"many\" })")
+	want = `(block (call print (match n (0 => "zero") (-1 => "minus one") ("a" => "") (true => "") (_ => "many"))))`
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	got = body(t, "match s\n{\n    Suit.Hearts =>\n    {\n        print(1)\n    }\n    _ => { }\n}")
+	want = `(block (match s (Suit.Hearts => (block (call print 1))) (_ => (block))))`
+	if got != want {
+		t.Errorf("match statement:\ngot\n%s\nwant\n%s", got, want)
+	}
+
+	// the match keeps the arms that parsed
+	f, _ = parse(t, "func f() -> Int\n{\n    return match x\n    {\n        1 => 1\n        oops => 2\n        _ => 3\n    }\n}")
+	m := f.Decls[0].(*ast.FuncDecl).Body.Stmts[0].(*ast.Return).Value.(*ast.Match)
+	if !m.Bad || len(m.Arms) != 2 {
+		t.Errorf("bad %v, %d arms", m.Bad, len(m.Arms))
 	}
 }
 

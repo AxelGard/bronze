@@ -1,0 +1,2 @@
+error: `Size.Small` is already matched
+  --> match_duplicate.brz:13:9

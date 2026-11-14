@@ -68,6 +68,7 @@ stmt        = var_decl
             | if_stmt
             | while_stmt
             | return_stmt
+            | match_expr                            // a match statement: its value is not used
             | expr                                  // must be a call, or a call with an error else
 
 var_decl    = ( "con" | "mut" ) IDENT [ ":" type ] "=" expr
@@ -95,7 +96,8 @@ args        = expr { "," expr }
 primary     = INT | FLOAT | STRING | "true" | "false" | "null" | "this"
             | IDENT | "(" expr ")" | match_expr
 
-match_expr  = "match" expr "{" { NEWLINE } { pattern "=>" expr NEWLINE { NEWLINE } } "}"
+match_expr  = "match" expr "{" { NEWLINE } { arm NEWLINE { NEWLINE } } "}"
+arm         = pattern "=>" ( expr | block )         // a block only in a match statement
 pattern     = INT | "-" INT | STRING | "true" | "false" | IDENT "." IDENT | "_"
 ```
 
@@ -163,7 +165,7 @@ A function without `->` returns nothing ("no value"). Its result can't be used i
 |---|---|---|
 | `print` | `print(x)`, exactly one argument of type `Int`, `Float`, `Bool`, `String` or an enum | prints `x` and a newline |
 | `Float` | `Float(Int) -> Float` | conversion |
-| `String` | `String(Int)`, `String(Float)`, `String(Bool)` `-> String` | conversion, the same text `print` would show |
+| `String` | `String(Int)`, `String(Float)`, `String(Bool)`, `String(E)` for an enum `E` `-> String` | conversion, the same text `print` would show (for an enum, the case name) |
 | `Error` | `Error(String) -> Error` | makes an error with that message |
 | `panic` | `panic(String)` | stops the program (see Panics). It never returns, so it is allowed wherever a value is expected. |
 | `assert` | `assert(Bool, String)` | panics with "assertion failed: MESSAGE" if false |
@@ -172,7 +174,7 @@ A function without `->` returns nothing ("no value"). Its result can't be used i
 
 ### Returns
 
-- A function with `-> T`, `-> T?` or `-> T ! E` must return on **every path**. "Every path" is checked simply: the last statement of the body is a `return`, a `panic(...)` call, or an `if` with an `else` where every branch ends that way. A `while` never counts. Otherwise: "missing return".
+- A function with `-> T`, `-> T?` or `-> T ! E` must return on **every path**. "Every path" is checked simply: the last statement of the body is a `return`, a `panic(...)` call, an `if` with an `else` where every branch ends that way, or a match statement where every arm ends that way. A `while` never counts. Otherwise: "missing return".
 - Functions returning nothing, or `! E`, may fall off the end.
 - `return expr` in a function without a value type is an error, unless `expr` is an error and the function is `! E`. A bare `return` in a function that returns a value is an error.
 
@@ -259,6 +261,26 @@ con fee = match status
 - **Exhaustiveness:** on an enum, every case must be listed, or there must be a `_`. On `Bool`, both `true` and `false`, or `_`. On `Int` and `String`, a `_` is required.
 - A duplicate pattern, or an arm after `_`, is an error.
 - An arm's value may be `panic(...)`.
+
+### match as a statement
+
+(**0.1 choice**) A `match` can also stand on its own as a statement. Its value is not used, so its arms are **calls or blocks**, and they don't need to have the same type. A `return` in a block arm returns from the function.
+
+```
+match suit
+{
+    Suit.Hearts =>
+    {
+        print("red")
+        return "hearts"
+    }
+    Suit.Diamonds => print("red")
+    _ => { }
+}
+```
+
+- It must cover every case, like any `match`: write `_ => { }` to ignore the rest.
+- A block arm has no value, so it is an error in a `match` whose value is used.
 
 ## Errors
 

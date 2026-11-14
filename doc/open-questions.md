@@ -7,6 +7,7 @@ What we still need to decide. When something is settled, it moves into the other
 - Can block comments nest? (0.1.0 says no.)
 - Shadowing: is declaring a name that exists in an outer scope allowed? (0.1.0 says no.)
 - `Int(Float)`: how does it round?
+- Exit codes outside 0–255: `main` returns an `Int`, but the OS keeps only the low 8 bits (`return 300` exits with 44, `return -1` with 255). Panic, clamp, or just document it? (0.1.0 passes the value to the OS as is.)
 
 ## Syntax
 - Naming conventions, and how strictly they are enforced

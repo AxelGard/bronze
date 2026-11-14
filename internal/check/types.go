@@ -87,3 +87,21 @@ type Field struct {
 	typ   Type // nil until the initial value is checked
 	state int  // 0: not checked, 1: being checked, 2: done
 }
+
+// Enum is an enum type. Its values are its cases.
+type Enum struct {
+	Name    string
+	Decl    *ast.EnumDecl
+	Cases   map[string]int // case name to its position
+	Methods map[string]*funcSig
+}
+
+func (e *Enum) String() string { return e.Name }
+
+// someCase returns the name of the first case, for examples in messages.
+func (e *Enum) someCase() string {
+	if len(e.Decl.Cases) == 0 {
+		return "Case"
+	}
+	return e.Decl.Cases[0].Name
+}

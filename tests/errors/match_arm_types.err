@@ -1,0 +1,2 @@
+error: this arm is Int, but the arms before it are String
+  --> match_arm_types.brz:6:14

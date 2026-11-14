@@ -14,10 +14,9 @@ import (
 // pending lists golden tests that need features not implemented yet. They
 // are skipped; remove them from here as the features land.
 var pending = map[string]string{
-	"run/bank":                  "classes, enums, errors, null",
-	"errors/match_missing_case": "enums and match",
-	"errors/maybe_null":         "null",
-	"errors/unhandled_error":    "errors",
+	"run/bank":               "classes, enums, errors, null",
+	"errors/maybe_null":      "null",
+	"errors/unhandled_error": "errors",
 }
 
 func TestRun(t *testing.T) {
@@ -100,4 +99,18 @@ func read(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return string(b)
+}
+
+// TestExamplesInSync checks that the golden copies of the 0.1.0 target
+// programs are the same as the examples.
+func TestExamplesInSync(t *testing.T) {
+	for copy, example := range map[string]string{
+		"run/core.brz":    "../examples/core.brz",
+		"run/counter.brz": "../examples/projects/counter.brz",
+		"run/bank.brz":    "../examples/projects/bank.brz",
+	} {
+		if read(t, copy) != read(t, example) {
+			t.Errorf("tests/%s is not the same as %s", copy, strings.TrimPrefix(example, "../"))
+		}
+	}
 }

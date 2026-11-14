@@ -68,6 +68,14 @@ func (p *parser) failHere(format string, args ...any) {
 	p.fail(p.tok().Span, format, args...)
 }
 
+// failNote is failHere with a note.
+func (p *parser) failNote(note, format string, args ...any) {
+	if !p.at(lexer.ILLEGAL) {
+		p.diags.Errorf(p.tok().Span, format, args...).Notes = []string{note}
+	}
+	panic(bailout{})
+}
+
 func (p *parser) expect(k lexer.Kind) lexer.Token {
 	if !p.at(k) {
 		p.failHere("expected %s, found %s", k, describe(p.tok()))
@@ -152,7 +160,9 @@ func (p *parser) decl() (d ast.Decl) {
 		p.endOfLine("declaration")
 		return c
 	case lexer.ENUM:
-		p.notYet(p.tok().Span, "enums are")
+		e := p.enumDecl()
+		p.endOfLine("declaration")
+		return e
 	}
 	p.failHere("expected `func`, `class` or `enum`, found %s", describe(p.tok()))
 	return nil
@@ -252,6 +262,52 @@ func (p *parser) member(c *ast.ClassDecl) {
 		p.failHere("expected a field (`con` or `mut`) or a method (`func`), found %s", describe(p.tok()))
 	}
 	p.endOfLine("member")
+}
+
+func (p *parser) enumDecl() *ast.EnumDecl {
+	start := p.expect(lexer.ENUM).Span
+	e := &ast.EnumDecl{Name: p.ident()}
+	p.skipNewlines()
+	p.expect(lexer.LBRACE)
+	p.skipNewlines()
+	for !p.at(lexer.RBRACE) {
+		if p.at(lexer.EOF) {
+			p.diags.Errorf(p.tok().Span, "expected `}`, found end of file").Notes = []string{
+				fmt.Sprintf("the enum starts at line %d", start.Start.Line),
+			}
+			e.Bad = true
+			e.Sp = start.To(p.tok().Span)
+			return e
+		}
+		p.enumMember(e)
+		p.skipNewlines()
+	}
+	e.Sp = start.To(p.advance().Span)
+	return e
+}
+
+// enumMember parses one case or method into e, recovering like member.
+func (p *parser) enumMember(e *ast.EnumDecl) {
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(bailout); !ok {
+				panic(r)
+			}
+			e.Bad = true
+			p.syncStmt()
+		}
+	}()
+	switch p.kind() {
+	case lexer.IDENT, lexer.RESERVED:
+		e.Cases = append(e.Cases, p.ident())
+		p.endOfLine("case")
+	case lexer.FUNC:
+		e.Methods = append(e.Methods, p.funcDecl())
+		p.endOfLine("method")
+	default:
+		p.failNote("cases are written one per line, as plain names",
+			"expected a case or a method (`func`), found %s", describe(p.tok()))
+	}
 }
 
 func (p *parser) field() *ast.Field {
@@ -427,18 +483,20 @@ func (p *parser) simpleStmt() ast.Stmt {
 		p.advance()
 		switch x.(type) {
 		case *ast.Ident, *ast.Member:
+		case *ast.This:
+			p.fail(x.Span(), "cannot assign to `this`")
 		default:
 			p.fail(x.Span(), "cannot assign to this expression")
 		}
 		v := p.expr()
 		return &ast.Assign{Target: x, Value: v, Sp: x.Span().To(v.Span())}
 	}
-	if _, ok := x.(*ast.Call); !ok {
-		if _, bad := x.(*ast.BadExpr); !bad {
-			d := p.diags.Errorf(x.Span(), "this expression is not used")
-			d.Notes = []string{"only a call can be used as a statement"}
-			panic(bailout{})
-		}
+	switch x.(type) {
+	case *ast.Call, *ast.Match, *ast.BadExpr:
+	default:
+		d := p.diags.Errorf(x.Span(), "this expression is not used")
+		d.Notes = []string{"only a call or a match can be used as a statement"}
+		panic(bailout{})
 	}
 	return &ast.ExprStmt{X: x}
 }
@@ -598,6 +656,91 @@ func (p *parser) postfix() ast.Expr {
 	}
 }
 
+func (p *parser) match() *ast.Match {
+	start := p.expect(lexer.MATCH).Span
+	m := &ast.Match{X: p.expr()}
+	p.skipNewlines()
+	p.expect(lexer.LBRACE)
+	p.skipNewlines()
+	for !p.at(lexer.RBRACE) {
+		if p.at(lexer.EOF) {
+			p.fail(p.tok().Span, "expected `}` to end the match that starts at line %d, found end of file", start.Start.Line)
+		}
+		p.arm(m)
+		p.skipNewlines()
+	}
+	m.Sp = start.To(p.advance().Span)
+	return m
+}
+
+// arm parses `pattern => value` into m. On a syntax error it skips to the
+// next arm and marks the match as bad.
+func (p *parser) arm(m *ast.Match) {
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(bailout); !ok {
+				panic(r)
+			}
+			m.Bad = true
+			p.syncStmt()
+		}
+	}()
+	pat := p.pattern()
+	if !p.at(lexer.FATARR) {
+		p.failHere("expected `=>` after the pattern, found %s", describe(p.tok()))
+	}
+	p.advance()
+	arm := &ast.Arm{Pattern: pat}
+	if p.at(lexer.LBRACE) {
+		arm.Body = p.block()
+	} else {
+		arm.Value = p.expr()
+	}
+	m.Arms = append(m.Arms, arm)
+	p.endOfLine("arm")
+}
+
+func (p *parser) pattern() *ast.Pattern {
+	t := p.tok()
+	switch t.Kind {
+	case lexer.INT:
+		p.advance()
+		return &ast.Pattern{Kind: ast.PatInt, Int: t.Int, Sp: t.Span}
+	case lexer.MINUS:
+		p.advance()
+		n := p.tok()
+		if n.Kind != lexer.INT {
+			p.failHere("expected a number after `-` in a pattern, found %s", describe(n))
+		}
+		p.advance()
+		return &ast.Pattern{Kind: ast.PatInt, Int: -n.Int, Sp: t.Span.To(n.Span)}
+	case lexer.STRING:
+		p.advance()
+		return &ast.Pattern{Kind: ast.PatString, Str: t.Str, Sp: t.Span}
+	case lexer.TRUE, lexer.FALSE:
+		p.advance()
+		return &ast.Pattern{Kind: ast.PatBool, Bool: t.Kind == lexer.TRUE, Sp: t.Span}
+	case lexer.IDENT:
+		p.advance()
+		if t.Text == "_" {
+			return &ast.Pattern{Kind: ast.PatAny, Sp: t.Span}
+		}
+		if p.at(lexer.DOT) {
+			p.advance()
+			c := p.ident()
+			return &ast.Pattern{Kind: ast.PatCase, Enum: &ast.Ident{Name: t.Text, Sp: t.Span}, Case: c, Sp: t.Span.To(c.Sp)}
+		}
+		p.diags.Errorf(t.Span, "`%s` is not a pattern", t.Text).Notes = []string{patternNote}
+		panic(bailout{})
+	case lexer.FLOAT:
+		p.fail(t.Span, "Float values can't be used as patterns")
+	}
+	p.failNote(patternNote, "expected a pattern, found %s", describe(t))
+	return nil
+}
+
+const patternNote = "a pattern is an Int, String or Bool literal, a case like `Color.Red`, or `_`"
+
 // closeParen reports a missing `)`. Newlines don't end statements inside
 // ( ), so if the next token is on a later line, the `(` was most likely
 // never closed: point at it.
@@ -639,7 +782,7 @@ func (p *parser) primary() ast.Expr {
 		p.advance()
 		return &ast.This{Sp: t.Span}
 	case lexer.MATCH:
-		p.notYet(t.Span, "`match` is")
+		return p.match()
 	}
 	p.failHere("expected an expression, found %s", describe(t))
 	return nil

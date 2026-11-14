@@ -1,0 +1,99 @@
+// enums with methods, and match on enums, Int, String and Bool
+
+enum Suit
+{
+    Hearts
+    Diamonds
+    Clubs
+    Spades
+
+    func color() -> String
+    {
+        return match this
+        {
+            Suit.Hearts => "red"
+            Suit.Diamonds => "red"
+            _ => "black"
+        }
+    }
+
+    func is_red() -> Bool
+    {
+        return this.color() == "red"
+    }
+}
+
+
+class Card
+{
+    con rank = 0
+    con suit = Suit.Spades
+
+    func init(rank: Int, suit: Suit)
+    {
+        this.rank = rank
+        this.suit = suit
+    }
+
+    func name() -> String
+    {
+        con rank = match this.rank
+        {
+            1 => "ace"
+            11 => "jack"
+            12 => "queen"
+            13 => "king"
+            _ => String(this.rank)
+        }
+        return rank + " of " + match this.suit
+        {
+            Suit.Hearts => "hearts"
+            Suit.Diamonds => "diamonds"
+            Suit.Clubs => "clubs"
+            Suit.Spades => "spades"
+        }
+    }
+}
+
+
+func points(word: String) -> Int
+{
+    return match word
+    {
+        "ace" => 11
+        "king" => 4
+        _ => 0
+    }
+}
+
+
+func yes_no(b: Bool) -> String
+{
+    return match b
+    {
+        true => "yes"
+        false => "no"
+    }
+}
+
+
+func main() -> Int
+{
+    con a = Card(1, Suit.Hearts)
+    con b = Card(12, Suit.Clubs)
+    con c = Card(7, Suit.Diamonds)
+
+    print(a.name())
+    print(b.name())
+    print(c.name())
+
+    print(a.suit)
+    print(b.suit.color())
+    print(yes_no(c.suit.is_red()))
+    print(a.suit == c.suit)
+    print(a.suit != Suit.Hearts)
+
+    print(points("ace") + points("king") + points("two"))
+
+    return 0
+}

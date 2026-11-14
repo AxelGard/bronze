@@ -1,0 +1,51 @@
+// match as a statement: arms are calls or blocks, and a block can return
+
+enum Suit
+{
+    Hearts
+    Diamonds
+    Clubs
+    Spades
+}
+
+
+func describe(suit: Suit) -> String
+{
+    match suit
+    {
+        Suit.Hearts =>
+        {
+            print("red, and the best one")
+            return "hearts"
+        }
+        Suit.Diamonds => print("red")
+        _ => { }
+    }
+    return "suit: " + String(suit)
+}
+
+
+func main() -> Int
+{
+    print(describe(Suit.Hearts))
+    print(describe(Suit.Diamonds))
+    print(describe(Suit.Spades))
+
+    mut i = 0
+    while i < 3
+    {
+        match i
+        {
+            0 => print("zero")
+            1 =>
+            {
+                con twice = i * 2
+                print("one, twice is " + String(twice))
+            }
+            _ => print("more")
+        }
+        i = i + 1
+    }
+
+    return 0
+}

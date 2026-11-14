@@ -1,0 +1,21 @@
+enum Size
+{
+    Small
+    Large
+}
+
+func price(size: Size) -> Int
+{
+    return match size
+    {
+        Size.Small => 10
+        Size.Large => 20
+        Size.Small => 15
+    }
+}
+
+func main() -> Int
+{
+    print(price(Size.Small))
+    return 0
+}

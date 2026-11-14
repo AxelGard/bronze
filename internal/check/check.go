@@ -20,6 +20,7 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 		info:    &Info{Types: map[ast.Expr]Type{}},
 		funcs:   map[string]*funcSig{},
 		classes: map[string]*Class{},
+		enums:   map[string]*Enum{},
 		broken:  map[string]bool{},
 	}
 	c.collect(file)
@@ -42,6 +43,16 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 			for _, sig := range c.methodsInOrder(cls) {
 				c.funcBody(sig)
 			}
+		case *ast.EnumDecl:
+			en := c.enums[d.Name.Name]
+			if en == nil || en.Decl != d {
+				continue
+			}
+			for _, m := range d.Methods {
+				if sig := en.Methods[m.Name.Name]; sig != nil && sig.decl == m {
+					c.funcBody(sig)
+				}
+			}
 		}
 	}
 	return c.info, c.diags
@@ -53,6 +64,7 @@ type checker struct {
 	info    *Info
 	funcs   map[string]*funcSig
 	classes map[string]*Class
+	enums   map[string]*Enum
 	broken  map[string]bool // names of declarations with syntax errors
 
 	fn    *funcSig // the function being checked; nil in a field's value
@@ -64,7 +76,8 @@ type funcSig struct {
 	decl   *ast.FuncDecl
 	params []Type
 	result Type   // NoValue if the function has no `->`
-	class  *Class // for methods: the class of `this`
+	class  *Class // for methods of a class: the class of `this`
+	enum   *Enum  // for methods of an enum: the enum of `this`
 	isInit bool
 	line   int // where it is declared
 }
@@ -125,12 +138,15 @@ func (c *checker) collect(file *ast.File) {
 	declared := map[string]*ast.Ident{}
 	var funcs []*ast.FuncDecl
 	var classes []*ast.ClassDecl
+	var enums []*ast.EnumDecl
 	for _, d := range file.Decls {
 		var name *ast.Ident
 		switch d := d.(type) {
 		case *ast.FuncDecl:
 			name = d.Name
 		case *ast.ClassDecl:
+			name = d.Name
+		case *ast.EnumDecl:
 			name = d.Name
 		case *ast.BadDecl:
 			if d.Name != nil {
@@ -163,6 +179,14 @@ func (c *checker) collect(file *ast.File) {
 				Methods: map[string]*funcSig{},
 				Inits:   map[int]*funcSig{},
 			}
+		case *ast.EnumDecl:
+			enums = append(enums, d)
+			c.enums[name.Name] = &Enum{
+				Name:    name.Name,
+				Decl:    d,
+				Cases:   map[string]int{},
+				Methods: map[string]*funcSig{},
+			}
 		}
 	}
 
@@ -171,6 +195,9 @@ func (c *checker) collect(file *ast.File) {
 	}
 	for _, d := range classes {
 		c.classMembers(c.classes[d.Name.Name])
+	}
+	for _, d := range enums {
+		c.enumMembers(c.enums[d.Name.Name])
 	}
 
 	main, ok := c.funcs["main"]
@@ -258,6 +285,41 @@ func (c *checker) classMembers(cls *Class) {
 	}
 }
 
+// enumMembers records the cases and methods of an enum.
+func (c *checker) enumMembers(en *Enum) {
+	d := en.Decl
+	for i, cs := range d.Cases {
+		if prev, ok := en.Cases[cs.Name]; ok {
+			c.errorf(cs.Sp, "`%s` already has a case `%s`", en.Name, cs.Name).Notes = []string{
+				fmt.Sprintf("the first one is at line %d", d.Cases[prev].Sp.Start.Line),
+			}
+			continue
+		}
+		en.Cases[cs.Name] = i
+	}
+	for _, m := range d.Methods {
+		name := m.Name.Name
+		if name == "init" {
+			d := c.errorf(m.Name.Sp, "an enum can't have an `init`")
+			d.Notes = []string{fmt.Sprintf("its values are its cases, like `%s.%s`", en.Name, en.someCase())}
+			continue
+		}
+		if _, ok := en.Cases[name]; ok {
+			c.errorf(m.Name.Sp, "`%s` already has a case `%s`; a method can't have the same name", en.Name, name)
+			continue
+		}
+		if prev, ok := en.Methods[name]; ok {
+			c.errorf(m.Name.Sp, "`%s` already has a method `%s`", en.Name, name).Notes = []string{
+				fmt.Sprintf("the first one is at line %d", prev.line),
+			}
+			continue
+		}
+		sig := c.signature(m, nil)
+		sig.enum = en
+		en.Methods[name] = sig
+	}
+}
+
 // methodsInOrder returns the methods and inits of a class declared in its
 // body, in source order.
 func (c *checker) methodsInOrder(cls *Class) []*funcSig {
@@ -315,6 +377,9 @@ func (c *checker) resolveType(t *ast.TypeExpr) Type {
 	if cls, ok := c.classes[t.Name.Name]; ok {
 		return cls
 	}
+	if en, ok := c.enums[t.Name.Name]; ok {
+		return en
+	}
 	if t.Name.Name == "Error" {
 		c.errorf(t.Sp, "the `Error` type is not supported yet")
 		return Invalid
@@ -368,6 +433,11 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 		d.Notes = []string{fmt.Sprintf("the class is declared at line %d", cls.Decl.Name.Sp.Start.Line)}
 		return
 	}
+	if en, ok := c.enums[n]; ok {
+		d := c.errorf(name.Sp, "`%s` is already the name of an enum", n)
+		d.Notes = []string{fmt.Sprintf("the enum is declared at line %d", en.Decl.Name.Sp.Start.Line)}
+		return
+	}
 	if builtinFuncs[n] || builtinTypes[n] != nil {
 		c.errorf(name.Sp, "`%s` is a built-in name and can't be used for a variable", n)
 		return
@@ -383,6 +453,9 @@ func terminates(s ast.Stmt) bool {
 	case *ast.Return:
 		return true
 	case *ast.ExprStmt:
+		if m, ok := s.X.(*ast.Match); ok {
+			return matchTerminates(m)
+		}
 		return isPanicCall(s.X)
 	case *ast.Block:
 		return len(s.Stmts) > 0 && terminates(s.Stmts[len(s.Stmts)-1])
@@ -392,6 +465,25 @@ func terminates(s ast.Stmt) bool {
 		return true
 	}
 	return false
+}
+
+// matchTerminates reports whether every arm of a match statement leaves
+// the function. A match always covers every case, so then it always leaves.
+func matchTerminates(m *ast.Match) bool {
+	if len(m.Arms) == 0 {
+		return false
+	}
+	for _, a := range m.Arms {
+		switch {
+		case a.Body != nil:
+			if !terminates(a.Body) {
+				return false
+			}
+		case !terminates(&ast.ExprStmt{X: a.Value}):
+			return false
+		}
+	}
+	return true
 }
 
 func isPanicCall(e ast.Expr) bool {
@@ -421,10 +513,26 @@ func hasSyntaxError(fn *ast.FuncDecl) bool {
 			}
 		case *ast.While:
 			walkStmt(s.Body)
+		case *ast.ExprStmt:
+			if m, ok := s.X.(*ast.Match); ok {
+				walkMatch(m, walkStmt)
+			}
 		}
 	}
 	walkStmt(fn.Body)
 	return found
+}
+
+// walkMatch walks the block arms of a match statement, and nested match
+// statements.
+func walkMatch(m *ast.Match, walkStmt func(ast.Stmt)) {
+	for _, a := range m.Arms {
+		if a.Body != nil {
+			walkStmt(a.Body)
+		} else if inner, ok := a.Value.(*ast.Match); ok {
+			walkMatch(inner, walkStmt)
+		}
+	}
 }
 
 func plural(n int, word string) string {
@@ -495,7 +603,11 @@ func (c *checker) stmt(s ast.Stmt) {
 		c.returnStmt(s)
 
 	case *ast.ExprStmt:
-		c.expr(s.X)
+		if m, ok := s.X.(*ast.Match); ok {
+			c.matchStmt(m)
+		} else {
+			c.expr(s.X)
+		}
 
 	case *ast.Block:
 		c.block(s)

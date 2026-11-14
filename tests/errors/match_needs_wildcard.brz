@@ -1,0 +1,14 @@
+func name(n: Int) -> String
+{
+    return match n
+    {
+        1 => "one"
+        2 => "two"
+    }
+}
+
+func main() -> Int
+{
+    print(name(1))
+    return 0
+}

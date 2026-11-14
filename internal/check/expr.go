@@ -58,6 +58,8 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return c.binary(e)
 	case *ast.Call:
 		return c.call(e)
+	case *ast.Match:
+		return c.match(e)
 	case *ast.BadExpr:
 		return Invalid
 	}
@@ -76,6 +78,11 @@ func (c *checker) ident(e *ast.Ident) Type {
 	if _, ok := c.classes[e.Name]; ok {
 		d := c.errorf(e.Sp, "`%s` is a class, not a value", e.Name)
 		d.Help = []string{fmt.Sprintf("to create an object, write `%s(...)`", e.Name)}
+		return Invalid
+	}
+	if en, ok := c.enums[e.Name]; ok {
+		d := c.errorf(e.Sp, "`%s` is an enum, not a value", e.Name)
+		d.Help = []string{fmt.Sprintf("use one of its cases, like `%s.%s`", en.Name, en.someCase())}
 		return Invalid
 	}
 	if builtinTypes[e.Name] != nil {
@@ -101,6 +108,8 @@ func (c *checker) this(e *ast.This) Type {
 	case c.fn == nil:
 		c.errorf(e.Sp, "`this` can't be used in the initial value of a field")
 		return Invalid
+	case c.fn.enum != nil:
+		return c.fn.enum
 	case c.fn.class == nil:
 		c.errorf(e.Sp, "`this` can only be used inside methods")
 		return Invalid
@@ -135,11 +144,40 @@ func (c *checker) fieldOf(m *ast.Member) (*Field, *Class) {
 }
 
 func (c *checker) member(m *ast.Member) Type {
+	if en := c.enumName(m.X); en != nil {
+		return c.enumCase(m, en)
+	}
 	f, _ := c.fieldOf(m)
 	if f == nil {
 		return Invalid
 	}
 	return c.fieldType(f)
+}
+
+// enumName returns the enum that x names, if x is the name of an enum.
+func (c *checker) enumName(x ast.Expr) *Enum {
+	id, ok := x.(*ast.Ident)
+	if !ok || c.scope.lookup(id.Name) != nil {
+		return nil
+	}
+	return c.enums[id.Name]
+}
+
+// enumCase checks `Enum.Case`.
+func (c *checker) enumCase(m *ast.Member, en *Enum) Type {
+	name := m.Name.Name
+	if _, ok := en.Cases[name]; ok {
+		return en
+	}
+	switch {
+	case en.Decl.Bad:
+	case en.Methods[name] != nil:
+		d := c.errorf(m.Name.Sp, "`%s` is a method of each `%s` case, not a case", name, en.Name)
+		d.Help = []string{fmt.Sprintf("call it on a case, like `%s.%s.%s()`", en.Name, en.someCase(), name)}
+	default:
+		c.errorf(m.Name.Sp, "`%s` has no case `%s`", en.Name, name)
+	}
+	return Invalid
 }
 
 func (c *checker) unary(e *ast.Unary) Type {
@@ -310,6 +348,12 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 	if cls, ok := c.classes[id.Name]; ok {
 		return c.construct(e, cls)
 	}
+	if en, ok := c.enums[id.Name]; ok {
+		c.args(e)
+		d := c.errorf(id.Sp, "`%s` is an enum, and can't be called", id.Name)
+		d.Help = []string{fmt.Sprintf("use one of its cases, like `%s.%s`", en.Name, en.someCase())}
+		return Invalid
+	}
 	if builtinFuncs[id.Name] {
 		return c.builtin(e, id.Name)
 	}
@@ -318,7 +362,8 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 		return Invalid
 	}
 	d := c.errorf(id.Sp, "unknown function `%s`", id.Name)
-	if c.fn != nil && c.fn.class != nil && c.fn.class.Methods[id.Name] != nil {
+	if c.fn != nil && (c.fn.class != nil && c.fn.class.Methods[id.Name] != nil ||
+		c.fn.enum != nil && c.fn.enum.Methods[id.Name] != nil) {
 		d.Help = []string{fmt.Sprintf("to call the method, write `this.%s(...)`", id.Name)}
 	}
 	return Invalid
@@ -350,6 +395,18 @@ func (c *checker) construct(e *ast.Call, cls *Class) Type {
 func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	t := c.value(m.X)
 	types := c.args(e)
+	name := m.Name.Name
+	if en, ok := t.(*Enum); ok {
+		sig := en.Methods[name]
+		if sig == nil {
+			if !en.Decl.Bad {
+				c.errorf(m.Name.Sp, "`%s` has no method `%s`", en.Name, name)
+			}
+			return Invalid
+		}
+		c.checkArgs(e, name, sig, types)
+		return sig.result
+	}
 	cls, ok := t.(*Class)
 	if !ok {
 		if !silent(t) {
@@ -357,7 +414,6 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		}
 		return Invalid
 	}
-	name := m.Name.Name
 	sig := cls.Methods[name]
 	if sig == nil {
 		switch {
@@ -422,6 +478,8 @@ func (sig *funcSig) declNote() string {
 		return fmt.Sprintf("its `init` is declared at line %d", sig.line)
 	case sig.class != nil:
 		return fmt.Sprintf("`%s.%s` is declared at line %d", sig.class.Name, sig.name, sig.line)
+	case sig.enum != nil:
+		return fmt.Sprintf("`%s.%s` is declared at line %d", sig.enum.Name, sig.name, sig.line)
 	}
 	return fmt.Sprintf("`%s` is declared at line %d", sig.name, sig.line)
 }
@@ -453,6 +511,7 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 		case *Class:
 			d := c.errorf(e.Args[0].Span(), "cannot print an object of class %s", t)
 			d.Help = []string{"print its fields instead"}
+		case *Enum:
 		default:
 			if !silent(t) && t != Int && t != Float && t != Bool && t != String {
 				c.errorf(e.Args[0].Span(), "cannot print a value of type %s", t)
@@ -471,10 +530,11 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 			c.arityError(e, name, 1, nil)
 			return String
 		}
+		_, isEnum := types[0].(*Enum)
 		switch t := types[0]; {
 		case t == String:
 			c.errorf(e.Args[0].Span(), "this is already a String")
-		case t != Int && t != Float && t != Bool && !silent(t):
+		case t != Int && t != Float && t != Bool && !isEnum && !silent(t):
 			c.errorf(e.Args[0].Span(), "cannot convert %s to String", t)
 		}
 		return String

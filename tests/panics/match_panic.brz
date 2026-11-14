@@ -1,0 +1,23 @@
+enum Mode
+{
+    Read
+    Write
+    Admin
+}
+
+func level(mode: Mode) -> Int
+{
+    return match mode
+    {
+        Mode.Read => 1
+        Mode.Write => 2
+        Mode.Admin => panic("admin mode is not allowed here")
+    }
+}
+
+func main() -> Int
+{
+    print(level(Mode.Write))
+    print(level(Mode.Admin))
+    return 0
+}

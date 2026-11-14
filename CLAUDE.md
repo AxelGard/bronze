@@ -22,7 +22,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 
 ## Current state
 
-Implementation of 0.1.0 is under way. Work-order steps 1–8 of `doc/milestones.md` are done: the pipeline, and simple classes (fields, methods, `this`, several `init`s, objects shared by reference). `core.brz` and `counter.brz` run. The parser reports "... not supported yet" for enums, `match`, `null`, `is`, `?` types, `use Error`, `! E` and the `else` handlers. Next: step 9 (enums and `match`), then errors and null (`bank.brz`). Golden tests that need those features are listed in `pending` in `tests/golden_test.go`; remove them as features land.
+Implementation of 0.1.0 is under way. Work-order steps 1–9 of `doc/milestones.md` are done: the pipeline, simple classes, and enums with `match`. `core.brz` and `counter.brz` run. The parser reports "... not supported yet" for `null`, `is`, `?` types, `use Error`, `! E` and the `else` handlers. Next: step 10 (errors and the error `else`), then step 11 (null; `bank.brz` runs). Golden tests that need those features are listed in `pending` in `tests/golden_test.go`; remove them as features land.
 
 ## Commands
 

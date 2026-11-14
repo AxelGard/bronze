@@ -299,3 +299,121 @@ func main() -> Int
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }
+
+const light = `enum Light
+{
+    Red
+    Yellow
+    Green
+
+    func next() -> Light
+    {
+        return match this
+        {
+            Light.Red => Light.Green
+            Light.Green => Light.Yellow
+            Light.Yellow => Light.Red
+        }
+    }
+
+    func stop() -> Bool
+    {
+        return this == Light.Red or this == Light.Yellow
+    }
+}
+
+class Crossing
+{
+    mut light = Light.Red
+}
+`
+
+func TestEnumsAndMatch(t *testing.T) {
+	tests := []struct{ body, want string }{
+		{"print(Light.Yellow)", "Yellow\n"},
+		{"print(Light.Red.next().next())", "Yellow\n"},
+		{"con l = Light.Green\n    print(l == Light.Green)\n    print(l != Light.Green)\n    print(l.stop())", "true\nfalse\nfalse\n"},
+		{"con c = Crossing()\n    c.light = c.light.next()\n    print(c.light)", "Green\n"},
+		// patterns of each kind, first match wins
+		{"print(match -1 { -1 => \"minus\"\n _ => \"other\" })", "minus\n"},
+		{"print(match \"b\" { \"a\" => 1\n \"b\" => 2\n _ => 3 })", "2\n"},
+		{"print(match 1 < 2 { true => \"yes\"\n false => \"no\" })", "yes\n"},
+		{"print(match 7 { 1 => \"one\"\n _ => \"any\" })", "any\n"},
+		// only the chosen arm is evaluated
+		{"print(match Light.Red { Light.Red => 1\n _ => panic(\"not this\") })", "1\n"},
+	}
+	for _, tt := range tests {
+		out, _, p := run(t, light+"func main() -> Int\n{\n    "+tt.body+"\n    return 0\n}\n")
+		if p != nil {
+			t.Fatalf("%s: panic: %s", tt.body, p.Message)
+		}
+		if out != tt.want {
+			t.Errorf("%s:\ngot\n%s\nwant\n%s", tt.body, out, tt.want)
+		}
+	}
+}
+
+func TestEnumMethodTrace(t *testing.T) {
+	src := `enum Coin
+{
+    Heads
+    Tails
+
+    func flip() -> Coin
+    {
+        return match this
+        {
+            Coin.Heads => Coin.Tails
+            Coin.Tails => panic("no more flips")
+        }
+    }
+}
+
+func main() -> Int
+{
+    print(Coin.Heads.flip().flip())
+    return 0
+}
+`
+	_, _, p := run(t, src)
+	if p == nil {
+		t.Fatal("no panic")
+	}
+	want := "panic: no more flips\n  at Coin.flip (t.brz:11)\n  at main      (t.brz:18)\n"
+	if got := trace(p); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestMatchStatement(t *testing.T) {
+	src := light + `func check(l: Light) -> String
+{
+    match l
+    {
+        Light.Red =>
+        {
+            print("stop")
+            return "red"
+        }
+        Light.Yellow => print("slow")
+        _ => { }
+    }
+    return String(l)
+}
+
+func main() -> Int
+{
+    print(check(Light.Red))
+    print(check(Light.Yellow))
+    print(check(Light.Green))
+    return 0
+}
+`
+	out, _, p := run(t, src)
+	if p != nil {
+		t.Fatal(p.Message)
+	}
+	if want := "stop\nred\nslow\nYellow\nGreen\n"; out != want {
+		t.Errorf("got\n%s\nwant\n%s", out, want)
+	}
+}

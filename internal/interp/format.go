@@ -17,6 +17,8 @@ func Format(v Value) string {
 		return strconv.FormatBool(v)
 	case string:
 		return v
+	case *Case:
+		return v.Name
 	}
 	panic("interp: cannot format value")
 }

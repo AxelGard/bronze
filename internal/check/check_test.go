@@ -248,6 +248,151 @@ func TestClassErrors(t *testing.T) {
 	}
 }
 
+const statusEnum = `enum Status
+{
+    Active
+    Frozen
+    Closed
+
+    func label() -> String
+    {
+        return match this
+        {
+            Status.Active => "active"
+            Status.Frozen => "frozen"
+            Status.Closed => "closed"
+        }
+    }
+
+    func is_open() -> Bool
+    {
+        return this != Status.Closed
+    }
+}
+`
+
+// relErrors checks prefix+src and returns errors with line numbers
+// counted within src.
+func relErrors(t *testing.T, prefix, src string) []string {
+	t.Helper()
+	offset := strings.Count(prefix, "\n")
+	var got []string
+	for _, e := range errors(t, prefix+src+mainFunc) {
+		var line int
+		fmt.Sscanf(e, "%d:", &line)
+		got = append(got, fmt.Sprint(line-offset)+e[strings.Index(e, ":"):])
+	}
+	return got
+}
+
+func TestEnums(t *testing.T) {
+	ok := []string{
+		"func f(s: Status) -> String\n{\n    print(s)\n    print(Status.Active.label())\n    return s.label()\n}",
+		"func f(s: Status) -> Int\n{\n    if s == Status.Frozen and s.is_open()\n    {\n        return 1\n    }\n    return match s\n    {\n        Status.Active => 0\n        _ => panic(\"no\")\n    }\n}",
+		"class Account\n{\n    mut status = Status.Active\n}\nfunc f(a: Account)\n{\n    a.status = Status.Closed\n}",
+		"func f(n: Int) -> String\n{\n    return match n\n    {\n        0 => \"zero\"\n        -1 => \"minus one\"\n        _ => \"other\"\n    }\n}",
+		"func f(b: Bool, s: String) -> Int\n{\n    con x = match b\n    {\n        true => 1\n        false => 2\n    }\n    return x + match s\n    {\n        \"a\" => 1\n        _ => 0\n    }\n}",
+		"func f(s: Status) -> Int\n{\n    return match s\n    {\n        Status.Active => panic(\"a\")\n        Status.Frozen => 1\n        Status.Closed => panic(\"c\")\n    }\n}",
+		"func f(s: Status) -> String\n{\n    return \"is \" + String(s)\n}",
+		// match statements
+		"func f(s: Status)\n{\n    match s\n    {\n        Status.Active => print(1)\n        Status.Frozen =>\n        {\n            con x = 2\n            print(x)\n        }\n        _ => { }\n    }\n}",
+		"func f(s: Status) -> Int\n{\n    match s\n    {\n        Status.Active => { return 1 }\n        _ => panic(\"no\")\n    }\n}",
+		"func f(s: Status, n: Int)\n{\n    match s\n    {\n        Status.Active => match n\n        {\n            1 => print(1)\n            _ => { }\n        }\n        _ => { }\n    }\n}",
+	}
+	for _, src := range ok {
+		if errs := relErrors(t, statusEnum, src); len(errs) > 0 {
+			t.Errorf("%q:\n%s", src, strings.Join(errs, "\n"))
+		}
+	}
+}
+
+func TestEnumErrors(t *testing.T) {
+	tests := []struct {
+		name, src string
+		want      []string
+	}{
+		{"unknown case", "func f() -> Status\n{\n    return Status.Open\n}",
+			[]string{"3:19 `Status` has no case `Open`"}},
+		{"method as case", "func f() -> String\n{\n    return Status.label\n}",
+			[]string{"3:19 `label` is a method of each `Status` case, not a case"}},
+		{"enum as value", "func f()\n{\n    con s = Status\n}",
+			[]string{"3:13 `Status` is an enum, not a value"}},
+		{"enum called", "func f()\n{\n    con s = Status()\n}",
+			[]string{"3:13 `Status` is an enum, and can't be called"}},
+		{"unknown method", "func f(s: Status)\n{\n    s.close()\n}",
+			[]string{"3:7 `Status` has no method `close`"}},
+		{"no fields", "func f(s: Status) -> Int\n{\n    return s.count\n}",
+			[]string{"3:14 Status has no fields"}},
+		{"ordering", "func f(s: Status) -> Bool\n{\n    return s < Status.Active\n}",
+			[]string{"3:12 cannot compare Status values with `<`"}},
+		{"duplicate case", "enum Two\n{\n    A\n    A\n}",
+			[]string{"4:5 `Two` already has a case `A`"}},
+		{"enum init", "enum Two\n{\n    A\n    func init()\n    {\n    }\n}",
+			[]string{"4:10 an enum can't have an `init`"}},
+		{"shadow enum", "func f()\n{\n    con Status = 1\n}",
+			[]string{"3:9 `Status` is already the name of an enum"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := relErrors(t, statusEnum, tt.src)
+			if strings.Join(got, "\n") != strings.Join(tt.want, "\n") {
+				t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
+			}
+		})
+	}
+}
+
+func TestMatchErrors(t *testing.T) {
+	m := func(x, arms string) string {
+		return "func f(s: Status, n: Int, b: Bool, x: Float) -> Int\n{\n    return match " + x + "\n    {\n" + arms + "    }\n}"
+	}
+	tests := []struct {
+		name, src string
+		want      []string
+	}{
+		{"missing cases", m("s", "        Status.Active => 1\n"),
+			[]string{"3:12 match does not cover `Status.Frozen` and `Status.Closed`"}},
+		{"missing false", m("b", "        true => 1\n"),
+			[]string{"3:12 match does not cover `false`"}},
+		{"int needs wildcard", m("n", "        1 => 1\n        2 => 2\n"),
+			[]string{"3:12 match on Int needs a `_` arm"}},
+		{"duplicate", m("n", "        1 => 1\n        1 => 2\n        _ => 3\n"),
+			[]string{"6:9 `1` is already matched"}},
+		{"after wildcard", m("n", "        _ => 1\n        2 => 2\n"),
+			[]string{"6:9 this arm is never used"}},
+		{"wrong pattern type", m("n", "        \"a\" => 1\n        _ => 2\n"),
+			[]string{"5:9 the pattern `\"a\"` is String, but the matched value is Int"}},
+		{"wrong enum", "enum Other\n{\n    X\n}\n" + m("s", "        Other.X => 1\n        _ => 2\n"),
+			[]string{"9:9 the pattern `Other.X` is Other, but the matched value is Status"}},
+		{"unknown enum", m("s", "        Nope.X => 1\n        _ => 2\n"),
+			[]string{"5:9 unknown enum `Nope`"}},
+		{"unknown case pattern", m("s", "        Status.Open => 1\n        _ => 2\n"),
+			[]string{"5:16 `Status` has no case `Open`"}},
+		{"arm types", m("n", "        1 => 1\n        _ => \"many\"\n"),
+			[]string{"6:14 this arm is String, but the arms before it are Int"}},
+		{"float", m("x", "        _ => 1\n"),
+			[]string{"3:18 cannot match on Float"}},
+		{"block arm with value used", m("n", "        1 => { print(1) }\n        _ => 2\n"),
+			[]string{"5:14 a `{ }` arm has no value"}},
+		{"statement arm value", "func f(n: Int)\n{\n    match n\n    {\n        1 => 5\n        _ => { }\n    }\n}",
+			[]string{"5:14 the value of this arm is not used"}},
+		{"statement must cover", "func f(s: Status)\n{\n    match s\n    {\n        Status.Active => { }\n    }\n}",
+			[]string{"3:5 match does not cover `Status.Frozen` and `Status.Closed`"}},
+		{"statement missing return", "func f(s: Status) -> Int\n{\n    match s\n    {\n        Status.Active => { return 1 }\n        _ => { print(2) }\n    }\n}",
+			[]string{"8:1 missing return at the end of `f`"}},
+		{"match type", "func f(n: Int) -> String\n{\n    return match n\n    {\n        _ => 1\n    }\n}",
+			[]string{"3:12 `f` returns String, but this is Int"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := relErrors(t, statusEnum, tt.src)
+			if strings.Join(got, "\n") != strings.Join(tt.want, "\n") {
+				t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
+			}
+		})
+	}
+}
+
 func TestMainFunc(t *testing.T) {
 	if got := errors(t, "func f()\n{\n}"); len(got) != 1 || got[0] != "1:1 the program has no `main` function" {
 		t.Errorf("no main: %v", got)

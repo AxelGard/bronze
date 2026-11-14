@@ -58,6 +58,16 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(' ')
 		dump(b, n.Value)
 		b.WriteByte(')')
+	case *EnumDecl:
+		fmt.Fprintf(b, "(enum %s", n.Name.Name)
+		for _, c := range n.Cases {
+			fmt.Fprintf(b, " %s", c.Name)
+		}
+		for _, m := range n.Methods {
+			b.WriteByte(' ')
+			dump(b, m)
+		}
+		b.WriteByte(')')
 	case *BadDecl:
 		b.WriteString("(bad-decl)")
 	case *Block:
@@ -146,6 +156,34 @@ func dump(b *strings.Builder, n Node) {
 		fmt.Fprintf(b, " %s)", n.Name.Name)
 	case *This:
 		b.WriteString("this")
+	case *Match:
+		b.WriteString("(match ")
+		dump(b, n.X)
+		for _, a := range n.Arms {
+			b.WriteString(" (")
+			dump(b, a.Pattern)
+			b.WriteString(" => ")
+			if a.Body != nil {
+				dump(b, a.Body)
+			} else {
+				dump(b, a.Value)
+			}
+			b.WriteByte(')')
+		}
+		b.WriteByte(')')
+	case *Pattern:
+		switch n.Kind {
+		case PatInt:
+			b.WriteString(strconv.FormatInt(n.Int, 10))
+		case PatString:
+			b.WriteString(strconv.Quote(n.Str))
+		case PatBool:
+			b.WriteString(strconv.FormatBool(n.Bool))
+		case PatCase:
+			fmt.Fprintf(b, "%s.%s", n.Enum.Name, n.Case.Name)
+		case PatAny:
+			b.WriteByte('_')
+		}
 	case *Paren:
 		b.WriteString("(paren ")
 		dump(b, n.X)
