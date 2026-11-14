@@ -1,0 +1,18 @@
+class Point
+{
+    mut x = 0
+    mut y = 0
+
+    func init(x: Int, y: Int)
+    {
+        this.x = x
+        this.y = y
+    }
+}
+
+func main() -> Int
+{
+    con p = Point(1)
+    print(p.x)
+    return 0
+}

@@ -5,7 +5,6 @@ import (
 
 	"github.com/AxelGard/bronze/internal/ast"
 	"github.com/AxelGard/bronze/internal/diag"
-	"github.com/AxelGard/bronze/internal/lexer"
 )
 
 // Info is what the checker learned about the program.
@@ -17,37 +16,57 @@ type Info struct {
 // functions with syntax errors are not checked, to avoid follow-up errors.
 func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 	c := &checker{
-		src:   src,
-		info:  &Info{Types: map[ast.Expr]Type{}},
-		funcs: map[string]*funcSig{},
+		src:     src,
+		info:    &Info{Types: map[ast.Expr]Type{}},
+		funcs:   map[string]*funcSig{},
+		classes: map[string]*Class{},
+		broken:  map[string]bool{},
 	}
 	c.collect(file)
 	for _, d := range file.Decls {
-		fn, ok := d.(*ast.FuncDecl)
-		if !ok {
-			continue
-		}
-		if sig := c.funcs[fn.Name.Name]; sig != nil && sig.decl == fn && !hasSyntaxError(fn) {
-			c.funcBody(sig)
+		switch d := d.(type) {
+		case *ast.FuncDecl:
+			if sig := c.funcs[d.Name.Name]; sig != nil && sig.decl == d {
+				c.funcBody(sig)
+			}
+		case *ast.ClassDecl:
+			cls := c.classes[d.Name.Name]
+			if cls == nil || cls.Decl != d {
+				continue
+			}
+			for _, f := range d.Fields {
+				if fd := cls.Fields[f.Name.Name]; fd != nil && fd.Decl == f {
+					c.fieldType(fd)
+				}
+			}
+			for _, sig := range c.methodsInOrder(cls) {
+				c.funcBody(sig)
+			}
 		}
 	}
 	return c.info, c.diags
 }
 
 type checker struct {
-	src   *diag.Source
-	diags diag.List
-	info  *Info
-	funcs map[string]*funcSig
+	src     *diag.Source
+	diags   diag.List
+	info    *Info
+	funcs   map[string]*funcSig
+	classes map[string]*Class
+	broken  map[string]bool // names of declarations with syntax errors
 
-	fn    *funcSig // the function being checked
+	fn    *funcSig // the function being checked; nil in a field's value
 	scope *scope
 }
 
 type funcSig struct {
+	name   string // `add`, or `init` / `describe` for methods
 	decl   *ast.FuncDecl
 	params []Type
-	result Type // NoValue if the function has no `->`
+	result Type   // NoValue if the function has no `->`
+	class  *Class // for methods: the class of `this`
+	isInit bool
+	line   int // where it is declared
 }
 
 // VarKind is how a variable was declared.
@@ -99,33 +118,59 @@ func (c *checker) text(n ast.Node) string {
 // ---------------------------------------------------------------------
 // Declarations
 
-// collect records every top-level declaration, so they can be used before
-// they are declared.
+// collect records every top-level declaration and its signature, so they
+// can be used before they are declared.
 func (c *checker) collect(file *ast.File) {
+	// Names first, so that types can refer to any class.
+	declared := map[string]*ast.Ident{}
+	var funcs []*ast.FuncDecl
+	var classes []*ast.ClassDecl
 	for _, d := range file.Decls {
-		fn, ok := d.(*ast.FuncDecl)
-		if !ok {
+		var name *ast.Ident
+		switch d := d.(type) {
+		case *ast.FuncDecl:
+			name = d.Name
+		case *ast.ClassDecl:
+			name = d.Name
+		case *ast.BadDecl:
+			if d.Name != nil {
+				c.broken[d.Name.Name] = true
+			}
+			continue
+		default:
 			continue
 		}
-		name := fn.Name.Name
-		if prev, ok := c.funcs[name]; ok {
-			c.errorf(fn.Name.Sp, "`%s` is declared twice", name).Notes = []string{
-				fmt.Sprintf("the first declaration is at line %d", prev.decl.Name.Sp.Start.Line),
+		if prev, ok := declared[name.Name]; ok {
+			c.errorf(name.Sp, "`%s` is declared twice", name.Name).Notes = []string{
+				fmt.Sprintf("the first declaration is at line %d", prev.Sp.Start.Line),
 			}
 			continue
 		}
-		if builtinFuncs[name] || builtinTypes[name] != nil {
-			c.errorf(fn.Name.Sp, "`%s` is a built-in name and can't be declared again", name)
+		if builtinFuncs[name.Name] || builtinTypes[name.Name] != nil {
+			c.errorf(name.Sp, "`%s` is a built-in name and can't be declared again", name.Name)
 			continue
 		}
-		sig := &funcSig{decl: fn, result: NoValue}
-		for _, p := range fn.Params {
-			sig.params = append(sig.params, c.resolveType(p.Type))
+		declared[name.Name] = name
+		switch d := d.(type) {
+		case *ast.FuncDecl:
+			funcs = append(funcs, d)
+		case *ast.ClassDecl:
+			classes = append(classes, d)
+			c.classes[name.Name] = &Class{
+				Name:    name.Name,
+				Decl:    d,
+				Fields:  map[string]*Field{},
+				Methods: map[string]*funcSig{},
+				Inits:   map[int]*funcSig{},
+			}
 		}
-		if fn.Result != nil {
-			sig.result = c.resolveType(fn.Result)
-		}
-		c.funcs[name] = sig
+	}
+
+	for _, fn := range funcs {
+		c.funcs[fn.Name.Name] = c.signature(fn, nil)
+	}
+	for _, d := range classes {
+		c.classMembers(c.classes[d.Name.Name])
 	}
 
 	main, ok := c.funcs["main"]
@@ -139,12 +184,142 @@ func (c *checker) collect(file *ast.File) {
 	}
 }
 
+// signature resolves the parameter and result types of a function or method.
+func (c *checker) signature(fn *ast.FuncDecl, class *Class) *funcSig {
+	sig := &funcSig{name: fn.Name.Name, decl: fn, result: NoValue, class: class, line: fn.Name.Sp.Start.Line}
+	sig.isInit = class != nil && fn.Name.Name == "init"
+	seen := map[string]bool{}
+	for _, p := range fn.Params {
+		if seen[p.Name.Name] {
+			c.errorf(p.Name.Sp, "parameter `%s` is declared twice", p.Name.Name)
+		}
+		seen[p.Name.Name] = true
+		sig.params = append(sig.params, c.resolveType(p.Type))
+	}
+	if fn.Result != nil {
+		t := c.resolveType(fn.Result)
+		switch {
+		case !sig.isInit:
+			sig.result = t
+		case t != class && t != Invalid:
+			d := c.errorf(fn.Result.Sp, "`init` returns the new `%s`, so its return type can only be `%s`", class.Name, class.Name)
+			d.Help = []string{"remove the return type"}
+		}
+	}
+	return sig
+}
+
+// classMembers records the fields, methods and inits of a class. The types
+// of fields are found later, from their initial values.
+func (c *checker) classMembers(cls *Class) {
+	d := cls.Decl
+	for _, f := range d.Fields {
+		if prev, ok := cls.Fields[f.Name.Name]; ok {
+			c.errorf(f.Name.Sp, "`%s` already has a field `%s`", cls.Name, f.Name.Name).Notes = []string{
+				fmt.Sprintf("the first one is at line %d", prev.Decl.Name.Sp.Start.Line),
+			}
+			continue
+		}
+		cls.Fields[f.Name.Name] = &Field{Name: f.Name.Name, Mut: f.Mut, Decl: f}
+	}
+	for _, m := range d.Methods {
+		name := m.Name.Name
+		sig := c.signature(m, cls)
+		if f, ok := cls.Fields[name]; ok {
+			c.errorf(m.Name.Sp, "`%s` already has a field `%s`", cls.Name, name).Notes = []string{
+				fmt.Sprintf("the field is at line %d; a method can't have the same name", f.Decl.Name.Sp.Start.Line),
+			}
+			continue
+		}
+		if sig.isInit {
+			if prev, ok := cls.Inits[len(sig.params)]; ok {
+				d := c.errorf(m.Name.Sp, "`%s` already has an `init` with %s", cls.Name, plural(len(sig.params), "parameter"))
+				d.Notes = []string{
+					fmt.Sprintf("the other one is at line %d", prev.line),
+					"several `init`s must have different numbers of parameters",
+				}
+				continue
+			}
+			cls.Inits[len(sig.params)] = sig
+			continue
+		}
+		if prev, ok := cls.Methods[name]; ok {
+			c.errorf(m.Name.Sp, "`%s` already has a method `%s`", cls.Name, name).Notes = []string{
+				fmt.Sprintf("the first one is at line %d", prev.line),
+				"only `init` can be declared several times",
+			}
+			continue
+		}
+		cls.Methods[name] = sig
+	}
+	if len(cls.Inits) == 0 {
+		// A class without an init gets an empty one.
+		cls.Inits[0] = &funcSig{name: "init", result: NoValue, class: cls, isInit: true, line: d.Name.Sp.Start.Line}
+	}
+}
+
+// methodsInOrder returns the methods and inits of a class declared in its
+// body, in source order.
+func (c *checker) methodsInOrder(cls *Class) []*funcSig {
+	var sigs []*funcSig
+	for _, m := range cls.Decl.Methods {
+		if sig := cls.Methods[m.Name.Name]; sig != nil && sig.decl == m {
+			sigs = append(sigs, sig)
+		}
+		if sig := cls.Inits[len(m.Params)]; sig != nil && sig.decl == m {
+			sigs = append(sigs, sig)
+		}
+	}
+	return sigs
+}
+
+// fieldType returns the type of a field, checking its initial value the
+// first time.
+func (c *checker) fieldType(f *Field) Type {
+	switch f.state {
+	case 2:
+		return f.typ
+	case 1:
+		// The initial value depends on the field itself.
+		c.errorf(f.Decl.Name.Sp, "the type of field `%s` depends on itself", f.Name).Help = []string{
+			fmt.Sprintf("write its type: `%s: Type = ...`", f.Name),
+		}
+		f.typ, f.state = Invalid, 2
+		return Invalid
+	}
+	f.state = 1
+	saveFn, saveScope := c.fn, c.scope
+	c.fn, c.scope = nil, &scope{vars: map[string]*variable{}}
+	t := c.value(f.Decl.Value)
+	if f.Decl.Type != nil {
+		want := c.resolveType(f.Decl.Type)
+		if !assignable(t, want) {
+			c.errorf(f.Decl.Value.Span(), "field `%s` is declared as %s, but the value is %s", f.Name, want, t)
+		}
+		t = want
+	}
+	if t == Never {
+		t = Invalid
+	}
+	c.fn, c.scope = saveFn, saveScope
+	if f.state == 1 {
+		f.typ, f.state = t, 2
+	}
+	return f.typ
+}
+
 func (c *checker) resolveType(t *ast.TypeExpr) Type {
 	if bt, ok := builtinTypes[t.Name.Name]; ok {
 		return bt
 	}
+	if cls, ok := c.classes[t.Name.Name]; ok {
+		return cls
+	}
 	if t.Name.Name == "Error" {
 		c.errorf(t.Sp, "the `Error` type is not supported yet")
+		return Invalid
+	}
+	if c.broken[t.Name.Name] {
 		return Invalid
 	}
 	c.errorf(t.Sp, "unknown type `%s`", t.Name.Name)
@@ -152,6 +327,9 @@ func (c *checker) resolveType(t *ast.TypeExpr) Type {
 }
 
 func (c *checker) funcBody(sig *funcSig) {
+	if hasSyntaxError(sig.decl) {
+		return
+	}
 	c.fn = sig
 	c.scope = &scope{vars: map[string]*variable{}}
 	for i, p := range sig.decl.Params {
@@ -159,15 +337,15 @@ func (c *checker) funcBody(sig *funcSig) {
 	}
 	c.blockStmts(sig.decl.Body)
 	if sig.result != NoValue && !terminates(sig.decl.Body) {
-		d := c.errorf(sig.decl.Body.Rbrace, "missing return at the end of `%s`", sig.decl.Name.Name)
-		d.Notes = []string{fmt.Sprintf("`%s` returns %s, so every path must end with `return`", sig.decl.Name.Name, sig.result)}
+		d := c.errorf(sig.decl.Body.Rbrace, "missing return at the end of `%s`", sig.name)
+		d.Notes = []string{fmt.Sprintf("`%s` returns %s, so every path must end with `return`", sig.name, sig.result)}
 	}
 	c.fn, c.scope = nil, nil
 }
 
 // declare adds a variable to the current scope. Names must not hide
 // anything: not a variable in this or an outer scope, a parameter, a
-// function or a built-in.
+// function, a class or a built-in.
 func (c *checker) declare(name *ast.Ident, v *variable) {
 	n := name.Name
 	if prev := c.scope.lookup(n); prev != nil {
@@ -182,7 +360,12 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 	}
 	if f, ok := c.funcs[n]; ok {
 		d := c.errorf(name.Sp, "`%s` is already the name of a function", n)
-		d.Notes = []string{fmt.Sprintf("the function is declared at line %d", f.decl.Name.Sp.Start.Line)}
+		d.Notes = []string{fmt.Sprintf("the function is declared at line %d", f.line)}
+		return
+	}
+	if cls, ok := c.classes[n]; ok {
+		d := c.errorf(name.Sp, "`%s` is already the name of a class", n)
+		d.Notes = []string{fmt.Sprintf("the class is declared at line %d", cls.Decl.Name.Sp.Start.Line)}
 		return
 	}
 	if builtinFuncs[n] || builtinTypes[n] != nil {
@@ -244,6 +427,13 @@ func hasSyntaxError(fn *ast.FuncDecl) bool {
 	return found
 }
 
+func plural(n int, word string) string {
+	if n == 1 {
+		return fmt.Sprintf("1 %s", word)
+	}
+	return fmt.Sprintf("%d %ss", n, word)
+}
+
 // ---------------------------------------------------------------------
 // Statements
 
@@ -280,7 +470,12 @@ func (c *checker) stmt(s ast.Stmt) {
 		c.declare(s.Name, &variable{kind: kind, typ: t, decl: s.Name.Sp})
 
 	case *ast.Assign:
-		c.assign(s)
+		switch target := s.Target.(type) {
+		case *ast.Ident:
+			c.assignVar(target, s.Value)
+		case *ast.Member:
+			c.assignField(target, s.Value)
+		}
 
 	case *ast.If:
 		c.cond(s.Cond)
@@ -309,17 +504,23 @@ func (c *checker) stmt(s ast.Stmt) {
 	}
 }
 
-func (c *checker) assign(s *ast.Assign) {
-	id := s.Target.(*ast.Ident)
-	t := c.value(s.Value)
+func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
+	t := c.value(value)
 	v := c.scope.lookup(id.Name)
 	if v == nil {
-		if _, ok := c.funcs[id.Name]; ok {
+		switch {
+		case c.funcs[id.Name] != nil:
 			c.errorf(id.Sp, "cannot assign to `%s`: it is a function", id.Name)
-			return
+		case c.classes[id.Name] != nil:
+			c.errorf(id.Sp, "cannot assign to `%s`: it is a class", id.Name)
+		default:
+			d := c.errorf(id.Sp, "cannot assign to `%s`: it is not declared", id.Name)
+			if f := c.thisField(id.Name); f != nil {
+				d.Help = []string{fmt.Sprintf("to change the field, write `this.%s = ...`", id.Name)}
+			} else {
+				d.Help = []string{fmt.Sprintf("declare it with `mut %s = ...`", id.Name)}
+			}
 		}
-		d := c.errorf(id.Sp, "cannot assign to `%s`: it is not declared", id.Name)
-		d.Help = []string{fmt.Sprintf("declare it with `mut %s = ...`", id.Name)}
 		return
 	}
 	switch v.kind {
@@ -330,12 +531,49 @@ func (c *checker) assign(s *ast.Assign) {
 		return
 	case Param:
 		d := c.errorf(id.Sp, "cannot assign to `%s`: parameters can't be changed", id.Name)
-		d.Help = []string{fmt.Sprintf("copy it into a variable first: `mut %s_ = %s`", id.Name, id.Name)}
+		if c.thisField(id.Name) != nil {
+			d.Help = []string{fmt.Sprintf("to change the field, write `this.%s = ...`", id.Name)}
+		} else {
+			d.Help = []string{fmt.Sprintf("copy it into a variable first: `mut %s_ = %s`", id.Name, id.Name)}
+		}
 		return
 	}
 	if !assignable(t, v.typ) {
-		c.errorf(s.Value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, v.typ)
+		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, v.typ)
 	}
+}
+
+func (c *checker) assignField(m *ast.Member, value ast.Expr) {
+	f, cls := c.fieldOf(m)
+	t := c.value(value)
+	if f == nil {
+		return
+	}
+	ft := c.fieldType(f)
+	if !f.Mut {
+		_, viaThis := m.X.(*ast.This)
+		if !(viaThis && c.fn != nil && c.fn.isInit && c.fn.class == cls) {
+			d := c.errorf(m.Name.Sp, "cannot assign to `%s`: it is a `con` field", f.Name)
+			d.Notes = []string{
+				fmt.Sprintf("`%s.%s` is declared at line %d", cls.Name, f.Name, f.Decl.Name.Sp.Start.Line),
+				"a `con` field can only be set in `init`, through `this`",
+			}
+			d.Help = []string{"declare it with `mut` if it needs to change"}
+			return
+		}
+	}
+	if !assignable(t, ft) {
+		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, f.Name, ft)
+	}
+}
+
+// thisField returns the field of `this` with the given name, if the
+// function being checked is a method and its class has one.
+func (c *checker) thisField(name string) *Field {
+	if c.fn == nil || c.fn.class == nil {
+		return nil
+	}
+	return c.fn.class.Fields[name]
 }
 
 func (c *checker) cond(e ast.Expr) {
@@ -346,7 +584,7 @@ func (c *checker) cond(e ast.Expr) {
 }
 
 func (c *checker) returnStmt(s *ast.Return) {
-	name := c.fn.decl.Name.Name
+	name := c.fn.name
 	want := c.fn.result
 	if s.Value == nil {
 		if want != NoValue {
@@ -355,6 +593,11 @@ func (c *checker) returnStmt(s *ast.Return) {
 		return
 	}
 	t := c.value(s.Value)
+	if c.fn.isInit {
+		d := c.errorf(s.Value.Span(), "`return` in `init` can't have a value")
+		d.Notes = []string{fmt.Sprintf("`init` returns the new `%s` by itself", c.fn.class.Name)}
+		return
+	}
 	if want == NoValue {
 		if !silent(t) {
 			d := c.errorf(s.Value.Span(), "`%s` returns nothing, so `return` can't have a value", name)
@@ -365,348 +608,4 @@ func (c *checker) returnStmt(s *ast.Return) {
 	if !assignable(t, want) {
 		c.errorf(s.Value.Span(), "`%s` returns %s, but this is %s", name, want, t)
 	}
-}
-
-// ---------------------------------------------------------------------
-// Expressions
-
-// value checks an expression whose value is used.
-func (c *checker) value(e ast.Expr) Type {
-	t := c.expr(e)
-	if t == NoValue {
-		name := "this call"
-		if call, ok := e.(*ast.Call); ok {
-			if id, ok := call.Fn.(*ast.Ident); ok {
-				name = "`" + id.Name + "`"
-			}
-		}
-		c.errorf(e.Span(), "%s returns nothing, so it can't be used as a value", name)
-		return Invalid
-	}
-	return t
-}
-
-func (c *checker) expr(e ast.Expr) Type {
-	t := c.expr1(e)
-	c.info.Types[e] = t
-	return t
-}
-
-func (c *checker) expr1(e ast.Expr) Type {
-	switch e := e.(type) {
-	case *ast.IntLit:
-		return Int
-	case *ast.FloatLit:
-		return Float
-	case *ast.StringLit:
-		return String
-	case *ast.BoolLit:
-		return Bool
-	case *ast.Paren:
-		return c.value(e.X)
-	case *ast.Ident:
-		return c.ident(e)
-	case *ast.Unary:
-		return c.unary(e)
-	case *ast.Binary:
-		return c.binary(e)
-	case *ast.Call:
-		return c.call(e)
-	case *ast.BadExpr:
-		return Invalid
-	}
-	panic(fmt.Sprintf("check: unexpected expression %T", e))
-}
-
-func (c *checker) ident(e *ast.Ident) Type {
-	if v := c.scope.lookup(e.Name); v != nil {
-		return v.typ
-	}
-	if _, ok := c.funcs[e.Name]; ok {
-		d := c.errorf(e.Sp, "`%s` is a function, and functions can't be used as values yet", e.Name)
-		d.Help = []string{fmt.Sprintf("to call it, write `%s(...)`", e.Name)}
-		return Invalid
-	}
-	if builtinTypes[e.Name] != nil {
-		c.errorf(e.Sp, "`%s` is a type, not a value", e.Name)
-		return Invalid
-	}
-	if builtinFuncs[e.Name] {
-		c.errorf(e.Sp, "`%s` is a built-in function, and functions can't be used as values yet", e.Name)
-		return Invalid
-	}
-	c.errorf(e.Sp, "unknown name `%s`", e.Name)
-	return Invalid
-}
-
-func (c *checker) unary(e *ast.Unary) Type {
-	t := c.value(e.X)
-	if silent(t) {
-		return Invalid
-	}
-	switch e.Op {
-	case lexer.MINUS:
-		if isNumeric(t) {
-			return t
-		}
-		c.errorf(e.Sp, "cannot negate %s", t)
-	case lexer.NOT:
-		if t == Bool {
-			return Bool
-		}
-		c.errorf(e.Sp, "`not` needs a Bool, found %s", t)
-	}
-	return Invalid
-}
-
-var arithVerbs = map[lexer.Kind]string{
-	lexer.PLUS:    "add %s and %s",
-	lexer.MINUS:   "subtract %[2]s from %[1]s",
-	lexer.STAR:    "multiply %s by %s",
-	lexer.SLASH:   "divide %s by %s",
-	lexer.PERCENT: "take the remainder of %s by %s",
-}
-
-func opText(k lexer.Kind) string {
-	s := k.String()
-	return s[1 : len(s)-1]
-}
-
-func (c *checker) binary(e *ast.Binary) Type {
-	if e.Op == lexer.AND || e.Op == lexer.OR {
-		x, y := c.value(e.X), c.value(e.Y)
-		for _, side := range []struct {
-			t Type
-			e ast.Expr
-		}{{x, e.X}, {y, e.Y}} {
-			if !assignable(side.t, Bool) {
-				c.errorf(side.e.Span(), "`%s` needs Bool on both sides, found %s", opText(e.Op), side.t)
-			}
-		}
-		return Bool
-	}
-
-	x, y := c.value(e.X), c.value(e.Y)
-	if silent(x) || silent(y) {
-		if isCmp(e.Op) {
-			return Bool
-		}
-		return Invalid
-	}
-	label := fmt.Sprintf("%s %s %s", x, opText(e.Op), y)
-
-	switch e.Op {
-	case lexer.EQ, lexer.NE:
-		if x == y {
-			return Bool
-		}
-		d := c.errorf(e.Span(), "cannot compare %s and %s with `%s`", x, y, opText(e.Op))
-		d.Label = label
-		c.mixedHelp(d, e, x, y)
-		return Bool
-
-	case lexer.LT, lexer.LE, lexer.GT, lexer.GE:
-		if x == y && (isNumeric(x) || x == String) {
-			return Bool
-		}
-		var d *diag.Diagnostic
-		if x == y {
-			d = c.errorf(e.Span(), "cannot compare %s values with `%s`", x, opText(e.Op))
-		} else {
-			d = c.errorf(e.Span(), "cannot compare %s and %s with `%s`", x, y, opText(e.Op))
-		}
-		d.Label = label
-		c.mixedHelp(d, e, x, y)
-		return Bool
-	}
-
-	// arithmetic
-	switch {
-	case x == y && x == Int:
-		return Int
-	case x == y && x == Float && e.Op != lexer.PERCENT:
-		return Float
-	case x == y && x == String && e.Op == lexer.PLUS:
-		return String
-	}
-	var d *diag.Diagnostic
-	if x == Float && y == Float {
-		d = c.errorf(e.Span(), "cannot use `%%` on Float")
-	} else {
-		d = c.errorf(e.Span(), "cannot "+arithVerbs[e.Op], x, y)
-	}
-	d.Label = label
-	c.mixedHelp(d, e, x, y)
-	if e.Op == lexer.PLUS && (x == String) != (y == String) {
-		other := e.X
-		if x == String {
-			other = e.Y
-		}
-		if t := c.info.Types[other]; t == Int || t == Float || t == Bool {
-			d.Help = append(d.Help, "convert explicitly: "+c.replaced(e, other, "String"))
-		}
-	}
-	return Invalid
-}
-
-// mixedHelp adds "convert explicitly: Float(a) / 2.0" when one side of e is
-// an Int and the other a Float.
-func (c *checker) mixedHelp(d *diag.Diagnostic, e *ast.Binary, x, y Type) {
-	if !(isNumeric(x) && isNumeric(y) && x != y) {
-		return
-	}
-	intSide := e.X
-	if y == Int {
-		intSide = e.Y
-	}
-	d.Help = append(d.Help, "convert explicitly: "+c.replaced(e, intSide, "Float"))
-}
-
-// replaced returns the source text of e with part wrapped in a call to fn.
-func (c *checker) replaced(e, part ast.Node, fn string) string {
-	text := c.src.Text
-	s, p := e.Span(), part.Span()
-	return string(text[s.Start.Offset:p.Start.Offset]) + fn + "(" + c.text(part) + ")" +
-		string(text[p.End.Offset:s.End.Offset])
-}
-
-func isCmp(k lexer.Kind) bool {
-	switch k {
-	case lexer.EQ, lexer.NE, lexer.LT, lexer.LE, lexer.GT, lexer.GE:
-		return true
-	}
-	return false
-}
-
-// ---------------------------------------------------------------------
-// Calls
-
-func (c *checker) call(e *ast.Call) Type {
-	id, ok := e.Fn.(*ast.Ident)
-	if !ok {
-		c.value(e.Fn)
-		c.args(e)
-		c.errorf(e.Fn.Span(), "this expression can't be called")
-		return Invalid
-	}
-	if v := c.scope.lookup(id.Name); v != nil {
-		c.args(e)
-		c.errorf(id.Sp, "`%s` is a variable, not a function", id.Name)
-		return Invalid
-	}
-	if sig, ok := c.funcs[id.Name]; ok {
-		types := c.args(e)
-		if len(types) != len(sig.params) {
-			c.arityError(e, id.Name, len(sig.params), sig.decl.Name.Sp.Start.Line)
-			return sig.result
-		}
-		for i, t := range types {
-			if !assignable(t, sig.params[i]) {
-				p := sig.decl.Params[i]
-				c.errorf(e.Args[i].Span(), "argument `%s` of `%s` must be %s, found %s", p.Name.Name, id.Name, sig.params[i], t).Notes = []string{
-					fmt.Sprintf("`%s` is declared at line %d", id.Name, sig.decl.Name.Sp.Start.Line),
-				}
-			}
-		}
-		return sig.result
-	}
-	if builtinFuncs[id.Name] {
-		return c.builtin(e, id.Name)
-	}
-	c.args(e)
-	c.errorf(id.Sp, "unknown function `%s`", id.Name)
-	return Invalid
-}
-
-func (c *checker) args(e *ast.Call) []Type {
-	var types []Type
-	for _, a := range e.Args {
-		types = append(types, c.value(a))
-	}
-	return types
-}
-
-func (c *checker) arityError(e *ast.Call, name string, want, line int) {
-	plural := "s"
-	if want == 1 {
-		plural = ""
-	}
-	verb := "were"
-	if len(e.Args) == 1 {
-		verb = "was"
-	}
-	d := c.errorf(e.Sp, "`%s` takes %d argument%s, but %d %s given", name, want, plural, len(e.Args), verb)
-	if line > 0 {
-		d.Notes = []string{fmt.Sprintf("`%s` is declared at line %d", name, line)}
-	}
-}
-
-// builtin checks a call to a built-in function.
-func (c *checker) builtin(e *ast.Call, name string) Type {
-	types := c.args(e)
-
-	// expect checks the argument count and types; it reports whether they
-	// are fine.
-	expect := func(want ...Type) bool {
-		if len(types) != len(want) {
-			c.arityError(e, name, len(want), 0)
-			return false
-		}
-		ok := true
-		for i, t := range types {
-			if !assignable(t, want[i]) {
-				c.errorf(e.Args[i].Span(), "`%s` needs %s here, found %s", name, want[i], t)
-				ok = false
-			}
-		}
-		return ok
-	}
-
-	switch name {
-	case "print":
-		if len(types) != 1 {
-			c.arityError(e, name, 1, 0)
-			return NoValue
-		}
-		if t := types[0]; !silent(t) && t != Int && t != Float && t != Bool && t != String {
-			c.errorf(e.Args[0].Span(), "cannot print a value of type %s", t)
-		}
-		return NoValue
-	case "Float":
-		if len(types) == 1 && types[0] == Float {
-			c.errorf(e.Args[0].Span(), "this is already a Float")
-			return Float
-		}
-		expect(Int)
-		return Float
-	case "String":
-		if len(types) != 1 {
-			c.arityError(e, name, 1, 0)
-			return String
-		}
-		switch t := types[0]; {
-		case t == String:
-			c.errorf(e.Args[0].Span(), "this is already a String")
-		case t != Int && t != Float && t != Bool && !silent(t):
-			c.errorf(e.Args[0].Span(), "cannot convert %s to String", t)
-		}
-		return String
-	case "Int":
-		d := c.errorf(e.Fn.Span(), "there is no `Int(...)` conversion yet")
-		d.Notes = []string{"the rounding rules for Float to Int are not decided"}
-		return Invalid
-	case "Bool":
-		c.errorf(e.Fn.Span(), "there is no `Bool(...)` conversion")
-		return Invalid
-	case "Error":
-		c.errorf(e.Fn.Span(), "`Error` is not supported yet")
-		return Invalid
-	case "panic":
-		expect(String)
-		return Never
-	case "assert":
-		expect(Bool, String)
-		return NoValue
-	}
-	panic("check: unknown built-in " + name)
 }

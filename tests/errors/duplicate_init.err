@@ -1,0 +1,2 @@
+error: `Temperature` already has an `init` with 1 parameter
+  --> duplicate_init.brz:10:10

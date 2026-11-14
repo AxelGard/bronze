@@ -1,0 +1,5 @@
+func main() -> Int
+{
+    print(this.x)
+    return 0
+}

@@ -1,0 +1,16 @@
+class User
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+}
+
+func main() -> Int
+{
+    con user = User("ada")
+    user.name = "grace"
+    return 0
+}

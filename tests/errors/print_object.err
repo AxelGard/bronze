@@ -1,0 +1,2 @@
+error: cannot print an object of class Point
+  --> print_object.brz:8:11

@@ -1,0 +1,3 @@
+panic: pop from an empty stack
+  at Stack.pop (method_panic.brz:14)
+  at main      (method_panic.brz:26)

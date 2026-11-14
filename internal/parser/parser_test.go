@@ -106,6 +106,25 @@ func TestErrors(t *testing.T) {
 			},
 		},
 		{
+			"class members",
+			"class A\n{\n    mut x\n    con y = 1 2\n    print(1)\n    func f() { }\n}\nfunc g() { }",
+			[]string{
+				"3:10 field `x` needs an initial value",
+				"4:15 expected the end of the member, found `2`",
+				"5:5 expected a field (`con` or `mut`) or a method (`func`), found `print`",
+			},
+		},
+		{
+			"block on the next line is skipped",
+			"class A\n{\n    func f() -> ! E\n    {\n        g()\n    }\n}\nfunc h()\n{\n    if x is B\n    {\n        g()\n    }\n}",
+			[]string{"3:17 functions that can fail are not supported yet", "10:10 `is` is not supported yet"},
+		},
+		{
+			"assign to call",
+			"func f()\n{\n    g() = 1\n}",
+			[]string{"3:5 cannot assign to this expression"},
+		},
+		{
 			"missing brace",
 			"func f()\n{\n    g()\n",
 			[]string{"4:1 expected `}`, found end of file"},
@@ -117,8 +136,8 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			"not yet",
-			"class A {}\nfunc f()\n{\n    con a = null\n}",
-			[]string{"1:1 classes are not supported yet", "4:13 `null` is not supported yet"},
+			"enum A {}\nclass B use Error {}\nfunc f()\n{\n    con a = null\n}",
+			[]string{"1:1 enums are not supported yet", "2:9 `use Error` is not supported yet", "5:13 `null` is not supported yet"},
 		},
 	}
 	for _, tt := range tests {
@@ -135,6 +154,38 @@ func TestErrors(t *testing.T) {
 				t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(tt.want, "\n"))
 			}
 		})
+	}
+}
+
+func TestClass(t *testing.T) {
+	src := `class Counter
+{
+    con name = ""
+    mut count: Int = 0
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+
+    func describe() -> String
+    {
+        return this.name + String(this.count)
+    }
+}
+`
+	f, diags := parse(t, src)
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := `(class Counter (field con name "") (field mut count: Int 0) ` +
+		`(func init (name String) (block (= (. this name) name))) ` +
+		`(func describe -> String (block (return (+ (. this name) (call String (. this count)))))))`
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+	if got := body(t, "c.add(1).total = c.items.count"); got != "(block (= (. (call (. c add) 1) total) (. (. c items) count)))" {
+		t.Errorf("members: %s", got)
 	}
 }
 

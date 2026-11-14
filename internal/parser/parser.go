@@ -129,8 +129,16 @@ func (p *parser) decl() (d ast.Decl) {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			bad := &ast.BadDecl{}
+			// Keep the name, so that uses of it don't cause more errors.
+			if k := p.toks[start].Kind; (k == lexer.FUNC || k == lexer.CLASS || k == lexer.ENUM) &&
+				p.toks[start+1].Kind == lexer.IDENT {
+				t := p.toks[start+1]
+				bad.Name = &ast.Ident{Name: t.Text, Sp: t.Span}
+			}
 			p.syncDecl()
-			d = &ast.BadDecl{Sp: p.toks[start].Span.To(p.prev())}
+			bad.Sp = p.toks[start].Span.To(p.prev())
+			d = bad
 		}
 	}()
 
@@ -140,7 +148,9 @@ func (p *parser) decl() (d ast.Decl) {
 		p.endOfLine("declaration")
 		return fn
 	case lexer.CLASS:
-		p.notYet(p.tok().Span, "classes are")
+		c := p.classDecl()
+		p.endOfLine("declaration")
+		return c
 	case lexer.ENUM:
 		p.notYet(p.tok().Span, "enums are")
 	}
@@ -194,6 +204,72 @@ func (p *parser) funcDecl() *ast.FuncDecl {
 	fn.Body = p.block()
 	fn.Sp = start.To(fn.Body.Sp)
 	return fn
+}
+
+func (p *parser) classDecl() *ast.ClassDecl {
+	start := p.expect(lexer.CLASS).Span
+	c := &ast.ClassDecl{Name: p.ident()}
+	if p.at(lexer.USE) {
+		p.notYet(p.tok().Span, "`use Error` is")
+	}
+	p.skipNewlines()
+	p.expect(lexer.LBRACE)
+	p.skipNewlines()
+	for !p.at(lexer.RBRACE) {
+		if p.at(lexer.EOF) {
+			p.diags.Errorf(p.tok().Span, "expected `}`, found end of file").Notes = []string{
+				fmt.Sprintf("the class starts at line %d", start.Start.Line),
+			}
+			c.Bad = true
+			c.Sp = start.To(p.tok().Span)
+			return c
+		}
+		p.member(c)
+		p.skipNewlines()
+	}
+	c.Sp = start.To(p.advance().Span)
+	return c
+}
+
+// member parses one field or method into c. On a syntax error it skips to
+// the end of the member and marks the class as bad.
+func (p *parser) member(c *ast.ClassDecl) {
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(bailout); !ok {
+				panic(r)
+			}
+			c.Bad = true
+			p.syncStmt()
+		}
+	}()
+	switch p.kind() {
+	case lexer.CON, lexer.MUT:
+		c.Fields = append(c.Fields, p.field())
+	case lexer.FUNC:
+		c.Methods = append(c.Methods, p.funcDecl())
+	default:
+		p.failHere("expected a field (`con` or `mut`) or a method (`func`), found %s", describe(p.tok()))
+	}
+	p.endOfLine("member")
+}
+
+func (p *parser) field() *ast.Field {
+	t := p.advance()
+	f := &ast.Field{Mut: t.Kind == lexer.MUT, Name: p.ident()}
+	if p.at(lexer.COLON) {
+		p.advance()
+		f.Type = p.typeExpr()
+	}
+	if !p.at(lexer.ASSIGN) {
+		d := p.diags.Errorf(p.tok().Span, "field `%s` needs an initial value", f.Name.Name)
+		d.Help = []string{fmt.Sprintf("give it a value: `%s %s = ...`", t.Text, f.Name.Name)}
+		panic(bailout{})
+	}
+	p.advance()
+	f.Value = p.expr()
+	f.Sp = t.Span.To(f.Value.Span())
+	return f
 }
 
 func (p *parser) param() *ast.Param {
@@ -274,7 +350,13 @@ func (p *parser) stmt() (s ast.Stmt) {
 }
 
 // syncStmt skips to the end of the current statement: the next newline
-// outside of braces, or the `}` that closes the enclosing block.
+// outside of braces, or the `}` that closes the enclosing block. A block
+// that starts on the next line, as in
+//
+//	if x is Foo
+//	{
+//
+// belongs to the statement and is skipped too.
 func (p *parser) syncStmt() {
 	depth := 0
 	for !p.at(lexer.EOF) {
@@ -289,11 +371,28 @@ func (p *parser) syncStmt() {
 		case lexer.NEWLINE:
 			if depth == 0 {
 				p.advance()
-				return
+				if !p.nextLineIsBlock() {
+					return
+				}
+				continue
 			}
 		}
 		p.advance()
 	}
+}
+
+// nextLineIsBlock reports whether the next token after any newlines is `{`,
+// and if so moves to it.
+func (p *parser) nextLineIsBlock() bool {
+	i := p.pos
+	for p.toks[i].Kind == lexer.NEWLINE {
+		i++
+	}
+	if p.toks[i].Kind != lexer.LBRACE {
+		return false
+	}
+	p.pos = i
+	return true
 }
 
 func (p *parser) simpleStmt() ast.Stmt {
@@ -326,7 +425,9 @@ func (p *parser) simpleStmt() ast.Stmt {
 	x := p.expr()
 	if p.at(lexer.ASSIGN) {
 		p.advance()
-		if _, ok := x.(*ast.Ident); !ok {
+		switch x.(type) {
+		case *ast.Ident, *ast.Member:
+		default:
 			p.fail(x.Span(), "cannot assign to this expression")
 		}
 		v := p.expr()
@@ -489,7 +590,8 @@ func (p *parser) postfix() ast.Expr {
 			call.Sp = x.Span().To(p.advance().Span)
 			x = call
 		case lexer.DOT:
-			p.notYet(p.tok().Span, "fields and methods are")
+			p.advance()
+			x = &ast.Member{X: x, Name: p.ident()}
 		default:
 			return x
 		}
@@ -534,7 +636,8 @@ func (p *parser) primary() ast.Expr {
 	case lexer.NULL:
 		p.notYet(t.Span, "`null` is")
 	case lexer.THIS:
-		p.notYet(t.Span, "`this` is")
+		p.advance()
+		return &ast.This{Sp: t.Span}
 	case lexer.MATCH:
 		p.notYet(t.Span, "`match` is")
 	}

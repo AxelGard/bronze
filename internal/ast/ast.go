@@ -62,18 +62,40 @@ type TypeExpr struct {
 	Sp       diag.Span
 }
 
-// BadDecl is a declaration with a syntax error.
-type BadDecl struct {
-	Sp diag.Span
+// ClassDecl is `class Name { fields and methods }`.
+type ClassDecl struct {
+	Name    *Ident
+	Fields  []*Field
+	Methods []*FuncDecl
+	Bad     bool // some member had a syntax error
+	Sp      diag.Span
 }
 
-func (d *FuncDecl) Span() diag.Span { return d.Sp }
-func (d *BadDecl) Span() diag.Span  { return d.Sp }
-func (p *Param) Span() diag.Span    { return p.Sp }
-func (t *TypeExpr) Span() diag.Span { return t.Sp }
+// Field is `con name: Type = value` or `mut name = value` in a class.
+type Field struct {
+	Mut   bool
+	Name  *Ident
+	Type  *TypeExpr // nil if not written
+	Value Expr
+	Sp    diag.Span
+}
 
-func (*FuncDecl) declNode() {}
-func (*BadDecl) declNode()  {}
+// BadDecl is a declaration with a syntax error.
+type BadDecl struct {
+	Name *Ident // the declared name, if it could be read
+	Sp   diag.Span
+}
+
+func (d *FuncDecl) Span() diag.Span  { return d.Sp }
+func (d *BadDecl) Span() diag.Span   { return d.Sp }
+func (d *ClassDecl) Span() diag.Span { return d.Sp }
+func (f *Field) Span() diag.Span     { return f.Sp }
+func (p *Param) Span() diag.Span     { return p.Sp }
+func (t *TypeExpr) Span() diag.Span  { return t.Sp }
+
+func (*FuncDecl) declNode()  {}
+func (*BadDecl) declNode()   {}
+func (*ClassDecl) declNode() {}
 
 // ---------------------------------------------------------------------
 // Statements
@@ -96,7 +118,7 @@ type VarDecl struct {
 
 // Assign is `target = value`.
 type Assign struct {
-	Target Expr // an *Ident for now
+	Target Expr // an *Ident or a *Member
 	Value  Expr
 	Sp     diag.Span
 }
@@ -197,6 +219,17 @@ type Binary struct {
 	OpSp diag.Span
 }
 
+// Member is `x.name`: a field, or a method when it is called.
+type Member struct {
+	X    Expr
+	Name *Ident
+}
+
+// This is `this`.
+type This struct {
+	Sp diag.Span
+}
+
 // Call is `fn(args)`.
 type Call struct {
 	Fn   Expr
@@ -223,6 +256,8 @@ func (e *BoolLit) Span() diag.Span   { return e.Sp }
 func (e *Unary) Span() diag.Span     { return e.Sp }
 func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
 func (e *Call) Span() diag.Span      { return e.Sp }
+func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
+func (e *This) Span() diag.Span      { return e.Sp }
 func (e *Paren) Span() diag.Span     { return e.Sp }
 func (e *BadExpr) Span() diag.Span   { return e.Sp }
 
@@ -234,5 +269,7 @@ func (*BoolLit) exprNode()   {}
 func (*Unary) exprNode()     {}
 func (*Binary) exprNode()    {}
 func (*Call) exprNode()      {}
+func (*Member) exprNode()    {}
+func (*This) exprNode()      {}
 func (*Paren) exprNode()     {}
 func (*BadExpr) exprNode()   {}

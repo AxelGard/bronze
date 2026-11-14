@@ -1,0 +1,28 @@
+class Stack
+{
+    mut size = 0
+
+    func push()
+    {
+        this.size = this.size + 1
+    }
+
+    func pop()
+    {
+        if this.size == 0
+        {
+            panic("pop from an empty stack")
+        }
+        this.size = this.size - 1
+    }
+}
+
+func main() -> Int
+{
+    con s = Stack()
+    s.push()
+    s.pop()
+    print(s.size)
+    s.pop()
+    return 0
+}

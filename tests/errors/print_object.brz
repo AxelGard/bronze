@@ -1,0 +1,10 @@
+class Point
+{
+    mut x = 0
+}
+
+func main() -> Int
+{
+    print(Point())
+    return 0
+}

@@ -1,0 +1,12 @@
+class Point
+{
+    mut x = 0
+    mut y = 0
+}
+
+func main() -> Int
+{
+    con p = Point()
+    print(p.z)
+    return 0
+}

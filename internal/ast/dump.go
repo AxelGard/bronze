@@ -35,6 +35,29 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(' ')
 		dump(b, n.Body)
 		b.WriteByte(')')
+	case *ClassDecl:
+		fmt.Fprintf(b, "(class %s", n.Name.Name)
+		for _, f := range n.Fields {
+			b.WriteByte(' ')
+			dump(b, f)
+		}
+		for _, m := range n.Methods {
+			b.WriteByte(' ')
+			dump(b, m)
+		}
+		b.WriteByte(')')
+	case *Field:
+		kw := "con"
+		if n.Mut {
+			kw = "mut"
+		}
+		fmt.Fprintf(b, "(field %s %s", kw, n.Name.Name)
+		if n.Type != nil {
+			fmt.Fprintf(b, ": %s", typeString(n.Type))
+		}
+		b.WriteByte(' ')
+		dump(b, n.Value)
+		b.WriteByte(')')
 	case *BadDecl:
 		b.WriteString("(bad-decl)")
 	case *Block:
@@ -117,6 +140,12 @@ func dump(b *strings.Builder, n Node) {
 			dump(b, a)
 		}
 		b.WriteByte(')')
+	case *Member:
+		b.WriteString("(. ")
+		dump(b, n.X)
+		fmt.Fprintf(b, " %s)", n.Name.Name)
+	case *This:
+		b.WriteString("this")
 	case *Paren:
 		b.WriteString("(paren ")
 		dump(b, n.X)

@@ -1,5 +1,11 @@
 package check
 
+import (
+	"slices"
+
+	"github.com/AxelGard/bronze/internal/ast"
+)
+
 // Type is a Bronze type.
 type Type interface {
 	String() string
@@ -49,4 +55,35 @@ var builtinTypes = map[string]Type{
 	"Float":  Float,
 	"Bool":   Bool,
 	"String": String,
+}
+
+// Class is a class type. Objects are shared by reference.
+type Class struct {
+	Name    string
+	Decl    *ast.ClassDecl
+	Fields  map[string]*Field
+	Methods map[string]*funcSig
+	Inits   map[int]*funcSig // by number of parameters
+}
+
+func (c *Class) String() string { return c.Name }
+
+// initArities returns the numbers of parameters of the class's inits, in
+// increasing order.
+func (c *Class) initArities() []int {
+	var ns []int
+	for n := range c.Inits {
+		ns = append(ns, n)
+	}
+	slices.Sort(ns)
+	return ns
+}
+
+// Field is a field of a class.
+type Field struct {
+	Name  string
+	Mut   bool
+	Decl  *ast.Field
+	typ   Type // nil until the initial value is checked
+	state int  // 0: not checked, 1: being checked, 2: done
 }

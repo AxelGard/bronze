@@ -1,0 +1,20 @@
+class Temperature
+{
+    mut degrees = 0.0
+
+    func init(celsius: Float)
+    {
+        this.degrees = celsius
+    }
+
+    func init(fahrenheit: Int)
+    {
+        this.degrees = (Float(fahrenheit) - 32.0) / 1.8
+    }
+}
+
+func main() -> Int
+{
+    print(Temperature(20.0).degrees)
+    return 0
+}

@@ -1,0 +1,2 @@
+error: `Point` has no field `z`
+  --> unknown_field.brz:10:13

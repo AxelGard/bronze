@@ -14,7 +14,6 @@ import (
 // pending lists golden tests that need features not implemented yet. They
 // are skipped; remove them from here as the features land.
 var pending = map[string]string{
-	"run/counter":               "classes",
 	"run/bank":                  "classes, enums, errors, null",
 	"errors/match_missing_case": "enums and match",
 	"errors/maybe_null":         "null",

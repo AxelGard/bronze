@@ -1,0 +1,2 @@
+error: `Point` takes 2 arguments, but 1 was given
+  --> init_arity.brz:15:13

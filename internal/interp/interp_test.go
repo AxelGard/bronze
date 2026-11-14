@@ -165,3 +165,137 @@ func TestOutputBeforePanic(t *testing.T) {
 		t.Errorf("out %q, panic %v", out, p)
 	}
 }
+
+func TestCounter(t *testing.T) {
+	text, err := os.ReadFile("../../examples/projects/counter.brz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile("../../tests/run/counter.out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, code, p := run(t, string(text))
+	if p != nil || code != 0 {
+		t.Fatalf("code %d, panic %v", code, p)
+	}
+	if out != string(want) {
+		t.Errorf("got\n%s", out)
+	}
+}
+
+const node = `class Node
+{
+    mut value = next_id()
+    mut label = "?"
+
+    func init()
+    {
+    }
+
+    func init(label: String)
+    {
+        print("init " + label + " " + String(this.value))
+        this.label = label
+    }
+
+    func bump() -> Int
+    {
+        this.value = this.value + 1
+        return this.value
+    }
+
+    func twice() -> Int
+    {
+        this.bump()
+        return this.bump()
+    }
+}
+
+class Empty
+{
+}
+
+func next_id() -> Int
+{
+    print("next_id")
+    return 7
+}
+`
+
+func TestObjects(t *testing.T) {
+	tests := []struct{ body, want string }{
+		// field values are evaluated before init, for each new object
+		{`con a = Node("a")`, "next_id\ninit a 7\n"},
+		{`con a = Node()
+    con b = Node()
+    print(a == b)
+    print(a == a)`, "next_id\nnext_id\nfalse\ntrue\n"},
+		// methods calling methods, and shared objects
+		{`con a = Node()
+    con b = a
+    print(b.twice())
+    print(a.value)`, "next_id\n9\n9\n"},
+		{`con e = Empty()
+    print(e == e)`, "true\n"},
+		{`mut a = Node()
+    con first = a
+    a = Node()
+    first.label = "first"
+    print(a.label + " " + first.label)`, "next_id\nnext_id\n? first\n"},
+	}
+	for _, tt := range tests {
+		out, _, p := run(t, node+"func main() -> Int\n{\n    "+tt.body+"\n    return 0\n}\n")
+		if p != nil {
+			t.Fatalf("panic: %s", p.Message)
+		}
+		if out != tt.want {
+			t.Errorf("%s:\ngot\n%s\nwant\n%s", tt.body, out, tt.want)
+		}
+	}
+}
+
+func TestMethodPanic(t *testing.T) {
+	src := `class Account
+{
+    mut balance = 0
+
+    func init(balance: Int)
+    {
+        assert(balance >= 0, "negative balance")
+        this.balance = balance
+    }
+
+    func share(people: Int) -> Int
+    {
+        return this.balance / people
+    }
+}
+
+func main() -> Int
+{
+    con a = Account(10)
+    print(a.share(2))
+    print(a.share(0))
+    con b = Account(-1)
+    return 0
+}
+`
+	out, _, p := run(t, src)
+	if p == nil || out != "5\n" {
+		t.Fatalf("out %q, panic %v", out, p)
+	}
+	want := "panic: division by zero\n  at Account.share (t.brz:13)\n  at main          (t.brz:21)\n"
+	if got := trace(p); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	_, _, p = run(t, strings.Replace(src, "print(a.share(0))", "", 1))
+	want = "panic: assertion failed: negative balance\n  at Account.init (t.brz:7)\n  at main         (t.brz:22)\n"
+	if p == nil {
+		t.Fatal("no panic")
+	}
+	if got := trace(p); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}

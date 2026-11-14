@@ -1,0 +1,2 @@
+error: cannot assign to `name`: it is a `con` field
+  --> con_field_assign.brz:14:10
