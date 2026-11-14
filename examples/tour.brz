@@ -303,7 +303,7 @@ func parse_port(text: String) -> Int ! Error
 
 func errors_demo()
 {
-    con email = find_email(2) ?? "unknown"      /* default if null */
+    con email = find_email(2) else "unknown"    /* default if null */
 
     con port, err = parse_port("8080")
     if err != null

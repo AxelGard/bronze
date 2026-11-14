@@ -1,0 +1,674 @@
+/*
+    basics.brz: the basics we haven't decided yet          [to decide]
+
+    One topic per section. Each has:
+      - an example, written with the SUGGESTED default
+      - the alternatives
+      - a `// CHOICE:` line for you to fill in, plus any comments
+
+    Write whatever you like after CHOICE: "ok", "B", "no", a question, an idea...
+*/
+
+
+/* ==================================================================
+    NUMBERS
+================================================================== */
+
+/* ------------------------------------------------------------------
+    1. Size of Int and Float
+
+    Suggested: Int is 64-bit, Float is 64-bit.
+    Alternatives:
+      B. Also sized types: Int8, Int16, Int32, UInt8 ... Float32
+      C. Int is unlimited (big integers, like Python). Slower.
+------------------------------------------------------------------ */
+
+con big = 9_223_372_036_854_775_807     // largest Int
+con pi = 3.141592653589793              // Float
+
+// CHOICE: B, and yes I also want sized types, but I think I want Int32 == Int, I want Int to just be an ailas for Int32 or 64 based on what we talk about. 
+
+
+/* ------------------------------------------------------------------
+    2. Integer overflow
+
+    Suggested: panic (crash with a clear message). Catches bugs.
+    Alternatives:
+      B. Wrap around silently (Go, C, Java)
+      C. Panic by default, plus explicit wrapping operations: a.wrapping_add(b)
+------------------------------------------------------------------ */
+
+con too_big = big + 1                   // panic: integer overflow at basics.brz:38
+
+// CHOICE: I think B 
+
+
+/* ------------------------------------------------------------------
+    3. Integer division
+
+    Suggested: Int / Int gives an Int (rounded toward zero).
+    Alternatives:
+      B. Int / Int gives a Float (Python 3), and // for integer division
+------------------------------------------------------------------ */
+
+print(7 / 2)                            // 3
+print(-7 / 2)                           // -3
+print(7 % 2)                            // 1
+print(Float(7) / 2.0)                   // 3.5
+
+// CHOICE: Int / Int == Int, but Int / Float == Float 
+
+
+/* ------------------------------------------------------------------
+    4. Division by zero
+
+    Suggested: Int division by zero panics. Float gives inf / NaN (IEEE standard).
+    Alternatives:
+      B. Division can fail: 10 / x else 0
+------------------------------------------------------------------ */
+
+con zero = 0
+con boom = 10 / zero                    // panic: division by zero
+con inf = 1.0 / 0.0                     // inf
+
+// CHOICE: Im not sure 
+
+
+/* ------------------------------------------------------------------
+    5. Number literals
+------------------------------------------------------------------ */
+
+con million = 1_000_000                 // underscores for readability
+con mask = 0xFF                         // hex
+con flags = 0b1010                      // binary
+con perms = 0o755                       // octal
+con small = 1.5e-3                      // scientific
+
+// CHOICE: yes!
+
+
+/* ------------------------------------------------------------------
+    6. Bytes
+
+    Backend code needs raw bytes: files, HTTP bodies, hashing, images.
+    Suggested: a Byte type (0-255) and Bytes (a list of bytes).
+------------------------------------------------------------------ */
+
+con b: Byte = 0x41
+con logo: Bytes = file.read_bytes("logo.png") else panic("missing logo")
+con hash = sha256(logo)
+con text = logo.to_string() else ""     // decoding can fail (not valid UTF-8)
+
+// CHOICE: yes, type Bytes makes since to me! 
+
+
+/* ==================================================================
+    STRINGS
+================================================================== */
+
+/* ------------------------------------------------------------------
+    7. Interpolation
+
+    Suggested: {expr} inside a string.
+    Alternatives:
+      B. $name and ${expr} (Kotlin, JS)
+      C. Only a format function: format("hello {}", name)
+------------------------------------------------------------------ */
+
+con name = "Ada"
+con age = 36
+print("hello {name}, next year you are {age + 1}")
+
+// CHOICE: option B but I would like with out $ just "hi {my_var}"
+
+
+/* ------------------------------------------------------------------
+    8. Escapes
+------------------------------------------------------------------ */
+
+print("line one\nline two")             // newline
+print("tab\there")                      // tab
+print("she said \"hi\"")                // quote
+print("a literal \{ brace")             // { without interpolation
+print("back\\slash")                    // backslash
+
+// CHOICE: yes 
+
+
+/* ------------------------------------------------------------------
+    9. Multi-line strings
+
+    Suggested: triple quotes. Leading indentation is removed.
+    Very handy for SQL.
+------------------------------------------------------------------ */
+
+con query = """
+    select id, email
+    from users
+    where active = true
+      and created_at > $1
+    """
+
+// CHOICE: yes! 
+
+
+/* ------------------------------------------------------------------
+    10. Length and characters
+
+    Suggested: strings are UTF-8. length() counts characters, not bytes.
+------------------------------------------------------------------ */
+
+con word = "smörgåsbord"
+print(word.length())                    // 11 characters
+print(word.byte_length())               // 13 bytes
+print(word[0])                          // "s"
+print(word.upper())                     // "SMÖRGÅSBORD"
+
+// CHOICE: yes! and I want strings and list to have slicing like python my_str[2:5], word[-1] == "d"
+
+
+/* ==================================================================
+    OPERATORS AND EQUALITY
+================================================================== */
+
+/* ------------------------------------------------------------------
+    11. Compound assignment
+
+    Suggested: += -= *= /= %=
+    Alternatives:
+      B. None, always write x = x + 1
+      C. Also ++ and --
+------------------------------------------------------------------ */
+
+mut count = 0
+count += 1
+count *= 10
+
+// CHOICE: yes! 
+
+
+/* ------------------------------------------------------------------
+    12. == on classes
+
+    Suggested: classes compare by identity (same object).
+               data classes compare by value (already decided).
+    Alternatives:
+      B. Classes can define their own equals()
+      C. Separate operators: == for value, === for identity
+------------------------------------------------------------------ */
+
+class Account { mut balance = 0 }
+data Money(amount: Int, currency: String)
+
+con a1 = Account()
+con a2 = Account()
+print(a1 == a2)                         // false: different accounts
+print(a1 == a1)                         // true: same account
+
+print(Money(5, "EUR") == Money(5, "EUR"))   // true: same value
+
+// CHOICE: I think it might be good that classes compare idenity but im not sure. 
+
+
+/* ------------------------------------------------------------------
+    13. Operator precedence (highest first)
+
+        1. ()  .  []  calls
+        2. not  -x
+        3. *  /  %
+        4. +  -
+        5. ..  ..=
+        6. ==  !=  <  <=  >  >=  is
+        7. and
+        8. or
+        9. else   (error handling)
+------------------------------------------------------------------ */
+
+con ok = not done and count > 3 or forced
+// means:  ((not done) and (count > 3)) or forced
+
+// CHOICE: the operators looks good but im not sure if I understand: con ok = not done and count > 3 or forced
+
+
+/* ==================================================================
+    COLLECTIONS AND LOOPS
+================================================================== */
+
+/* ------------------------------------------------------------------
+    14. List and Map literals
+------------------------------------------------------------------ */
+
+con nums = [1, 2, 3]                    // List<Int>
+con ages = {"Ada": 36, "Grace": 85}     // Map<String, Int>
+con empty: List<String> = []
+con nothing: Map<String, Int> = {}
+
+// Set?   con tags = Set(["a", "b"])
+
+// CHOICE: this if good: 
+con nums = [1, 2, 3]                    // List<Int>
+con ages = {"Ada": 36, "Grace": 85}     // Map<String, Int>
+con tags = Set(["a", "b"])              // Set<String>
+
+
+/* ------------------------------------------------------------------
+    15. Indexing
+
+    Suggested: list[i] panics when out of range.
+               map[key] returns T? (the key may be missing).
+    Alternatives:
+      B. list[i] returns T? too (safe, but noisy)
+      C. list[i] panics, list.get(i) returns T?
+------------------------------------------------------------------ */
+
+print(nums[0])                          // 1
+print(nums[10])                         // panic: index 10 out of range (length 3)
+
+con ada = ages["Ada"]                   // Int?
+con zed = ages["Zed"] ?? 0              // 0
+
+// CHOICE: I think option B
+
+
+/* ------------------------------------------------------------------
+    16. for loops and ranges
+
+    Suggested:
+      for x in list
+      for i, x in list          (index first, like Go)
+      for k, v in map
+      for i in 0..10            (0 to 9)
+      for i in 0..=10           (0 to 10)
+------------------------------------------------------------------ */
+
+for n in nums
+{
+    print(n)
+}
+
+for i, n in nums
+{
+    print("{i}: {n}")
+}
+
+for name, age in ages
+{
+    print("{name} is {age}")
+}
+
+for i in 0..10
+{
+    print(i)
+}
+
+// CHOICE: looks good! 
+
+
+/* ------------------------------------------------------------------
+    17. break and continue
+------------------------------------------------------------------ */
+
+for n in nums
+{
+    if n == 2
+    {
+        continue
+    }
+    if n > 10
+    {
+        break
+    }
+    print(n)
+}
+
+// CHOICE: yes! 
+
+
+/* ==================================================================
+    NEW FEATURES
+================================================================== */
+
+/* ------------------------------------------------------------------
+    18. Enums
+
+    A fixed set of named values.
+    Alternatives:
+      B. Enums with data in each case (sum types):
+           enum Shape { Circle(radius: Float), Rect(w: Float, h: Float) }
+------------------------------------------------------------------ */
+
+enum Status
+{
+    Pending
+    Paid
+    Shipped
+    Cancelled
+}
+
+con s = Status.Paid
+print(s)                                // Paid
+
+if s == Status.Paid
+{
+    print("ship it")
+}
+
+// CHOICE: yes but I also want to be able to attach func to a method. 
+// I also want to be able to enums that are of diffrent types 
+
+
+
+/* ------------------------------------------------------------------
+    19. match
+
+    `if` is a statement, so this needs a tidy way to branch on a value.
+    Suggested: match as a statement, every case must be covered.
+    Alternatives:
+      B. match as an expression (produces a value)
+      C. switch / case like C
+------------------------------------------------------------------ */
+
+func label(s: Status) -> String
+{
+    match s
+    {
+        Status.Pending   => return "waiting"
+        Status.Paid      => return "paid"
+        Status.Shipped   => return "on its way"
+        Status.Cancelled => return "cancelled"
+    }
+}
+
+
+func size(n: Int) -> String
+{
+    match n
+    {
+        0          => return "none"
+        1..=9      => return "a few"
+        10..=99    => return "many"
+        _          => return "lots"        // _ = anything else
+    }
+}
+
+// CHOICE: B 
+
+
+/* ------------------------------------------------------------------
+    20. Files and imports
+
+    Suggested: folder = namespace. Everything in src/billing/*.brz
+    is namespace `billing`. Import with `import`.
+------------------------------------------------------------------ */
+
+//  myapp/
+//    bronze.toml
+//    src/
+//      main.brz              <- func main() lives here
+//      billing/
+//        invoice.brz         <- namespace billing (automatically)
+//        money.brz           <- namespace billing (automatically)
+
+import billing
+import billing.{Invoice, Money}
+import shop.catalog as cat
+
+// CHOICE: I like the: 
+import billing
+import billing.{Invoice, Money}
+import shop.catalog as cat
+
+// i would also want mabye ./myapp/libs which would be were depenacy lives. 
+// and also ./myapp/tests
+
+
+/* ------------------------------------------------------------------
+    21. Top-level constants and globals
+
+    Suggested: `con` allowed at the top level. Top-level `mut` is not
+    allowed (shared global state is a common source of bugs, and of
+    problems once requests run at the same time).
+------------------------------------------------------------------ */
+
+con MAX_USERS = 1000
+con API_VERSION = "v2"
+
+// mut request_count = 0    <- compile error: no global mut
+
+// CHOICE: Im not sure about this lets start with letting only con be allowed 
+
+
+/* ------------------------------------------------------------------
+    22. Panics and assert
+
+    A panic stops the program with a message and a stack trace
+    pointing at Bronze lines.
+------------------------------------------------------------------ */
+
+func checked_age(age: Int) -> Int
+{
+    assert(age >= 0, "age can't be negative")
+    if age > 150
+    {
+        panic("unrealistic age: {age}")
+    }
+    return age
+}
+
+//   panic: unrealistic age: 200
+//     at checked_age (src/users.brz:12)
+//     at main        (src/main.brz:5)
+
+// CHOICE: yes
+
+
+/* ------------------------------------------------------------------
+    23. Tests
+
+    Suggested: `test` blocks next to the code, run with `bronze test`.
+    Alternatives:
+      B. Test functions in separate *_test.brz files (Go)
+------------------------------------------------------------------ */
+
+func add(a: Int, b: Int) -> Int
+{
+    return a + b
+}
+
+test "add works"
+{
+    assert(add(2, 2) == 4)
+    assert(add(-1, 1) == 0)
+}
+
+// CHOICE: yes but there would probalby be a seperated test dir. but yes with asserts
+// but I do like the keyword for test 
+
+
+/* ------------------------------------------------------------------
+    24. Program input: arguments and environment
+------------------------------------------------------------------ */
+
+func main() -> Int
+{
+    con args = os.args()                          // List<String>, without the program name
+    con port = env.get("PORT") else "8080"        // env.get can fail: not set
+
+    if args.length() == 0
+    {
+        print("usage: myapp <name>")
+        return 1
+    }
+
+    print("hello {args[0]}, listening on {port}")
+    return 0
+}
+
+// Alternative: main receives them:  func main(args: List<String>) -> Int
+
+// CHOICE: I think 
+
+func main() -> Int
+{
+    con args = os.args()                          // List<String>, without the program name
+    con port = env.get("PORT") else "8080"        // env.get can fail: not set
+
+
+/* ==================================================================
+    FOLLOW-UP QUESTIONS
+    From your answers above. Same as before: write after CHOICE:
+================================================================== */
+
+/* ------------------------------------------------------------------
+    F1. Int = Int64 or Int32?
+
+    Suggested: Int64. Backend code is full of ids, byte counts and
+    timestamps. Int32 stops at about 2.1 billion; a timestamp in
+    milliseconds is already about 1.7 trillion.
+    (And Float = Float64.)
+------------------------------------------------------------------ */
+
+con user_id: Int = 4_000_000_000        // fits in Int64, not in Int32
+con now_ms: Int = 1_731_600_000_000     // fits in Int64, not in Int32
+
+// CHOICE: Int == Int64, and yes also add Float64
+
+
+/* ------------------------------------------------------------------
+    F2. Mixing Int and Float
+
+    You wrote: Int / Float == Float.
+    That conflicts with "an Int is never silently turned into a Float".
+
+      A. Mixed arithmetic is allowed, the result is a Float
+      B. Keep it explicit: convert yourself
+------------------------------------------------------------------ */
+
+con half_a = 7 / 2.0                    // A: 3.5
+con half_b = Float(7) / 2.0             // B: 3.5, and `7 / 2.0` is a compile error
+
+// CHOICE: con half_b = Float(7) / 2.0             // B: 3.5, and `7 / 2.0` is a compile error
+
+
+/* ------------------------------------------------------------------
+    F3. Division by zero
+
+    Suggested: Int division by zero panics (like Go). Float gives inf.
+    Division by zero is almost always a bug, and making every `/`
+    handle a possible failure would be very noisy.
+      B. Division can fail:  10 / x else 0
+------------------------------------------------------------------ */
+
+con x = 0
+con a = 10 / x                          // suggested: panic: division by zero
+con b = 10 / x else 0                   // B: every division needs handling
+
+// CHOICE: okay panic 
+
+
+/* ------------------------------------------------------------------
+    F4. Indexing returns T?
+
+    You chose B. That's safe, but every index needs handling.
+    Loops with `for n in nums` are not affected.
+
+      B.  nums[0] is Int?              (your choice)
+      C.  nums[0] panics if missing, nums.get(0) is Int?
+------------------------------------------------------------------ */
+
+con first = nums[0] ?? 0                // B
+con last = word[-1] ?? ""               // B
+
+con first_c = nums[0]                   // C: Int, panics if empty
+con maybe_c = nums.get(0)               // C: Int?
+
+// CHOICE: I do wonder if it should not be nums[0] else 0
+
+
+/* ------------------------------------------------------------------
+    F5. Slicing syntax
+
+      A. Python style:   s[2:5]   s[:3]   s[2:]
+      B. Reuse ranges:   s[2..5]  s[..3]  s[2..]   and   s[2..=5]
+------------------------------------------------------------------ */
+
+con part_a = word[2:5]                  // A
+con part_b = word[2..5]                 // B
+con part_c = word[2..=5]                // B: including index 5
+
+// CHOICE: I think B 
+
+
+/* ------------------------------------------------------------------
+    F6. Mixing and / or
+
+    `not done and count > 3 or forced` means:
+        ok is true if `forced`,
+        or if (not `done` and `count > 3`).
+    `and` binds tighter than `or`, like `*` binds tighter than `+`.
+
+    Since that's easy to misread: should the formatter / LSP suggest
+    parentheses when `and` and `or` are mixed?
+------------------------------------------------------------------ */
+
+con ok = (not done and count > 3) or forced     // clearer with parentheses
+
+// CHOICE: yes add parentheses
+
+
+/* ------------------------------------------------------------------
+    F7. Enums "of different types"
+
+      A. Each case has a value of one type
+      B. Each case carries its own data (sum types)
+      C. Both
+    (Methods on enums: recorded as yes.)
+------------------------------------------------------------------ */
+
+enum Role: String                       // A
+{
+    Admin = "admin"
+    Member = "member"
+
+    func can_delete() -> Bool
+    {
+        return this == Role.Admin
+    }
+}
+
+enum Shape                              // B
+{
+    Circle(radius: Float)
+    Rect(w: Float, h: Float)
+
+    func area() -> Float
+    {
+        return match this
+        {
+            Circle(r)  => 3.14 * r * r
+            Rect(w, h) => w * h
+        }
+    }
+}
+
+// CHOICE: lets go with A 
+
+
+/* ------------------------------------------------------------------
+    F8. Where tests live
+
+      A. Only in tests/
+      B. In tests/, and also allowed next to the code
+------------------------------------------------------------------ */
+
+// CHOICE: B
+
+
+/* ------------------------------------------------------------------
+    F9. Program input
+
+    Your answer to 24 was cut off after "I think".
+    Recorded: os.args() and env.get(). Correct?
+------------------------------------------------------------------ */
+
+// CHOICE: yes

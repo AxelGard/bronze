@@ -1,0 +1,296 @@
+/*
+    generics.brz: templates / generics with <T>               [exploration]
+
+    Write code once, use it for many types.
+    Bronze already uses this everywhere: List<Int>, Iter<String>, Map<String, Int>.
+
+    Sections:
+      1. Generic functions
+      2. Generic classes and data classes
+      3. Constraints: what T must be able to do (reusing `use`)
+      4. Generic interfaces and signatures
+      5. Inheritance with generics
+      6. Calling with explicit types
+      7. A backend example: a repository
+*/
+
+
+/* ------------------------------------------------------------------
+    1. Generic functions
+
+    <T> after the name: "for any type T".
+    The caller usually doesn't write the type, the compiler infers it.
+------------------------------------------------------------------ */
+
+func first<T>(items: List<T>) -> T?
+{
+    if items.length() == 0
+    {
+        return null
+    }
+    return items[0]
+}
+
+
+func pair_up<A, B>(a: A, b: B) -> A, B
+{
+    return a, b
+}
+
+
+func generic_demo()
+{
+    con n = first([1, 2, 3])              /* T = Int,    n: Int? */
+    con s = first(["a", "b"])             /* T = String, s: String? */
+    con x, y = pair_up(1, "one")          /* A = Int, B = String */
+}
+
+
+/* ------------------------------------------------------------------
+    2. Generic classes and data classes
+------------------------------------------------------------------ */
+
+class Stack<T>
+{
+    mut items: List<T> = []
+
+    mut func push(item: T)
+    {
+        this.items.add(item)
+    }
+
+    mut func pop() -> T?
+    {
+        return this.items.remove_last()
+    }
+
+    func peek() -> T?
+    {
+        return this.items.last()
+    }
+
+    func size() -> Int
+    {
+        return this.items.length()
+    }
+}
+
+
+data Pair<A, B>(first: A, second: B)
+
+data Page<T>(items: List<T>, page: Int, total: Int)
+
+
+func stack_demo()
+{
+    con numbers = Stack<Int>()
+    numbers.push(1)
+    numbers.push(2)
+    print(numbers.pop())                  /* 2 */
+
+    /* numbers.push("three")   <- compile error: expected Int, got String */
+
+    con p = Pair("age", 36)               /* Pair<String, Int>, inferred */
+}
+
+
+/* ------------------------------------------------------------------
+    3. Constraints: what T must be able to do
+
+    Reuse `use`: "T must use Comparable".
+    The compiler checks the generic code ONCE, against the constraint,
+    so errors point at your code, not deep inside a template.
+------------------------------------------------------------------ */
+
+interface Comparable<T>
+{
+    func compare(other: T) -> Int         /* <0, 0, >0 */
+}
+
+interface Printable
+{
+    func to_string() -> String
+}
+
+
+func max<T use Comparable<T>>(a: T, b: T) -> T
+{
+    if a.compare(b) >= 0
+    {
+        return a
+    }
+    return b
+}
+
+
+func print_all<T use Printable>(items: List<T>)
+{
+    for item in items
+    {
+        print(item.to_string())
+    }
+}
+
+
+/* several constraints */
+func sorted_labels<T use Comparable<T>, Printable>(items: List<T>) -> List<String>
+{
+    return items.sorted().map((x) => x.to_string())
+}
+
+
+/* without a constraint, you can only do what works for every type */
+func broken<T>(a: T, b: T) -> T
+{
+    return a + b
+    /* <- compile error: T has no `+`. Add a constraint, e.g. T use Addable */
+}
+
+
+/* ------------------------------------------------------------------
+    4. Generic interfaces and signatures
+------------------------------------------------------------------ */
+
+interface Repository<T, Id>
+{
+    func find(id: Id) -> T? ! DbError
+    func save(item: T) -> ! DbError
+}
+
+
+type Check<T>  = func(T) -> Bool
+type Mapper<A, B> = func(A) -> B
+
+
+func keep<T>(items: List<T>, test: Check<T>) -> List<T>
+{
+    mut out: List<T> = []
+    for item in items
+    {
+        if test(item)
+        {
+            out.add(item)
+        }
+    }
+    return out
+}
+
+
+/* ------------------------------------------------------------------
+    5. Inheritance with generics
+------------------------------------------------------------------ */
+
+/* a concrete class from a generic one */
+class IntStack use Stack<Int>
+{
+    func sum() -> Int
+    {
+        mut total = 0
+        for n in this.items
+        {
+            total = total + n
+        }
+        return total
+    }
+}
+
+
+/* a generic class that stays generic */
+class LoggedStack<T> use Stack<T>
+{
+    override mut func push(item: T)
+    {
+        print("push")
+        super(Stack<T>).push(item)
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    6. Calling with explicit types
+
+    Usually inferred. When it can't be, write the type.
+    Problem: `parse<Int>(s)` could also be read as `parse < Int > (s)`.
+------------------------------------------------------------------ */
+
+func parse<T use Parsable>(text: String) -> T ! ParseError { ... }
+
+func explicit_demo()
+{
+    con a: Int = parse("42") else 0       /* inferred from the variable's type */
+    con b = parse<Int>("42") else 0       /* explicit, with <> */
+    con c = Stack<String>()               /* explicit on a class */
+}
+
+
+/* ------------------------------------------------------------------
+    7. A backend example: one repository for every entity
+------------------------------------------------------------------ */
+
+interface Entity
+{
+    func id() -> Int
+    static func table() -> String
+}
+
+
+data User(user_id: Int, email: String) use Entity
+{
+    func id() -> Int { return this.user_id }
+    static func table() -> String { return "users" }
+}
+
+
+data Order(order_id: Int, total: Int) use Entity
+{
+    func id() -> Int { return this.order_id }
+    static func table() -> String { return "orders" }
+}
+
+
+class SqlRepo<T use Entity> use Repository<T, Int>
+{
+    mut conn: db.Connection
+
+    func init(conn: db.Connection) -> SqlRepo<T>
+    {
+        this.conn = conn
+    }
+
+    func find(id: Int) -> T? ! DbError
+    {
+        con row = this.conn.query_one("select * from {T.table()} where id = $1", id) else return
+        if row == null
+        {
+            return null
+        }
+        return row.decode<T>()
+    }
+
+    func save(item: T) -> ! DbError
+    {
+        this.conn.upsert(T.table(), item) else return
+    }
+}
+
+
+func repo_demo(conn: db.Connection) -> ! DbError
+{
+    con users  = SqlRepo<User>(conn)
+    con orders = SqlRepo<Order>(conn)
+
+    con ada = users.find(1) else return
+    orders.save(Order(7, 1200)) else return
+}
+
+
+/*
+    Questions:
+      - <T> or [T]?  (<> reads well; [] avoids the `a < b > c` parsing problem,
+        which is why Go chose it. But [] is also list literals and indexing.)
+      - Constraints with `use`:  <T use Comparable<T>>  OK?
+      - Check generic code once against its constraints (Rust, Swift, C#, Go),
+        or C++-style templates that are only checked when used?
+      - Static methods in interfaces (T.table()) and on type parameters?
+      - Default type parameters: class Cache<K, V = String>?
+*/

@@ -217,10 +217,14 @@ func connect() -> db.Connection
 
 
 /* ------------------------------------------------------------------
-    11. Errors and null together
+    11. Missing values, and errors and null together
+
+    `else` also handles missing values (T?):
+        find_email(id) else "unknown"
+        nums[0] else 0
 
     `User? ! DbError`: the query may fail, and if it works it may find nothing.
-    `else` handles the error, `??` and `if` handle the null.
+    `else` peels off ONE layer at a time, the error first.
 ------------------------------------------------------------------ */
 
 func find_by_email(email: String) -> User? ! DbError
@@ -238,13 +242,28 @@ func find_by_email(email: String) -> User? ! DbError
 
 func greeting(email: String) -> String
 {
-    con user = find_by_email(email) else return "error"
+    con user = find_by_email(email) else return "error"    /* the error: user is still User? */
     if user == null
     {
         return "who are you?"
     }
 
     return "hello {user.email}"
+}
+
+
+func greeting_or_guest(email: String) -> String
+{
+    con maybe = find_by_email(email) else return "error"   /* 1. the error   -> User? */
+    con user = maybe else User(0, "guest")                 /* 2. the null    -> User  */
+
+    return "hello {user.email}"
+}
+
+
+func first_or_zero(nums: List<Int>) -> Int
+{
+    return nums[0] else 0                                  /* indexing gives Int? */
 }
 
 
@@ -317,7 +336,6 @@ func can_delete(id: Int, is_owner: Bool) -> Bool
 
 /*
     Open questions:
-      - Should `else` also replace `??` for null?   find_email(id) else "unknown"
       - Can an `else (e) { }` block produce a fallback value, or must it always leave?
       - Is `-> ! Error` the right way to write "returns nothing, can fail"?
       - Should a mixed line like `is_admin(id) else false` give a hint in the editor?

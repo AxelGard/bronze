@@ -8,9 +8,7 @@ What we still need to decide. When something is settled, it moves into the other
 
 ## Syntax
 - Can block comments be nested?
-- Will there be `match`, and is it an expression?
 - Naming conventions, and how strictly they are enforced
-- String interpolation: `"{name}"`?
 - Creating objects: `Dog("Rex")`, or `new Dog("Rex")`?
 
 ## Functions
@@ -37,15 +35,21 @@ What we still need to decide. When something is settled, it moves into the other
 
 ## Namespaces
 - Block form `namespace x { }`, file form (`namespace x` at the top), or both?
-- Namespace = folder, or free?
-- Import syntax: `import billing`, `import shop.catalog as cat`, `import billing.{Invoice}`?
 - `private` on a top-level function outside any namespace: file or folder?
 
 ## Errors
-- Should `else` also replace `??` for null: `find_email(id) else "unknown"`?
 - Can an `else (e) { }` block produce a fallback value, or must it always leave?
 - Is `-> ! Error` the right way to write "returns nothing, can fail"?
 - Checking the kind: `if e is NotFound`?
+
+## Generics
+Explored in [`generics.brz`](../examples/generics.brz).
+- `<T>` or `[T]`?
+- Constraints with `use`: `<T use Comparable<T>>`?
+- Checked once against constraints (Rust, Swift, C#, Go), or C++-style templates?
+- Explicit type arguments in calls: `parse<Int>("42")`?
+- Static methods on interfaces and type parameters (`T.table()`)?
+- Default type parameters?
 
 ## Lambdas and iterators
 Explored in [`lambdas.brz`](../examples/lambdas.brz).
@@ -66,7 +70,6 @@ Trying out: everything shared, with the mode on the type: `a: T` (read only), `a
 - Objects like DB connections: are their methods `mut`?
 
 ## Other areas
-- **Type inference and generics**: how much do you write? Bounded generics?
 - **Mutability**: does `con` freeze only the variable, or the object too? Mutable vs immutable collections?
 - **Concurrency**: green threads (goroutines) plus structured concurrency? Async/await? Actors?
 - **Shell commands**: return type, non-zero exit codes, safe interpolation, which shell

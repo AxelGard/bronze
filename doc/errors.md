@@ -62,3 +62,25 @@ func find_email(id: Int) -> String?
     return null
 }
 ```
+
+### Handling null with `else`
+
+`else` handles missing values the same way it handles errors. There is no `??`.
+
+```
+con email = find_email(id) else "unknown"
+con first = nums[0] else 0
+con age = ages["Zed"] else 0
+```
+
+### Errors and null together
+
+For `T? ! E` (may fail, and may find nothing), `else` peels off **one layer at a time, the error first**:
+
+```
+con maybe = find_by_email(email) else return    // the error: maybe is User?
+con user = maybe else User(0, "guest")          // the null: user is User
+```
+
+That keeps "the database is down" separate from "no such user".
+

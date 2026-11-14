@@ -92,9 +92,9 @@ con ratio: Float = 0.5   // explicit type
 
 ## Built-in types
 
-- **`Int`**, **`Float`**, **`Bool`** (`true` / `false`) and **`String`**.
-- Conversions are **explicit**: `Float(x)`. An `Int` is never silently turned into a `Float`.
-- Strings are joined with `+`: `"hello, " + name`.
+See [types](types.md) for numbers, strings, bytes and collections.
+
+- Conversions are **explicit**: `Float(x)`. Mixing `Int` and `Float` in arithmetic is a compile error.
 - `print(...)` is a built-in that accepts any built-in type.
 
 ## Operators
@@ -102,8 +102,29 @@ con ratio: Float = 0.5   // explicit type
 | Kind | Operators |
 |---|---|
 | Arithmetic | `+ - * / %` |
+| Compound assignment | `+= -= *= /= %=` |
 | Comparison | `== != < <= > >=` |
 | Logic | **`and`**, **`or`**, **`not`** (words, not symbols) |
+| Ranges | `0..10` (0 to 9), `0..=10` (0 to 10) |
+
+### Precedence (highest first)
+
+1. `()` `.` `[]` calls
+2. `not` `-x`
+3. `*` `/` `%`
+4. `+` `-`
+5. `..` `..=`
+6. `==` `!=` `<` `<=` `>` `>=` `is`
+7. `and`
+8. `or`
+9. `else` (error handling)
+
+So `not done and count > 3 or forced` means `((not done) and (count > 3)) or forced`. Because that is easy to misread, the formatter/LSP **suggests parentheses** when `and` and `or` are mixed.
+
+### Equality
+
+- **Classes** compare by **identity**: `a == b` is true only if they are the same object.
+- **Data classes** compare by **value**: `Money(5, "EUR") == Money(5, "EUR")` is true.
 
 ## Control flow
 
@@ -125,7 +146,77 @@ else
 
 while i <= n
 {
-    i = i + 1
+    i += 1
+}
+```
+
+### for loops
+
+```
+for n in nums               // each element
+for i, n in nums            // index and element (index first, like Go)
+for name, age in ages       // map: key and value
+for i in 0..10              // 0 to 9
+for i in 0..=10             // 0 to 10
+```
+
+`break` and `continue` work in `for` and `while`.
+
+### match
+
+`match` is an **expression**: it produces a value. It must cover every case, and `_` means "anything else".
+
+```
+con label = match status
+{
+    Status.Pending   => "waiting"
+    Status.Paid      => "paid"
+    Status.Shipped   => "on its way"
+    Status.Cancelled => "cancelled"
+}
+
+con size = match n
+{
+    0       => "none"
+    1..=9   => "a few"
+    10..=99 => "many"
+    _       => "lots"
+}
+```
+
+## Top-level declarations
+
+Only **`con`** is allowed outside functions. There is no global `mut`.
+
+```
+con MAX_USERS = 1000
+con API_VERSION = "v2"
+```
+
+## Panics and assert
+
+A panic stops the program with a message and a stack trace pointing at Bronze lines.
+
+```
+assert(age >= 0, "age can't be negative")
+panic("unrealistic age: {age}")
+```
+
+```
+panic: unrealistic age: 200
+  at checked_age (src/users.brz:12)
+  at main        (src/main.brz:5)
+```
+
+## Tests
+
+Tests use the **`test`** keyword and `assert`. They live in the `tests/` folder, and can also be written next to the code. Run them with `bronze test`.
+
+```
+test "add works"
+{
+    assert(add(2, 2) == 4)
+    assert(add(-1, 1) == 0)
 }
 ```
 
@@ -140,3 +231,10 @@ func main() -> Int
 ```
 
 `main` returns an `Int`, which becomes the process exit code.
+
+Command-line arguments and environment variables come from the standard library:
+
+```
+con args = os.args()                      // List<String>, without the program name
+con port = env.get("PORT") else "8080"    // can fail: not set
+```
