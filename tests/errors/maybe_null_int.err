@@ -1,0 +1,2 @@
+error: `n` may be null
+  --> maybe_null_int.brz:13:12

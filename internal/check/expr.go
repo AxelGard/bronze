@@ -205,7 +205,7 @@ func (c *checker) enumCase(m *ast.Member, en *Enum) Type {
 
 func (c *checker) unary(e *ast.Unary) Type {
 	t := c.value(e.X)
-	if silent(t) {
+	if silent(t) || c.mayBeNull(e.X, t) {
 		return Invalid
 	}
 	switch e.Op {
@@ -243,7 +243,7 @@ func (c *checker) binary(e *ast.Binary) Type {
 			t Type
 			e ast.Expr
 		}{{x, e.X}, {y, e.Y}} {
-			if !assignable(side.t, Bool) {
+			if !assignable(side.t, Bool) && !c.nullMismatch(side.e, side.t, Bool) {
 				c.errorf(side.e.Span(), "`%s` needs Bool on both sides, found %s", opText(e.Op), side.t)
 			}
 		}
@@ -261,7 +261,8 @@ func (c *checker) binary(e *ast.Binary) Type {
 
 	switch e.Op {
 	case lexer.EQ, lexer.NE:
-		if x == y {
+		// A T? can be compared with a T, and with null.
+		if identical(nonNull(x), nonNull(y)) {
 			return Bool
 		}
 		_, xOpt := x.(*Optional)
@@ -284,6 +285,9 @@ func (c *checker) binary(e *ast.Binary) Type {
 		return Bool
 
 	case lexer.LT, lexer.LE, lexer.GT, lexer.GE:
+		if c.eitherMayBeNull(e, x, y) {
+			return Bool
+		}
 		if x == y && (isNumeric(x) || x == String) {
 			return Bool
 		}
@@ -298,7 +302,26 @@ func (c *checker) binary(e *ast.Binary) Type {
 		return Bool
 	}
 
+	if c.eitherMayBeNull(e, x, y) {
+		return Invalid
+	}
 	return c.arith(e.Op, e, e.X, e.Y, x, y, label, false)
+}
+
+// eitherMayBeNull reports "may be null" for each side of e that is a T?,
+// and says whether it did.
+func (c *checker) eitherMayBeNull(e *ast.Binary, x, y Type) bool {
+	nx := c.mayBeNull(e.X, x)
+	ny := c.mayBeNull(e.Y, y)
+	return nx || ny
+}
+
+// nonNull returns T for a T?, and t itself otherwise.
+func nonNull(t Type) Type {
+	if o, ok := t.(*Optional); ok {
+		return o.Inner
+	}
+	return t
 }
 
 // arith checks `x op y` for an arithmetic operator, where e is the whole

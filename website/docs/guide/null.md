@@ -41,7 +41,40 @@ Ada
 true
 ```
 
-In 0.1.0, `T?` works for classes, enums and `Error`. (`Int?`, `String?` and the like come in a later version.)
+`T?` works for every type: `Int?`, `String?`, `Bool?`, classes, enums and `Error`. A `T?` can be compared with a `T`: `n == 5` is true when `n` is not null and is `5`.
+
+```bronze
+func parse_digit(c: String) -> Int?
+{
+    if c == "1"
+    {
+        return 1
+    }
+    if c == "2"
+    {
+        return 2
+    }
+    return null
+}
+
+func main() -> Int
+{
+    con one = parse_digit("1")
+    print(one == 1)
+    print(parse_digit("x") == null)
+    con n = parse_digit("2") else 0
+    print(n * 10)
+    return 0
+}
+```
+
+```text title="Output"
+true
+true
+20
+```
+
+`print`, `String(...)` and arithmetic need a `T`, so handle the null first.
 
 ## Using a T?
 

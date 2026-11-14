@@ -54,7 +54,7 @@ A `{` may be on the next line, and so may the `else` of an `if`. The `else` that
 | a class `C` | a reference to an object of `C` |
 | an enum `E` | one of its cases |
 | `Error` | the built-in error class |
-| `T?` | a `T`, or `null` (`T` is a class, an enum or `Error`) |
+| `T?` | a `T`, or `null`, for any type `T` (but not `T??`) |
 | `T ! E` | return types only: a `T`, or a failure with `E` |
 | `! E` | return types only: nothing, or a failure with `E` |
 
@@ -67,7 +67,7 @@ From the lowest precedence to the highest:
 | `x else handler` | `x` is a `T ! E` or a `T?` | `T` (see [Errors](../guide/errors.md), [Null](../guide/null.md)) |
 | `or` | `Bool` | `Bool`, short-circuit |
 | `and` | `Bool` | `Bool`, short-circuit |
-| `== !=` | two values of the same type, or a `T?` and `null` | `Bool` |
+| `== !=` | two values of the same type, a `T?` and a `T`, or a `T?` and `null` | `Bool` |
 | `< <= > >=` | two `Int`s, two `Float`s or two `String`s | `Bool` |
 | `x is C` | `x` is an error, `C` is `Error` or a class that uses it | `Bool` |
 | `+ -` | two `Int`s or two `Float`s; `+` also joins two `String`s | the same type |

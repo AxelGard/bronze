@@ -1,0 +1,58 @@
+class Reading
+{
+    mut value: Float? = null
+}
+
+func digit(c: String) -> Int?
+{
+    if c == "7"
+    {
+        return 7
+    }
+    return null
+}
+
+func describe(flag: Bool?) -> String
+{
+    if flag == null
+    {
+        return "unknown"
+    }
+    if flag
+    {
+        return "yes"
+    }
+    return "no"
+}
+
+func main() -> Int
+{
+    con seven = digit("7")
+    con none = digit("x")
+    print(seven == 7)
+    print(none == 7)
+    print(none == null)
+    print(seven != none)
+    if seven != null
+    {
+        print(seven * 6)
+    }
+    print(none else -1)
+
+    mut name: String? = null
+    print(name == null)
+    name = "Ada"
+    con shown = name else "nobody"
+    print(shown)
+
+    print(describe(true))
+    print(describe(false))
+    print(describe(null))
+
+    con r = Reading()
+    print(r.value == null)
+    r.value = 2.5
+    con v = r.value else 0.0
+    print(v)
+    return 0
+}

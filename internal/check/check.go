@@ -455,13 +455,7 @@ func (c *checker) resolveType(t *ast.TypeExpr) Type {
 	if !t.Optional || silent(base) {
 		return base
 	}
-	switch base.(type) {
-	case *Class, *Enum:
-		return &Optional{Inner: base}
-	}
-	d := c.errorf(t.Sp, "`%s?` is not supported yet", base)
-	d.Notes = []string{"in 0.1, only classes, enums and `Error` can be `?` types"}
-	return Invalid
+	return &Optional{Inner: base}
 }
 
 func (c *checker) resolveName(name *ast.Ident) Type {
@@ -799,7 +793,7 @@ func (c *checker) thisField(name string) *Field {
 
 func (c *checker) cond(e ast.Expr) {
 	t := c.value(e)
-	if !assignable(t, Bool) {
+	if !assignable(t, Bool) && !c.nullMismatch(e, t, Bool) {
 		c.errorf(e.Span(), "condition must be Bool, found %s", t)
 	}
 }

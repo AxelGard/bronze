@@ -1,0 +1,14 @@
+func lookup(key: String) -> Int?
+{
+    if key == "one"
+    {
+        return 1
+    }
+    return null
+}
+
+func main() -> Int
+{
+    con n = lookup("one")
+    return n + 1
+}

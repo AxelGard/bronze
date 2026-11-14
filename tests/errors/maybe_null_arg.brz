@@ -1,0 +1,12 @@
+func shout(s: String) -> String
+{
+    return s + "!"
+}
+
+func main() -> Int
+{
+    mut name: String? = null
+    name = "Ada"
+    print(shout(name))
+    return 0
+}

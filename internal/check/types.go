@@ -65,10 +65,22 @@ func (f *Failable) String() string {
 // silent reports whether t is a type that never causes an error.
 func silent(t Type) bool { return t == Invalid || t == Never }
 
+// identical reports whether a and b are the same type.
+func identical(a, b Type) bool {
+	if a == b {
+		return true
+	}
+	if a, ok := a.(*Optional); ok {
+		b, ok := b.(*Optional)
+		return ok && identical(a.Inner, b.Inner)
+	}
+	return false
+}
+
 // assignable reports whether a value of type from can be used as a to: the
 // same type, a class that uses `Error` as an Error, or a T or null as a T?.
 func assignable(from, to Type) bool {
-	if from == to || silent(from) || to == Invalid {
+	if identical(from, to) || silent(from) || to == Invalid {
 		return true
 	}
 	switch to := to.(type) {

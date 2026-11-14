@@ -43,6 +43,7 @@ func TestValidPrograms(t *testing.T) {
 		"func f(a: Int) -> String\n{\n    return String(a) + String(1.5) + String(true)\n}",
 		"func f()\n{\n    mut x: Float = 1.0\n    x = x * 2.0\n    assert(x > 1.0, \"big\")\n}",
 		"func f() -> Int\n{\n    con x = panic(\"later\")\n    return x + 1\n}",
+		"func f(n: Int?, s: String?) -> Int\n{\n    mut total: Int? = null\n    total = 3\n    if n == 5 or s != \"a\"\n    {\n        return 1\n    }\n    if n != null\n    {\n        return n + 1\n    }\n    return 0\n}",
 	}
 	for _, src := range ok {
 		if errs := errors(t, src+mainFunc); len(errs) > 0 {
@@ -531,8 +532,10 @@ func TestErrorAndNullErrors(t *testing.T) {
 			[]string{"3:13 `null` needs a type here"}},
 		{"never null", "func f(i: Item) -> Bool\n{\n    return i == null\n}",
 			[]string{"3:12 `i` can never be null"}},
-		{"int optional", "func f(n: Int?)\n{\n}",
-			[]string{"1:11 `Int?` is not supported yet"}},
+		{"int optional used as int", "func f(n: Int?) -> Int\n{\n    con m = n + 1\n    return n\n}",
+			[]string{"3:13 `n` may be null", "4:12 `n` may be null"}},
+		{"optional basics", "func f(s: String?, b: Bool?, x: Float?)\n{\n    if b\n    {\n    }\n    con t = s < \"a\"\n    con y = -x\n    print(s)\n    con z: Int = s else 0\n}",
+			[]string{"3:8 `b` may be null", "6:13 `s` may be null", "7:14 `x` may be null", "8:11 `s` may be null", "9:18 `z` is declared as Int, but the value is String", "9:25 the fallback is Int, but the value it replaces is String"}},
 		{"null to plain", "func f()\n{\n    con a: Item = null\n}",
 			[]string{"3:19 `a` is declared as Item, but the value is null"}},
 		{"bind on null", "func f()\n{\n    con a = lookup(1) else (e) return\n}",

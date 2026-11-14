@@ -1,0 +1,2 @@
+error: `name` may be null
+  --> maybe_null_arg.brz:10:17
