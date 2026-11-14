@@ -12,8 +12,8 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `doc/implementation.md` | Architecture and implementation principles |
 | `doc/open-questions.md` | Everything not decided yet |
 | `doc/*.md` (others) | Decided design: syntax, types, classes, errors, namespaces, projects, core values |
-| `examples/core.brz`, `examples/projects/*.brz` | **The 0.1.0 targets**: each has its expected output at the bottom |
-| `examples/*.brz` (others) | Design explorations with later features and undecided syntax, marked `[decided]` / `[proposal]` / `[exploration]` |
+| `examples/` | Programs that run; each has its expected output at the bottom, and a test checks it (`tests/golden_test.go`). Only programs that run go here |
+| `doc/explorations/*.brz` | Design explorations and worksheets with later features and undecided syntax, marked `[decided]` / `[proposal]` / `[exploration]` / `[worksheet]` |
 | `cmd/bronze/` | CLI entry point; the logic is in `internal/cli` |
 | `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline |
 | `internal/cli/` | `run`, `check`, `lsp`, `version`; `cli.Main` is also what the golden tests call |
@@ -26,7 +26,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 
 ## Current state
 
-0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 has started with the LSP (`bronze lsp`: diagnostics, definition, rename), which needs no new language decisions. The 0.2 language features wait for the author's answers in `examples/worksheet-0.2.brz`; once answered, write `doc/spec-0.2.md` from them. Open: exit codes outside 0–255 (`doc/open-questions.md`).
+0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 has started with the LSP (`bronze lsp`: diagnostics, definition, rename), which needs no new language decisions. The 0.2 language features wait for the author's answers in `doc/explorations/worksheet-0.2.brz`; once answered, write `doc/spec-0.2.md` from them. Open: exit codes outside 0–255 (`doc/open-questions.md`).
 
 ## Commands
 
@@ -41,7 +41,7 @@ make install      # bronze into ~/.local/bin, and the parser into Neovim (script
 make dist VERSION=v0.1.0   # release archives for macOS and Linux into dist/
 ```
 
-Releases: pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which tests, runs `make dist`, and publishes a GitHub Release. `scripts/get-bronze.sh` downloads from `releases/latest`, so only tags with a suffix (`v0.2.0-rc1`) are prereleases. Release builds set `cli.Version` from the tag.
+CI (`.github/workflows/ci.yml`) runs gofmt, vet, `go test` and `make tree-sitter` on every push to master and every pull request, and fails if `editors/tree-sitter-bronze/src` doesn't match `grammar.js` (regenerate with tree-sitter CLI 0.27.2). Releases: pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which tests, runs `make dist`, and publishes a GitHub Release. `scripts/get-bronze.sh` downloads from `releases/latest`, so only tags with a suffix (`v0.2.0-rc1`) are prereleases. Release builds set `cli.Version` from the tag.
 
 Go 1.26, module `github.com/AxelGard/bronze`, standard library only.
 
@@ -55,7 +55,7 @@ Go 1.26, module `github.com/AxelGard/bronze`, standard library only.
 
 ## Working with the author
 
-- Design is explored by writing example `.brz` files with options side by side, or worksheets with `// CHOICE:` lines the author fills in. Decisions then go into `doc/*.md`, and open items into `doc/open-questions.md`.
+- Design is explored by writing `.brz` files in `doc/explorations/` with options side by side, or worksheets with `// CHOICE:` lines the author fills in. Decisions then go into `doc/*.md`, and open items into `doc/open-questions.md`.
 - Docs are Markdown in `doc/`. Keep them in sync when a decision changes.
 - Only commit when asked. Commit messages: a short summary line, then details if needed.
 - Bronze code style in examples: braces on their own line (Allman), 4-space indent, `//` comments.

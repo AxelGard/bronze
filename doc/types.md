@@ -1,6 +1,6 @@
 # Built-in types
 
-Worksheet: [`basics.brz`](../examples/basics.brz).
+Worksheet: [`basics.brz`](explorations/basics.brz).
 
 ## Numbers
 

@@ -10,7 +10,7 @@ func main() -> Int
 }
 ```
 
-It is early days: the language design lives in [`doc/`](doc/index.md), examples in [`examples/`](examples/), and the implementation is a tree-walking interpreter written in Go. See the [milestones](doc/milestones.md) for what each version adds.
+It is early days: the language design lives in [`doc/`](doc/index.md), programs you can run in [`examples/`](examples/), and the implementation is a tree-walking interpreter written in Go. See the [milestones](doc/milestones.md) for what each version adds.
 
 ## Install
 

@@ -56,7 +56,7 @@ x, y = min_max(x, y)               // or assign to existing mut variables
 
 ## Functions as values
 
-Example: [`lambdas.brz`](../examples/lambdas.brz). The goal is **no callback soup**: named functions are the normal thing to pass around.
+Example: [`lambdas.brz`](explorations/lambdas.brz). The goal is **no callback soup**: named functions are the normal thing to pass around.
 
 ```
 type Check = func(User) -> Bool                 // a named signature

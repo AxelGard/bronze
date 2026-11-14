@@ -1,0 +1,58 @@
+# Checks every push and pull request: formatting, vet, all tests, and the
+# tree-sitter grammar.
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not formatted with gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...
+
+  tree-sitter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The generated parser depends on the CLI version: keep this the same
+      # as the one used to generate editors/tree-sitter-bronze/src.
+      - name: Install the tree-sitter CLI
+        run: npm install -g tree-sitter-cli@0.27.2
+
+      - name: Generate, test, and parse every valid program
+        run: make tree-sitter
+
+      - name: The committed parser matches grammar.js
+        run: |
+          if ! git diff --exit-code -- editors/tree-sitter-bronze/src; then
+            echo "editors/tree-sitter-bronze/src is out of date: run 'make tree-sitter' and commit the result"
+            exit 1
+          fi

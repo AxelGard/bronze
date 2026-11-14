@@ -1,6 +1,6 @@
 # Errors and null
 
-**Decided:** errors as values, handled with `else`, with the Go form for full control. Full examples in [`errors.brz`](../examples/errors.brz).
+**Decided:** errors as values, handled with `else`, with the Go form for full control. Full examples in [`errors.brz`](explorations/errors.brz).
 
 ## Errors are values
 

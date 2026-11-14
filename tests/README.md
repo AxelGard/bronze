@@ -10,4 +10,6 @@ Golden tests, run by `go test ./...` (the runner is `golden_test.go`). Tests tha
 
 Only the start of a diagnostic is compared, so the rest (source excerpt, help, stack trace) can be improved freely.
 
-`run/core.brz`, `run/counter.brz` and `run/bank.brz` are copies of the example programs in `examples/` that 0.1.0 must run. Keep them in sync.
+`run/core.brz`, `run/counter.brz` and `run/bank.brz` are copies of the example programs in `examples/` that 0.1.0 must run. Keep them in sync (`TestExamplesInSync` checks it).
+
+Every program in `examples/` must also run with exit code 0, and print the output written in its `Expected output:` comment (`TestExamples`).

@@ -3,6 +3,7 @@ package tests
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,4 +110,69 @@ func TestExamplesInSync(t *testing.T) {
 			t.Errorf("tests/%s is not the same as %s", copy, strings.TrimPrefix(example, "../"))
 		}
 	}
+}
+
+// TestExamples runs every program in examples/. Each must end with a
+// comment saying what it prints:
+//
+//	/*
+//	    Expected output:
+//
+//	    hello
+//
+//	    Exit code: 0
+//	*/
+//
+// so that examples/ only holds programs that work. Design files that
+// don't run belong in doc/explorations/.
+func TestExamples(t *testing.T) {
+	var files []string
+	err := filepath.WalkDir("../examples", func(path string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && strings.HasSuffix(path, ".brz") {
+			files = append(files, path)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range files {
+		t.Run(strings.TrimPrefix(path, "../examples/"), func(t *testing.T) {
+			wantOut, wantCode, ok := expected(read(t, path))
+			if !ok {
+				t.Fatalf("%s has no `Expected output:` ... `Exit code: N` comment (programs that don't run belong in doc/explorations/)", path)
+			}
+			stdout, stderr, code := bronze("run", path)
+			if code != wantCode {
+				t.Errorf("exit code %d, want %d\nstderr:\n%s", code, wantCode, stderr)
+			}
+			if stdout != wantOut {
+				t.Errorf("stdout:\n%s\nwant:\n%s", stdout, wantOut)
+			}
+		})
+	}
+}
+
+// expected reads the `Expected output:` comment of an example.
+func expected(src string) (out string, code int, ok bool) {
+	_, rest, found := strings.Cut(src, "Expected output:")
+	if !found {
+		return "", 0, false
+	}
+	body, tail, found := strings.Cut(rest, "Exit code:")
+	if !found {
+		return "", 0, false
+	}
+	if _, err := fmt.Sscanf(strings.TrimSpace(tail), "%d", &code); err != nil {
+		return "", 0, false
+	}
+	var lines []string
+	for _, line := range strings.Split(body, "\n") {
+		lines = append(lines, strings.TrimPrefix(line, "    "))
+	}
+	out = strings.Trim(strings.Join(lines, "\n"), "\n")
+	if out != "" {
+		out += "\n"
+	}
+	return out, code, true
 }

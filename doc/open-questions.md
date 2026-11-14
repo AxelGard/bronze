@@ -45,7 +45,7 @@ What we still need to decide. When something is settled, it moves into the other
 - Checking the kind: `if e is NotFound`?
 
 ## Generics
-Explored in [`generics.brz`](../examples/generics.brz).
+Explored in [`generics.brz`](explorations/generics.brz).
 - `<T>` or `[T]`?
 - Constraints with `use`: `<T use Comparable<T>>`?
 - Checked once against constraints (Rust, Swift, C#, Go), or C++-style templates?
@@ -54,7 +54,7 @@ Explored in [`generics.brz`](../examples/generics.brz).
 - Default type parameters?
 
 ## Lambdas and iterators
-Explored in [`lambdas.brz`](../examples/lambdas.brz).
+Explored in [`lambdas.brz`](explorations/lambdas.brz).
 - Is matching a signature both automatic and explicit (`use Handler`) the right call, or should one go?
 - Parameter names in signatures: `type Handler = func(req: http.Request) -> ...`?
 - Writing iterators: generators with `yield`, an `Iterator` class with `next()`, or both?
@@ -63,7 +63,7 @@ Explored in [`lambdas.brz`](../examples/lambdas.brz).
 - Ranges `0..10` / `0..=10`, and `for i, x in list`?
 
 ## Passing arguments
-Trying out: everything shared, with the mode on the type: `a: T` (read only), `a: mut T`, `a: copy T`, plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [`references.brz`](../examples/references.brz).
+Trying out: everything shared, with the mode on the type: `a: T` (read only), `a: mut T`, `a: copy T`, plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [`references.brz`](explorations/references.brz).
 - Mark `mut` at the call site too?
 - Can you write `x, y = y, x` directly (without a function)?
 - Does `con` on a local variable also freeze the object?

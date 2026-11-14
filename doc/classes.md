@@ -1,6 +1,6 @@
 # Classes
 
-Examples: [`basic.brz`](../examples/basic.brz), [`namespaces.brz`](../examples/namespaces.brz).
+Examples: [`basic.brz`](explorations/basic.brz), [`namespaces.brz`](explorations/namespaces.brz).
 
 ## Classes
 
