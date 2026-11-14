@@ -55,7 +55,13 @@ con empty: List<String> = []
 
 - **Indexing returns `T?`**: `nums[0]` is an `Int?`, and `ages["Zed"]` is an `Int?`. The compiler makes you handle the missing case: `nums[10] else 0`.
 - **Negative indexes** count from the end: `word[-1]` is the last character.
-- **Slicing** with ranges, for strings and lists: `word[2..5]`, `word[2..=5]`, `word[..3]`, `word[2..]`.
+- **Slicing** with ranges, for strings and lists: `word[2..5]`, `word[2..=5]`, `word[..3]`, `word[2..]`. Slices are clamped and never fail: `word[2..100]` is everything from index 2. A slice of a list is a new list.
+- Indexing a string gives a one-character `String?`. There is no `Char` type.
+- **Shared**, like objects: assigning or passing a list or map never copies it. `con` fixes the variable, not the collection.
+- **`==` compares by value.**
+- **Maps keep insertion order.** Keys can be `Int`, `String`, `Bool` or enums.
+- `[]` and `{}` need a known type, like `null`: `con ages: Map<String, Int> = {}`.
+- Printed as `[1, 2, 3]`, `["a", "b"]` and `{"Ada": 36}`, with strings quoted.
 
 ## Enums
 

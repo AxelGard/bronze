@@ -14,7 +14,8 @@ Everything decided about Bronze so far.
 | [Projects](projects.md) | Folder layout, imports |
 | [Implementation](implementation.md) | Go, tree-walking interpreter, architecture |
 | [Spec 0.1](spec-0.1.md) | The exact language version 0.1.0 implements |
-| [Milestones](milestones.md) | Version plan, and when 0.1.0 is done |
+| [Spec 0.2](spec-0.2.md) | The changes for 0.2.0: `T?` for all types, lists, maps, `for`, interpolation |
+| [Milestones](milestones.md) | Version plan, and when 0.1.0 and 0.2.0 are done |
 | [Open questions](open-questions.md) | What we still need to decide |
 
 ## Examples
@@ -33,7 +34,7 @@ Design files in [`explorations/`](explorations/): options side by side, workshee
 
 | File | Shows |
 |---|---|
-| [`worksheet-0.2.brz`](explorations/worksheet-0.2.brz) | Worksheet: the open choices for 0.2.0 |
+| [`worksheet-0.2.brz`](explorations/worksheet-0.2.brz) | Worksheet: the choices for 0.2.0 (answered; see spec-0.2) |
 | [`basics.brz`](explorations/basics.brz) | Worksheet: 24 basic topics to decide |
 | [`basic.brz`](explorations/basic.brz) | Classes, multiple inheritance, diamonds, `super(A)`, `static` |
 | [`tour.brz`](explorations/tour.brz) | A tour of the whole language, including a small backend |

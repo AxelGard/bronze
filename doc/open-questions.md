@@ -60,7 +60,6 @@ Explored in [`lambdas.brz`](explorations/lambdas.brz).
 - Writing iterators: generators with `yield`, an `Iterator` class with `next()`, or both?
 - Chains: eager, lazy, or lazy on `Iter` and eager on `List`?
 - Names: `where` or `filter`, `fold` or `reduce`?
-- Ranges `0..10` / `0..=10`, and `for i, x in list`?
 
 ## Passing arguments
 Trying out: everything shared, with the mode on the type: `a: T` (read only), `a: mut T`, `a: copy T`, plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [`references.brz`](explorations/references.brz).
@@ -72,7 +71,7 @@ Trying out: everything shared, with the mode on the type: `a: T` (read only), `a
 - Objects like DB connections: are their methods `mut`?
 
 ## Other areas
-- **Mutability**: does `con` freeze only the variable, or the object too? Mutable vs immutable collections?
+- **Mutability**: does `con` freeze only the variable, or the object too? (0.1 and 0.2: only the variable, for objects, lists and maps.) Immutable collections later?
 - **Concurrency**: green threads (goroutines) plus structured concurrency? Async/await? Actors?
 - **Shell commands**: return type, non-zero exit codes, safe interpolation, which shell
 - **Standard library**: how big, and can Bronze call Go packages directly?

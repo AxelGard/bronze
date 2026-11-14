@@ -8,6 +8,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 |---|---|
 | `doc/index.md` | Start here: map of all design docs |
 | `doc/spec-0.1.md` | **The exact language for 0.1.0**: tokens, newline rules, grammar, type rules, runtime semantics, print format, CLI, diagnostics format |
+| `doc/spec-0.2.md` | **The changes for 0.2.0**, on top of spec-0.1 |
 | `doc/milestones.md` | Version plan, the "done when" list and work order for 0.1.0 |
 | `doc/implementation.md` | Architecture and implementation principles |
 | `doc/open-questions.md` | Everything not decided yet |
@@ -27,7 +28,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 
 ## Current state
 
-0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 has started with the LSP (`bronze lsp`: diagnostics, definition, rename), which needs no new language decisions. The 0.2 language features wait for the author's answers in `doc/explorations/worksheet-0.2.brz`; once answered, write `doc/spec-0.2.md` from them. Open: exit codes outside 0–255 (`doc/open-questions.md`).
+0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 has started with the LSP (`bronze lsp`: diagnostics, definition, rename), which needs no new language decisions. The worksheet `doc/explorations/worksheet-0.2.brz` is answered and `doc/spec-0.2.md` is written; next is implementing it, in the work order in `doc/milestones.md`. Open: exit codes outside 0–255 (`doc/open-questions.md`).
 
 ## Commands
 
@@ -49,7 +50,7 @@ Go 1.26, module `github.com/AxelGard/bronze`, standard library only.
 
 ## Implementation rules
 
-- Implement exactly `doc/spec-0.1.md` for 0.1.0. If something isn't covered there, check the other docs, then ask. Don't add later features early.
+- Implement exactly `doc/spec-0.1.md` for 0.1.0, and `doc/spec-0.2.md` on top of it for 0.2.0. If something isn't covered there, check the other docs, then ask. Don't add later features early.
 - Every AST node carries a source span. The parser recovers from errors and reports several. The checker reports all errors. These matter for the LSP in 0.2.
 - The interpreter assumes a checked program. Bronze runtime failures are Bronze panics (stack trace, exit code 101), never Go panics.
 - Tests: unit tests per package, plus golden tests in `tests/`. Add a golden test for every new diagnostic.

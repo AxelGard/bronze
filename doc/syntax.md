@@ -105,7 +105,7 @@ See [types](types.md) for numbers, strings, bytes and collections.
 | Compound assignment | `+= -= *= /= %=` |
 | Comparison | `== != < <= > >=` |
 | Logic | **`and`**, **`or`**, **`not`** (words, not symbols) |
-| Ranges | `0..10` (0 to 9), `0..=10` (0 to 10) |
+| Ranges | `0..10` (0 to 9), `0..=10` (0 to 10). Outside `for` and slices, a range is a `List<Int>` |
 
 ### Precedence (highest first)
 
@@ -125,6 +125,7 @@ So `not done and count > 3 or forced` means `((not done) and (count > 3)) or for
 
 - **Classes** compare by **identity**: `a == b` is true only if they are the same object.
 - **Data classes** compare by **value**: `Money(5, "EUR") == Money(5, "EUR")` is true.
+- **Lists and maps** compare by **value**: `[1, 2] == [1, 2]` is true. Their elements compare with their own `==`.
 
 ## Control flow
 
@@ -160,7 +161,7 @@ for i in 0..10              // 0 to 9
 for i in 0..=10             // 0 to 10
 ```
 
-`break` and `continue` work in `for` and `while`.
+`break` and `continue` work in `for` and `while`. The loop variable can't be assigned to, and changing the length of a list or map while looping over it panics.
 
 ### match
 
