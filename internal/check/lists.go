@@ -24,6 +24,8 @@ func (c *checker) resolveBase(t *ast.TypeExpr) Type {
 			return Invalid
 		}
 		return &List{Elem: elem}
+	case "Map":
+		return c.mapType(t)
 	}
 	base := c.resolveName(t.Name)
 	if len(t.Args) > 0 && !silent(base) {
@@ -56,6 +58,10 @@ func (c *checker) valueFor(e ast.Expr, want Type) Type {
 		t := c.listLit(x, want)
 		c.info.Types[e] = t
 		return t
+	case *ast.MapLit:
+		t := c.mapLit(x, want)
+		c.info.Types[e] = t
+		return t
 	case *ast.Paren:
 		if isLiteral(x.X) {
 			t := c.valueFor(x.X, want)
@@ -70,7 +76,7 @@ func (c *checker) valueFor(e ast.Expr, want Type) Type {
 // type from where they are used.
 func isLiteral(e ast.Expr) bool {
 	switch x := e.(type) {
-	case *ast.ListLit:
+	case *ast.ListLit, *ast.MapLit:
 		return true
 	case *ast.Paren:
 		return isLiteral(x.X)
@@ -107,25 +113,7 @@ func (c *checker) listLit(l *ast.ListLit, want Type) Type {
 		d.Help = []string{"write the type where it is declared, like `con names: List<String> = []`"}
 		return Invalid
 	}
-	var elem Type // the type of the elements so far
-	mixed := false
-	for _, el := range l.Elems {
-		t := c.valueFor(el, elem)
-		switch {
-		case silent(t) || c.mayBeNull(el, t):
-			continue
-		case t == Null:
-			d := c.errorf(el.Span(), "a list can't hold null")
-			d.Notes = []string{"its elements can't be a `?` type"}
-			continue
-		case elem == nil:
-			elem = t
-		case !identical(t, elem) && !mixed:
-			d := c.errorf(el.Span(), "list elements have different types: %s and %s", elem, t)
-			d.Help = []string{"if they share a type, write it where the list is declared, like `con xs: List<Error> = [...]`"}
-			mixed = true
-		}
-	}
+	elem := c.sameTypes(l.Elems, "list elements", "a list")
 	if elem == nil {
 		return Invalid
 	}
@@ -142,6 +130,9 @@ func (c *checker) index(e *ast.Index) Type {
 	case *List:
 		c.intIndex(e.Index)
 		return &Optional{Inner: t.Elem}
+	case *Map:
+		c.mapKey(t, e.Index)
+		return &Optional{Inner: t.Val}
 	}
 	c.value(e.Index)
 	if !silent(t) {
@@ -171,6 +162,10 @@ func (c *checker) indexTarget(e *ast.Index) Type {
 		c.intIndex(e.Index)
 		c.info.Types[e] = t.Elem
 		return t.Elem
+	case *Map:
+		c.mapKey(t, e.Index)
+		c.info.Types[e] = t.Val
+		return t.Val
 	}
 	c.value(e.Index)
 	if !silent(t) {
@@ -185,7 +180,11 @@ func (c *checker) assignIndex(target *ast.Index, value ast.Expr) {
 	want := c.indexTarget(target)
 	t := c.valueFor(value, want)
 	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
-		c.errorf(value.Span(), "cannot assign %s to an element of %s, which holds %s", t, c.info.Types[target.X], want)
+		what := "an element"
+		if _, ok := nonNull(c.info.Types[target.X]).(*Map); ok {
+			what = "a value"
+		}
+		c.errorf(value.Span(), "cannot assign %s to %s of %s, which holds %s", t, what, nonNull(c.info.Types[target.X]), want)
 	}
 }
 
@@ -197,6 +196,8 @@ func printable(t Type) bool {
 		return true
 	case *List:
 		return printable(t.Elem)
+	case *Map:
+		return printable(t.Key) && printable(t.Val)
 	}
 	return t == Int || t == Float || t == Bool || t == String
 }

@@ -1,0 +1,2 @@
+error: map values have different types: Int and Float
+  --> map_mixed_types.brz:3:39

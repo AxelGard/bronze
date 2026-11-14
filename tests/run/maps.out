@@ -1,0 +1,21 @@
+{"Ada": 36, "Grace": 85}
+36
+true
+true
+{"Ada": 37, "Grace": 85, "Linus": 20}
+3
+37
+true
+["Grace", "Linus", "Ada"]
+[85, 20, 1]
+Grace: 85
+Linus: 20
+Ada: 1
+{"Grace": 0, "Linus": 0, "Ada": 0}
+{"a": 3, "b": 1, "c": 1}
+true
+false
+true
+green
+{Red: "red", Green: "green"}
+{"even": [2, 4], "odd": [1, 3, 5]}

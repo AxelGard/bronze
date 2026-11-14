@@ -1,0 +1,14 @@
+func main() -> Int
+{
+    con ages = {"Ada": 36, "Grace": 85}
+    for name, age in ages
+    {
+        ages[name] = age + 1
+    }
+    print(ages)
+    for name in ages
+    {
+        ages[name + "!"] = 0
+    }
+    return 0
+}

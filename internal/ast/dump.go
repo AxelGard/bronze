@@ -190,6 +190,16 @@ func dump(b *strings.Builder, n Node) {
 			dump(b, x)
 		}
 		b.WriteByte(')')
+	case *MapLit:
+		b.WriteString("(map")
+		for _, en := range n.Entries {
+			b.WriteString(" (")
+			dump(b, en.Key)
+			b.WriteString(": ")
+			dump(b, en.Value)
+			b.WriteByte(')')
+		}
+		b.WriteByte(')')
 	case *Index:
 		b.WriteString("(index ")
 		dump(b, n.X)

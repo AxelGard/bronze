@@ -15,7 +15,7 @@ import (
 
 // Value is a Bronze value: int64 (Int), float64 (Float), bool (Bool),
 // string (String), *Object (an object of a class), *Case (an enum case),
-// *List, or nil (null). A call to a function that can fail may also give a
+// *List, *Map, or nil (null). A call to a function that can fail may also give a
 // *Failure, which only an `else` sees.
 type Value any
 
@@ -338,7 +338,7 @@ func (in *interp) stmt(s ast.Stmt, e *env) (ctl, Value) {
 			obj.Fields[t.Name.Name] = in.expr(s.Value, e)
 		case *ast.Index:
 			sl := in.indexTarget(t, e)
-			sl.set(in.expr(s.Value, e))
+			in.set(sl, in.expr(s.Value, e), s.Sp)
 		}
 	case *ast.Compound:
 		in.compound(s, e)
@@ -428,6 +428,22 @@ func (in *interp) forStmt(s *ast.For, e *env) (ctl, Value) {
 				break
 			}
 		}
+	case *Map:
+		x.looping++
+		defer func() { x.looping-- }()
+		for i := 0; i < len(x.keys); i++ {
+			vals := []Value{x.keys[i]}
+			if len(s.Vars) == 2 {
+				vals = []Value{x.keys[i], x.vals[i]}
+			}
+			c, v := pass(vals...)
+			if c == ctlReturn {
+				return c, v
+			}
+			if c == ctlBreak {
+				break
+			}
+		}
 	default:
 		panic(fmt.Sprintf("interp: cannot loop over %T", x))
 	}
@@ -484,7 +500,8 @@ func (in *interp) compound(s *ast.Compound, e *env) {
 		obj.Fields[t.Name.Name] = in.arith(s.Op, old, in.expr(s.Value, e), s.Sp)
 	case *ast.Index:
 		sl := in.indexTarget(t, e)
-		sl.set(in.arith(s.Op, sl.get(), in.expr(s.Value, e), s.Sp))
+		old := in.get(sl, s.Sp)
+		in.set(sl, in.arith(s.Op, old, in.expr(s.Value, e), s.Sp), s.Sp)
 	}
 }
 
@@ -554,6 +571,13 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 			l.Elems[i] = in.expr(el, e)
 		}
 		return l
+	case *ast.MapLit:
+		m := NewMap()
+		for _, en := range x.Entries {
+			k := in.expr(en.Key, e)
+			m.Set(k, in.expr(en.Value, e))
+		}
+		return m
 	case *ast.Index:
 		return in.index(x, e)
 	case *ast.Call:
@@ -652,8 +676,11 @@ func (in *interp) callExpr(x *ast.Call, e *env) Value {
 	if m, ok := x.Fn.(*ast.Member); ok {
 		recv := in.expr(m.X, e)
 		args := in.args(x, e)
-		if l, ok := recv.(*List); ok {
-			return in.listMethod(l, m.Name.Name, args, x.Sp)
+		switch recv := recv.(type) {
+		case *List:
+			return in.listMethod(recv, m.Name.Name, args, x.Sp)
+		case *Map:
+			return in.mapMethod(recv, m.Name.Name, args, x.Sp)
 		}
 		var typeName string
 		var fn *ast.FuncDecl

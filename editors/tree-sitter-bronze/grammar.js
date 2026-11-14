@@ -36,6 +36,8 @@ module.exports = grammar({
   conflicts: ($) => [
     // `else (e) return` binds e; `else (x)` is a fallback value
     [$._expression, $.else_handler],
+    // `=> {}` in a match arm is a block (see match_arm)
+    [$.block, $.map],
   ],
 
   rules: {
@@ -192,6 +194,7 @@ module.exports = grammar({
         $.index_expression,
         $.match_expression,
         $.list,
+        $.map,
         $.parenthesized_expression,
         $.identifier,
         $.integer,
@@ -262,11 +265,16 @@ module.exports = grammar({
 
     list: ($) => seq('[', trailingCommaSep($._expression), ']'),
 
+    map: ($) => seq('{', trailingCommaSep($.map_entry), '}'),
+
+    map_entry: ($) => seq(field('key', $._expression), ':', field('value', $._expression)),
+
     match_expression: ($) =>
       seq('match', field('value', $._expression), '{', repeat($.match_arm), '}'),
 
+    // `=> {` is always a block, so a map value is written `=> ({})`.
     match_arm: ($) =>
-      seq(field('pattern', $.pattern), '=>', field('value', choice($._expression, $.block))),
+      seq(field('pattern', $.pattern), '=>', field('value', choice($._expression, prec.dynamic(1, $.block)))),
 
     pattern: ($) =>
       choice(

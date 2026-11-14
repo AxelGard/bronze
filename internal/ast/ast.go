@@ -370,6 +370,17 @@ type ListLit struct {
 	Sp    diag.Span
 }
 
+// MapLit is `{k: v, ...}`.
+type MapLit struct {
+	Entries []*Entry
+	Sp      diag.Span
+}
+
+// Entry is `key: value` in a map literal.
+type Entry struct {
+	Key, Value Expr
+}
+
 // Index is `x[i]`.
 type Index struct {
 	X     Expr
@@ -407,6 +418,7 @@ func (e *Else) Span() diag.Span      { return e.Sp }
 func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
 func (e *Range) Span() diag.Span     { return e.Lo.Span().To(e.Hi.Span()) }
 func (e *ListLit) Span() diag.Span   { return e.Sp }
+func (e *MapLit) Span() diag.Span    { return e.Sp }
 func (e *Index) Span() diag.Span     { return e.Sp }
 func (e *Call) Span() diag.Span      { return e.Sp }
 func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
@@ -428,6 +440,7 @@ func (*Else) exprNode()      {}
 func (*Binary) exprNode()    {}
 func (*Range) exprNode()     {}
 func (*ListLit) exprNode()   {}
+func (*MapLit) exprNode()    {}
 func (*Index) exprNode()     {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}

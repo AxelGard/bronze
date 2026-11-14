@@ -30,14 +30,20 @@ func (in *interp) index(x *ast.Index, e *env) Value {
 			return v.Elems[j]
 		}
 		return nil
+	case *Map:
+		val, _ := v.Get(in.expr(x.Index, e))
+		return val
 	}
 	panic("interp: cannot index")
 }
 
-// slot is an element of a list, as the target of an assignment.
+// slot is an element of a list or a value in a map, as the target of an
+// assignment.
 type slot struct {
 	list *List
 	i    int
+	m    *Map
+	key  Value
 }
 
 // indexTarget evaluates the parts of `x[i]` as an assignment target. An
@@ -51,12 +57,37 @@ func (in *interp) indexTarget(x *ast.Index, e *env) slot {
 			in.fail(x.Sp, "index %d out of range for a list of length %d", i, len(v.Elems))
 		}
 		return slot{list: v, i: j}
+	case *Map:
+		return slot{m: v, key: in.expr(x.Index, e)}
 	}
 	panic("interp: cannot assign to an index")
 }
 
-func (s slot) get() Value  { return s.list.Elems[s.i] }
-func (s slot) set(v Value) { s.list.Elems[s.i] = v }
+// get returns the current value. A key that is not in the map panics, for
+// `m[k] += v`.
+func (in *interp) get(s slot, at diag.Span) Value {
+	if s.m != nil {
+		v, ok := s.m.Get(s.key)
+		if !ok {
+			in.fail(at, "key %s is not in the map", formatInner(s.key))
+		}
+		return v
+	}
+	return s.list.Elems[s.i]
+}
+
+// set replaces the value. Adding a key to a map that is being looped over
+// panics.
+func (in *interp) set(s slot, v Value, at diag.Span) {
+	if s.m != nil {
+		if _, ok := s.m.Get(s.key); !ok {
+			in.mapChanging(s.m, at)
+		}
+		s.m.Set(s.key, v)
+		return
+	}
+	s.list.Elems[s.i] = v
+}
 
 // changing panics if a list is being looped over, before a method changes
 // its length or order.
@@ -145,6 +176,9 @@ func equal(a, b Value) bool {
 	case *List:
 		b, ok := b.(*List)
 		return ok && slices.EqualFunc(a.Elems, b.Elems, equal)
+	case *Map:
+		b, ok := b.(*Map)
+		return ok && mapEqual(a, b)
 	}
 	return a == b
 }

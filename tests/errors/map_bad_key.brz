@@ -1,0 +1,5 @@
+func main() -> Int
+{
+    con prices: Map<Float, String> = {}
+    return 0
+}

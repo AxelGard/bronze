@@ -73,6 +73,8 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return c.rangeExpr(e)
 	case *ast.ListLit:
 		return c.listLit(e, nil)
+	case *ast.MapLit:
+		return c.mapLit(e, nil)
 	case *ast.Index:
 		return c.index(e)
 	case *ast.Call:
@@ -501,8 +503,11 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	if c.mayBeNull(m.X, t) {
 		t = t.(*Optional).Inner
 	}
-	if l, ok := t.(*List); ok {
-		return c.listMethod(e, m, l)
+	switch t := t.(type) {
+	case *List:
+		return c.listMethod(e, m, t)
+	case *Map:
+		return c.mapMethod(e, m, t)
 	}
 	if en, ok := t.(*Enum); ok {
 		sig := en.Methods[name]

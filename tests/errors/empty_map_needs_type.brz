@@ -1,0 +1,5 @@
+func main() -> Int
+{
+    mut counts = {}
+    return 0
+}

@@ -1,0 +1,2 @@
+panic: key "Zed" is not in the map
+  at main (map_missing_key.brz:6)

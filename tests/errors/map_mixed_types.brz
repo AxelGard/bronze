@@ -1,0 +1,5 @@
+func main() -> Int
+{
+    con scores = {"Ada": 10, "Grace": 9.5}
+    return 0
+}

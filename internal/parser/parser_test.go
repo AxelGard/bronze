@@ -54,6 +54,9 @@ func TestStatements(t *testing.T) {
 		{"for _, x in xs { f(x) }", "(block (for _ x in xs (block (call f x))))"},
 		{"con xs: List<List<Int>> = [[1, 2], [], [3,\n4,],]", "(block (con xs: List<List<Int>> (list (list 1 2) (list) (list 3 4))))"},
 		{"mut m: Map<String, List<Int>?>= xs[i + 1][0]\nxs[0] = 1\nxs[i] += 2", "(block (mut m: Map<String, List<Int>?> (index (index xs (+ i 1)) 0)) (= (index xs 0) 1) (+= (index xs i) 2))"},
+		{"con ages = {\n    \"Ada\": 36,\n    \"Grace\": 85,\n}\ncon e: Map<String, Int> = {}", `(block (con ages (map ("Ada": 36) ("Grace": 85))) (con e: Map<String, Int> (map)))`},
+		{"if m == {} { f() }", "(block (if (== m (map)) (block (call f))))"},
+		{"match x\n{\n1 => {}\n_ => ({})\n}", "(block (match x (1 => (block)) (_ => (paren (map)))))"},
 		{"con r = 1 + 1..=n * 2 == xs", "(block (con r (== (..= (+ 1 1) (* n 2)) xs)))"},
 	}
 	for _, tt := range tests {
@@ -158,6 +161,11 @@ func TestErrors(t *testing.T) {
 			"chained range and for",
 			"func f()\n{\n    con r = 1..2..3\n    for i 0..3 { }\n    for x, in xs { }\n}",
 			[]string{"3:17 ranges can't be chained", "4:11 expected `in` after the loop variables, found `0`", "5:12 expected a name, found `in`"},
+		},
+		{
+			"map literal",
+			"func f()\n{\n    con m = {\"a\" 1}\n    con n = {1: 2 3: 4}\n}",
+			[]string{"3:18 expected `:` and a value after the key, found `1`", "4:19 expected `,` or `}` in the map, found `3`"},
 		},
 		{
 			"reserved word",

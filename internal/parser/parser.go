@@ -265,6 +265,7 @@ func (p *parser) classDecl() *ast.ClassDecl {
 // member parses one field or method into c. On a syntax error it skips to
 // the end of the member and marks the class as bad.
 func (p *parser) member(c *ast.ClassDecl) {
+	start := p.pos
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(bailout); !ok {
@@ -272,7 +273,7 @@ func (p *parser) member(c *ast.ClassDecl) {
 			}
 			p.recovered++
 			c.Bad = true
-			p.syncStmt()
+			p.syncStmt(start)
 		}
 	}()
 	switch p.kind() {
@@ -310,6 +311,7 @@ func (p *parser) enumDecl() *ast.EnumDecl {
 
 // enumMember parses one case or method into e, recovering like member.
 func (p *parser) enumMember(e *ast.EnumDecl) {
+	start := p.pos
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(bailout); !ok {
@@ -317,7 +319,7 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 			}
 			p.recovered++
 			e.Bad = true
-			p.syncStmt()
+			p.syncStmt(start)
 		}
 	}()
 	switch p.kind() {
@@ -458,7 +460,7 @@ func (p *parser) stmt() (s ast.Stmt) {
 				panic(r)
 			}
 			p.recovered++
-			p.syncStmt()
+			p.syncStmt(start)
 			s = &ast.BadStmt{Sp: p.toks[start].Span.To(p.prev())}
 		}
 	}()
@@ -467,16 +469,25 @@ func (p *parser) stmt() (s ast.Stmt) {
 	return s
 }
 
-// syncStmt skips to the end of the current statement: the next newline
-// outside of braces, or the `}` that closes the enclosing block. A block
-// that starts on the next line, as in
+// syncStmt skips to the end of the statement that starts at token from:
+// the next newline outside of braces, or the `}` that closes the
+// enclosing block. Braces opened since from, as in a map literal, are
+// closed first. A block that starts on the next line, as in
 //
 //	if x is Foo
 //	{
 //
 // belongs to the statement and is skipped too.
-func (p *parser) syncStmt() {
+func (p *parser) syncStmt(from int) {
 	depth := 0
+	for _, t := range p.toks[from:p.pos] {
+		switch t.Kind {
+		case lexer.LBRACE:
+			depth++
+		case lexer.RBRACE:
+			depth = max(depth-1, 0)
+		}
+	}
 	for !p.at(lexer.EOF) {
 		switch p.kind() {
 		case lexer.LBRACE:
@@ -703,7 +714,7 @@ func (p *parser) peekKind(n int) lexer.Kind {
 func canStartExpr(k lexer.Kind) bool {
 	switch k {
 	case lexer.INT, lexer.FLOAT, lexer.STRING, lexer.TRUE, lexer.FALSE, lexer.NULL,
-		lexer.THIS, lexer.IDENT, lexer.LPAREN, lexer.MINUS, lexer.NOT, lexer.MATCH, lexer.LBRACK:
+		lexer.THIS, lexer.IDENT, lexer.LPAREN, lexer.MINUS, lexer.NOT, lexer.MATCH, lexer.LBRACK, lexer.LBRACE:
 		return true
 	}
 	return false
@@ -860,6 +871,7 @@ func (p *parser) match() *ast.Match {
 // arm parses `pattern => value` into m. On a syntax error it skips to the
 // next arm and marks the match as bad.
 func (p *parser) arm(m *ast.Match) {
+	start := p.pos
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(bailout); !ok {
@@ -867,7 +879,7 @@ func (p *parser) arm(m *ast.Match) {
 			}
 			p.recovered++
 			m.Bad = true
-			p.syncStmt()
+			p.syncStmt(start)
 		}
 	}()
 	pat := p.pattern()
@@ -962,6 +974,36 @@ func (p *parser) listLit() *ast.ListLit {
 	return l
 }
 
+// mapLit parses `{k: v, ...}`, which may end in a `,`. Newlines are
+// skipped after `{`, around `,` and before `}`.
+func (p *parser) mapLit() *ast.MapLit {
+	open := p.expect(lexer.LBRACE).Span
+	m := &ast.MapLit{}
+	p.skipNewlines()
+	for !p.at(lexer.RBRACE) {
+		key := p.expr()
+		if !p.at(lexer.COLON) {
+			p.failHere("expected `:` and a value after the key, found %s", describe(p.tok()))
+		}
+		p.advance()
+		m.Entries = append(m.Entries, &ast.Entry{Key: key, Value: p.expr()})
+		p.skipNewlines()
+		if !p.at(lexer.COMMA) {
+			break
+		}
+		p.advance()
+		p.skipNewlines()
+	}
+	if !p.at(lexer.RBRACE) {
+		if p.at(lexer.EOF) {
+			p.fail(open, "`{` is not closed")
+		}
+		p.failHere("expected `,` or `}` in the map, found %s", describe(p.tok()))
+	}
+	m.Sp = open.To(p.advance().Span)
+	return m
+}
+
 func (p *parser) primary() ast.Expr {
 	t := p.tok()
 	switch t.Kind {
@@ -997,6 +1039,8 @@ func (p *parser) primary() ast.Expr {
 		return p.match()
 	case lexer.LBRACK:
 		return p.listLit()
+	case lexer.LBRACE:
+		return p.mapLit()
 	}
 	p.failHere("expected an expression, found %s", describe(t))
 	return nil

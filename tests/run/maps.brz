@@ -1,0 +1,83 @@
+enum Color
+{
+    Red
+    Green
+}
+
+func count(words: List<String>) -> Map<String, Int>
+{
+    con counts: Map<String, Int> = {}
+    for w in words
+    {
+        if counts.contains(w)
+        {
+            counts[w] += 1
+        }
+        else
+        {
+            counts[w] = 1
+        }
+    }
+    return counts
+}
+
+func main() -> Int
+{
+    con ages = {
+        "Ada": 36,
+        "Grace": 85,
+    }
+    print(ages)
+    print(ages["Ada"] else 0)
+    print(ages["Zed"] == null)
+    print(ages["Grace"] == 85)
+
+    // adding a key puts it last; replacing a value keeps its place
+    ages["Linus"] = 20
+    ages["Ada"] += 1
+    print(ages)
+    print(ages.length())
+
+    // removing a key and adding it again puts it last
+    print(ages.remove("Ada") else 0)
+    print(ages.remove("Ada") == null)
+    ages["Ada"] = 1
+    print(ages.keys())
+    print(ages.values())
+
+    for name, age in ages
+    {
+        print(name + ": " + String(age))
+    }
+    for name in ages
+    {
+        ages[name] = 0
+    }
+    print(ages)
+
+    print(count(["a", "b", "a", "c", "a"]))
+
+    // == ignores the order
+    print({1: true, 2: false} == {2: false, 1: true})
+    print({1: true} == {1: false})
+    con empty: Map<Int, Bool> = {}
+    print(empty == {})
+
+    con names = {Color.Red: "red", Color.Green: "green"}
+    print(names[Color.Green] else "")
+    print(names)
+
+    con groups: Map<String, List<Int>> = {"even": [], "odd": []}
+    for n in 1..=5
+    {
+        con key = match n % 2
+        {
+            0 => "even"
+            _ => "odd"
+        }
+        con group = groups[key] else []
+        group.append(n)
+    }
+    print(groups)
+    return 0
+}

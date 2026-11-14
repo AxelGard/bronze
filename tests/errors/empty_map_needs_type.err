@@ -1,0 +1,2 @@
+error: `{}` needs a type here
+  --> empty_map_needs_type.brz:3:18

@@ -1,0 +1,40 @@
+==================
+Maps
+==================
+
+func f()
+{
+    con ages = {
+        "Ada": 36,
+        "Grace": 85,
+    }
+    if ages == {}
+    {
+    }
+    match x
+    {
+        1 => {}
+        _ => ({})
+    }
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (variable_declaration
+        name: (identifier)
+        value: (map
+          (map_entry key: (string) value: (integer))
+          (map_entry key: (string) value: (integer))))
+      (if_statement
+        condition: (binary_expression left: (identifier) right: (map))
+        consequence: (block))
+      (expression_statement
+        (match_expression
+          value: (identifier)
+          (match_arm pattern: (pattern (integer)) value: (block))
+          (match_arm pattern: (pattern (identifier)) value: (parenthesized_expression (map))))))))

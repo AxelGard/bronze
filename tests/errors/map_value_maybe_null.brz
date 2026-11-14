@@ -1,0 +1,5 @@
+func main() -> Int
+{
+    con ages = {"Ada": 36}
+    return ages["Ada"] + 1
+}

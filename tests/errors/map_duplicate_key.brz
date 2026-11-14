@@ -1,0 +1,15 @@
+enum Color
+{
+    Red
+    Green
+}
+
+func main() -> Int
+{
+    con names = {
+        Color.Red: "red",
+        Color.Green: "green",
+        Color.Red: "also red",
+    }
+    return 0
+}

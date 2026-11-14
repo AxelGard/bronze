@@ -55,6 +55,14 @@ type List struct {
 
 func (l *List) String() string { return "List<" + l.Elem.String() + ">" }
 
+// Map is `Map<K, V>`. Maps are shared by reference, and keep their keys
+// in the order they were added.
+type Map struct {
+	Key, Val Type
+}
+
+func (m *Map) String() string { return "Map<" + m.Key.String() + ", " + m.Val.String() + ">" }
+
 // Failable is the result of calling a function that can fail: `T ! E`, or
 // `! E` when Value is NoValue. It must be handled with `else`.
 type Failable struct {
@@ -84,6 +92,9 @@ func identical(a, b Type) bool {
 	case *List:
 		b, ok := b.(*List)
 		return ok && identical(a.Elem, b.Elem)
+	case *Map:
+		b, ok := b.(*Map)
+		return ok && identical(a.Key, b.Key) && identical(a.Val, b.Val)
 	}
 	return false
 }

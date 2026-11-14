@@ -237,4 +237,4 @@ print(1..=3)
 
 ## Next
 
-[Panics](panics.md).
+[Maps](maps.md).

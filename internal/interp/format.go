@@ -30,6 +30,19 @@ func Format(v Value) string {
 		}
 		b.WriteByte(']')
 		return b.String()
+	case *Map:
+		var b strings.Builder
+		b.WriteByte('{')
+		for i, k := range v.keys {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(formatInner(k))
+			b.WriteString(": ")
+			b.WriteString(formatInner(v.vals[i]))
+		}
+		b.WriteByte('}')
+		return b.String()
 	}
 	panic("interp: cannot format value")
 }

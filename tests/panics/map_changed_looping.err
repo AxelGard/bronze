@@ -1,0 +1,2 @@
+panic: map changed while looping over it
+  at main (map_changed_looping.brz:11)

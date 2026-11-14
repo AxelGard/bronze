@@ -36,6 +36,8 @@ The panic message and the stack trace go to stderr.
 | `xs[i] = v` or `xs[i] += v` out of range | `index 5 out of range for a list of length 3` |
 | `xs.insert(i, x)` out of range | `index 5 out of range for insert into a list of length 3` |
 | changing a list while a `for` loops over it | `list changed while looping over it` |
+| `m[k] += v` with a key that isn't there | `key "Zed" is not in the map` |
+| adding or removing a key while a `for` loops over the map | `map changed while looping over it` |
 
 ## panic and assert
 

@@ -1,0 +1,2 @@
+error: the key Color.Red is written twice
+  --> map_duplicate_key.brz:12:9

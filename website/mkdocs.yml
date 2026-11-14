@@ -65,6 +65,7 @@ nav:
       - Errors: guide/errors.md
       - "Null and T?": guide/null.md
       - Lists: guide/lists.md
+      - Maps: guide/maps.md
       - Panics: guide/panics.md
   - Reference:
       - The bronze command: reference/cli.md

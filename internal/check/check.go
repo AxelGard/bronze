@@ -819,6 +819,8 @@ func (c *checker) forStmt(s *ast.For) {
 	switch tt := t.(type) {
 	case *List:
 		types = []Type{tt.Elem, Int, tt.Elem}
+	case *Map:
+		types = []Type{tt.Key, tt.Key, tt.Val}
 	default:
 		switch {
 		case silent(t):
