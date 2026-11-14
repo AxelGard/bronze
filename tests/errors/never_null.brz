@@ -1,0 +1,14 @@
+class User
+{
+    con name = ""
+}
+
+func main() -> Int
+{
+    con user = User()
+    if user == null
+    {
+        print("no user")
+    }
+    return 0
+}

@@ -1,0 +1,2 @@
+error: `null` needs a type here
+  --> null_needs_type.brz:3:19

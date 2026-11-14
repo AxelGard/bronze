@@ -1,0 +1,20 @@
+{
+  "grammars": [
+    {
+      "name": "bronze",
+      "camelcase": "Bronze",
+      "scope": "source.bronze",
+      "path": ".",
+      "file-types": ["brz"],
+      "highlights": "queries/highlights.scm"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Bronze grammar for tree-sitter",
+    "links": {
+      "repository": "https://github.com/AxelGard/bronze"
+    }
+  }
+}

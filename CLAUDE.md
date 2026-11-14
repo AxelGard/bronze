@@ -18,11 +18,12 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline |
 | `internal/cli/` | `run`, `check`, `version`; `cli.Main` is also what the golden tests call |
 | `tests/run/`, `tests/errors/`, `tests/panics/` | Golden tests; see `tests/README.md` |
+| `editors/tree-sitter-bronze/` | Tree-sitter grammar and highlight queries for Neovim; see its README |
 | `std/algo.bz` | Old leftover from before the redesign; ignore |
 
 ## Current state
 
-Implementation of 0.1.0 is under way. Work-order steps 1–9 of `doc/milestones.md` are done: the pipeline, simple classes, and enums with `match`. `core.brz` and `counter.brz` run. The parser reports "... not supported yet" for `null`, `is`, `?` types, `use Error`, `! E` and the `else` handlers. Next: step 10 (errors and the error `else`), then step 11 (null; `bank.brz` runs). Golden tests that need those features are listed in `pending` in `tests/golden_test.go`; remove them as features land.
+All 12 steps of the 0.1.0 work order in `doc/milestones.md` are done: `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (`make tree-sitter` to test it, `make nvim-install` to install it for Neovim). Open: exit codes outside 0–255 (`doc/open-questions.md`). Next is 0.2.0.
 
 ## Commands
 
@@ -32,6 +33,7 @@ make test        # go test ./...
 make run-core    # build, then run examples/core.brz
 bin/bronze run examples/projects/bank.brz
 make fmt vet
+make tree-sitter  # generate and test the tree-sitter grammar (needs the tree-sitter CLI)
 ```
 
 Go 1.26, module `github.com/AxelGard/bronze`, standard library only.

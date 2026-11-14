@@ -306,6 +306,7 @@ con a = find(1) else return
 - A class can **`use Error`**. It inherits the `message` field, and can be used wherever an `Error` is expected. (**0.1 choice:** `use` works only with `Error` for now.)
 - **`-> T ! E`**: the function returns a `T`, or fails with an `E`. `E` must be `Error` or a class that uses it, and `T` must not be one. Inside, `return x` returns the value if `x` is a `T`, and fails if `x` is an `E`.
 - **`-> ! E`**: returns nothing, or fails with an `E`.
+- (**0.1 choice**) `init` can't fail, and `T` in `-> T ! E` can't be an error or a `?` of one. `T?` is fine: `-> Account? ! Error`.
 - A call to a function that can fail **must be handled with `else`**. Using its result in any other way, or calling it as a plain statement, is an error: "`find` can fail, and the error is not handled", with the help "add `else return`, `else <fallback>` or `else (e) { ... }`".
 - **(0.1 choice)** Not yet: the Go form `con x, err = f()`.
 

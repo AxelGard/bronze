@@ -5,6 +5,7 @@ import (
 
 	"github.com/AxelGard/bronze/internal/ast"
 	"github.com/AxelGard/bronze/internal/diag"
+	"github.com/AxelGard/bronze/internal/parser"
 )
 
 // Info is what the checker learned about the program.
@@ -23,8 +24,9 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 		enums:   map[string]*Enum{},
 		broken:  map[string]bool{},
 	}
-	c.collect(file)
-	for _, d := range file.Decls {
+	decls := append(append([]ast.Decl{}, parser.Prelude()...), file.Decls...)
+	c.collect(file, decls)
+	for _, d := range decls {
 		switch d := d.(type) {
 		case *ast.FuncDecl:
 			if sig := c.funcs[d.Name.Name]; sig != nil && sig.decl == d {
@@ -66,6 +68,7 @@ type checker struct {
 	classes map[string]*Class
 	enums   map[string]*Enum
 	broken  map[string]bool // names of declarations with syntax errors
+	errCls  *Class          // the built-in Error class
 
 	fn    *funcSig // the function being checked; nil in a field's value
 	scope *scope
@@ -75,7 +78,7 @@ type funcSig struct {
 	name   string // `add`, or `init` / `describe` for methods
 	decl   *ast.FuncDecl
 	params []Type
-	result Type   // NoValue if the function has no `->`
+	result Type   // NoValue if the function has no `->`; *Failable with `!`
 	class  *Class // for methods of a class: the class of `this`
 	enum   *Enum  // for methods of an enum: the enum of `this`
 	isInit bool
@@ -133,13 +136,13 @@ func (c *checker) text(n ast.Node) string {
 
 // collect records every top-level declaration and its signature, so they
 // can be used before they are declared.
-func (c *checker) collect(file *ast.File) {
+func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 	// Names first, so that types can refer to any class.
 	declared := map[string]*ast.Ident{}
 	var funcs []*ast.FuncDecl
 	var classes []*ast.ClassDecl
 	var enums []*ast.EnumDecl
-	for _, d := range file.Decls {
+	for _, d := range decls {
 		var name *ast.Ident
 		switch d := d.(type) {
 		case *ast.FuncDecl:
@@ -162,7 +165,7 @@ func (c *checker) collect(file *ast.File) {
 			}
 			continue
 		}
-		if builtinFuncs[name.Name] || builtinTypes[name.Name] != nil {
+		if cd, ok := d.(*ast.ClassDecl); (!ok || !cd.Builtin) && (builtinFuncs[name.Name] || builtinTypes[name.Name] != nil) {
 			c.errorf(name.Sp, "`%s` is a built-in name and can't be declared again", name.Name)
 			continue
 		}
@@ -190,6 +193,12 @@ func (c *checker) collect(file *ast.File) {
 		}
 	}
 
+	c.errCls = c.classes["Error"]
+	for _, d := range classes {
+		if d.UseError {
+			c.classes[d.Name.Name].Super = c.errCls
+		}
+	}
 	for _, fn := range funcs {
 		c.funcs[fn.Name.Name] = c.signature(fn, nil)
 	}
@@ -233,14 +242,66 @@ func (c *checker) signature(fn *ast.FuncDecl, class *Class) *funcSig {
 			d.Help = []string{"remove the return type"}
 		}
 	}
+	if fn.Fail != nil {
+		c.failType(fn, sig)
+	}
 	return sig
+}
+
+// failType resolves the `! E` of a signature and makes its result a
+// *Failable. If E is not an error type, the function still counts as one
+// that can fail (with Error), so that its callers don't get more errors.
+func (c *checker) failType(fn *ast.FuncDecl, sig *funcSig) {
+	t := c.resolveType(fn.Fail)
+	if sig.isInit {
+		c.errorf(fn.Fail.Sp, "`init` can't fail")
+		return
+	}
+	cls, ok := t.(*Class)
+	switch {
+	case silent(t):
+		cls = c.errCls
+	case fn.Fail.Optional:
+		c.errorf(fn.Fail.Sp, "the error type after `!` can't be a `?` type")
+		cls = c.errCls
+	case !ok || !c.isError(cls):
+		d := c.errorf(fn.Fail.Sp, "`%s` is not an error type", t)
+		d.Help = []string{"use `Error`, or a class that uses `Error`: `class NotFound use Error { ... }`"}
+		cls = c.errCls
+	}
+	value := sig.result
+	inner := value
+	if o, ok := value.(*Optional); ok {
+		inner = o.Inner
+	}
+	if k, ok := inner.(*Class); ok && c.isError(k) {
+		d := c.errorf(fn.Result.Sp, "the value of `-> T ! E` can't be an error")
+		d.Notes = []string{fmt.Sprintf("a function that fails with `%s` returns it with `return`, it isn't the value", k.Name)}
+		return
+	}
+	sig.result = &Failable{Value: value, Err: cls}
+}
+
+// isError reports whether t is Error or a class that uses it.
+func (c *checker) isError(t Type) bool {
+	return c.errCls != nil && t != Invalid && assignable(t, c.errCls) && !silent(t)
 }
 
 // classMembers records the fields, methods and inits of a class. The types
 // of fields are found later, from their initial values.
 func (c *checker) classMembers(cls *Class) {
 	d := cls.Decl
+	if cls.Super != nil {
+		for name, f := range cls.Super.Fields {
+			cls.Fields[name] = f
+		}
+	}
 	for _, f := range d.Fields {
+		if cls.Super != nil && cls.Super.Fields[f.Name.Name] != nil {
+			d := c.errorf(f.Name.Sp, "`%s` already has a field `%s`, from `use %s`", cls.Name, f.Name.Name, cls.Super.Name)
+			d.Help = []string{fmt.Sprintf("set it in `init` instead: `this.%s = ...`", f.Name.Name)}
+			continue
+		}
 		if prev, ok := cls.Fields[f.Name.Name]; ok {
 			c.errorf(f.Name.Sp, "`%s` already has a field `%s`", cls.Name, f.Name.Name).Notes = []string{
 				fmt.Sprintf("the first one is at line %d", prev.Decl.Name.Sp.Start.Line),
@@ -360,7 +421,10 @@ func (c *checker) fieldType(f *Field) Type {
 		}
 		t = want
 	}
-	if t == Never {
+	if t == Never || t == Null {
+		if t == Null {
+			c.nullNeedsType(f.Decl.Name, f.Decl.Value, f.Mut)
+		}
 		t = Invalid
 	}
 	c.fn, c.scope = saveFn, saveScope
@@ -371,28 +435,38 @@ func (c *checker) fieldType(f *Field) Type {
 }
 
 func (c *checker) resolveType(t *ast.TypeExpr) Type {
-	if bt, ok := builtinTypes[t.Name.Name]; ok {
+	base := c.resolveName(t.Name)
+	if !t.Optional || silent(base) {
+		return base
+	}
+	switch base.(type) {
+	case *Class, *Enum:
+		return &Optional{Inner: base}
+	}
+	d := c.errorf(t.Sp, "`%s?` is not supported yet", base)
+	d.Notes = []string{"in 0.1, only classes, enums and `Error` can be `?` types"}
+	return Invalid
+}
+
+func (c *checker) resolveName(name *ast.Ident) Type {
+	if bt, ok := builtinTypes[name.Name]; ok {
 		return bt
 	}
-	if cls, ok := c.classes[t.Name.Name]; ok {
+	if cls, ok := c.classes[name.Name]; ok {
 		return cls
 	}
-	if en, ok := c.enums[t.Name.Name]; ok {
+	if en, ok := c.enums[name.Name]; ok {
 		return en
 	}
-	if t.Name.Name == "Error" {
-		c.errorf(t.Sp, "the `Error` type is not supported yet")
+	if c.broken[name.Name] {
 		return Invalid
 	}
-	if c.broken[t.Name.Name] {
-		return Invalid
-	}
-	c.errorf(t.Sp, "unknown type `%s`", t.Name.Name)
+	c.errorf(name.Sp, "unknown type `%s`", name.Name)
 	return Invalid
 }
 
 func (c *checker) funcBody(sig *funcSig) {
-	if hasSyntaxError(sig.decl) {
+	if sig.decl.Bad {
 		return
 	}
 	c.fn = sig
@@ -401,7 +475,7 @@ func (c *checker) funcBody(sig *funcSig) {
 		c.declare(p.Name, &variable{kind: Param, typ: sig.params[i], decl: p.Name.Sp})
 	}
 	c.blockStmts(sig.decl.Body)
-	if sig.result != NoValue && !terminates(sig.decl.Body) {
+	if hasValue(sig.result) && !terminates(sig.decl.Body) {
 		d := c.errorf(sig.decl.Body.Rbrace, "missing return at the end of `%s`", sig.name)
 		d.Notes = []string{fmt.Sprintf("`%s` returns %s, so every path must end with `return`", sig.name, sig.result)}
 	}
@@ -495,46 +569,6 @@ func isPanicCall(e ast.Expr) bool {
 	return ok && id.Name == "panic"
 }
 
-func hasSyntaxError(fn *ast.FuncDecl) bool {
-	found := false
-	var walkStmt func(s ast.Stmt)
-	walkStmt = func(s ast.Stmt) {
-		switch s := s.(type) {
-		case *ast.BadStmt:
-			found = true
-		case *ast.Block:
-			for _, s := range s.Stmts {
-				walkStmt(s)
-			}
-		case *ast.If:
-			walkStmt(s.Then)
-			if s.Else != nil {
-				walkStmt(s.Else)
-			}
-		case *ast.While:
-			walkStmt(s.Body)
-		case *ast.ExprStmt:
-			if m, ok := s.X.(*ast.Match); ok {
-				walkMatch(m, walkStmt)
-			}
-		}
-	}
-	walkStmt(fn.Body)
-	return found
-}
-
-// walkMatch walks the block arms of a match statement, and nested match
-// statements.
-func walkMatch(m *ast.Match, walkStmt func(ast.Stmt)) {
-	for _, a := range m.Arms {
-		if a.Body != nil {
-			walkStmt(a.Body)
-		} else if inner, ok := a.Value.(*ast.Match); ok {
-			walkMatch(inner, walkStmt)
-		}
-	}
-}
-
 func plural(n int, word string) string {
 	if n == 1 {
 		return fmt.Sprintf("1 %s", word)
@@ -563,10 +597,14 @@ func (c *checker) stmt(s ast.Stmt) {
 		t := c.value(s.Value)
 		if s.Type != nil {
 			want := c.resolveType(s.Type)
-			if !assignable(t, want) {
+			if !assignable(t, want) && !c.nullMismatch(s.Value, t, want) {
 				c.errorf(s.Value.Span(), "`%s` is declared as %s, but the value is %s", s.Name.Name, want, t)
 			}
 			t = want
+		}
+		if t == Null {
+			c.nullNeedsType(s.Name, s.Value, s.Mut)
+			t = Invalid
 		}
 		if t == Never {
 			t = Invalid
@@ -586,14 +624,7 @@ func (c *checker) stmt(s ast.Stmt) {
 		}
 
 	case *ast.If:
-		c.cond(s.Cond)
-		c.block(s.Then)
-		switch e := s.Else.(type) {
-		case *ast.Block:
-			c.block(e)
-		case *ast.If:
-			c.stmt(e)
-		}
+		c.ifStmt(s)
 
 	case *ast.While:
 		c.cond(s.Cond)
@@ -605,8 +636,8 @@ func (c *checker) stmt(s ast.Stmt) {
 	case *ast.ExprStmt:
 		if m, ok := s.X.(*ast.Match); ok {
 			c.matchStmt(m)
-		} else {
-			c.expr(s.X)
+		} else if _, ok := c.expr(s.X).(*Failable); ok {
+			c.unhandled(s.X)
 		}
 
 	case *ast.Block:
@@ -650,7 +681,7 @@ func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
 		}
 		return
 	}
-	if !assignable(t, v.typ) {
+	if !assignable(t, v.typ) && !c.nullMismatch(value, t, v.typ) {
 		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, v.typ)
 	}
 }
@@ -674,7 +705,7 @@ func (c *checker) assignField(m *ast.Member, value ast.Expr) {
 			return
 		}
 	}
-	if !assignable(t, ft) {
+	if !assignable(t, ft) && !c.nullMismatch(value, t, ft) {
 		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, f.Name, ft)
 	}
 }
@@ -696,28 +727,54 @@ func (c *checker) cond(e ast.Expr) {
 }
 
 func (c *checker) returnStmt(s *ast.Return) {
-	name := c.fn.name
-	want := c.fn.result
-	if s.Value == nil {
-		if want != NoValue {
-			c.errorf(s.Sp, "`%s` must return %s, but this `return` has no value", name, want)
+	c.checkReturn(s.Sp, s.Value)
+}
+
+// checkReturn checks `return value` (value may be nil), as a statement or
+// in an `else return`.
+func (c *checker) checkReturn(at diag.Span, value ast.Expr) {
+	if c.fn == nil {
+		c.errorf(at, "`return` can't be used in the initial value of a field")
+		if value != nil {
+			c.value(value)
 		}
 		return
 	}
-	t := c.value(s.Value)
-	if c.fn.isInit {
-		d := c.errorf(s.Value.Span(), "`return` in `init` can't have a value")
-		d.Notes = []string{fmt.Sprintf("`init` returns the new `%s` by itself", c.fn.class.Name)}
+	name := c.fn.name
+	want, fails := c.fn.result, (*Class)(nil)
+	if f, ok := want.(*Failable); ok {
+		want, fails = f.Value, f.Err
+	}
+	if value == nil {
+		if want != NoValue {
+			c.errorf(at, "`%s` must return %s, but this `return` has no value", name, want)
+		}
 		return
 	}
-	if want == NoValue {
-		if !silent(t) {
-			d := c.errorf(s.Value.Span(), "`%s` returns nothing, so `return` can't have a value", name)
+	t := c.value(value)
+	switch {
+	case silent(t):
+	case c.fn.isInit:
+		d := c.errorf(value.Span(), "`return` in `init` can't have a value")
+		d.Notes = []string{fmt.Sprintf("`init` returns the new `%s` by itself", c.fn.class.Name)}
+	case fails != nil && assignable(t, fails):
+		// fails with the error
+	case fails != nil && c.isError(t):
+		d := c.errorf(value.Span(), "`%s` fails with %s, but this is %s", name, fails, t)
+		d.Notes = []string{fmt.Sprintf("%s doesn't use %s", t, fails)}
+	case want == NoValue && fails != nil:
+		c.errorf(value.Span(), "`%s` returns nothing, so `return` can only fail with an error (%s), but this is %s", name, fails, t)
+	case want == NoValue:
+		d := c.errorf(value.Span(), "`%s` returns nothing, so `return` can't have a value", name)
+		if c.isError(t) {
+			d.Help = []string{fmt.Sprintf("to fail with it, declare `func %s(...) -> ! %s`", name, t)}
+		} else {
 			d.Help = []string{fmt.Sprintf("add a return type: `func %s(...) -> %s`", name, t)}
 		}
-		return
-	}
-	if !assignable(t, want) {
-		c.errorf(s.Value.Span(), "`%s` returns %s, but this is %s", name, want, t)
+	case !assignable(t, want) && !c.nullMismatch(value, t, want):
+		d := c.errorf(value.Span(), "`%s` returns %s, but this is %s", name, want, t)
+		if c.isError(t) && fails == nil {
+			d.Help = []string{fmt.Sprintf("to fail with it, declare `func %s(...) -> %s ! %s`", name, want, t)}
+		}
 	}
 }

@@ -1,0 +1,2 @@
+panic: could not load the config
+  at main (error_fallback_panic.brz:19)

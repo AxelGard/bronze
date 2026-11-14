@@ -12,6 +12,13 @@ import (
 // value checks an expression whose value is used.
 func (c *checker) value(e ast.Expr) Type {
 	t := c.expr(e)
+	if f, ok := t.(*Failable); ok {
+		c.unhandled(e)
+		if f.Value == NoValue {
+			return Invalid
+		}
+		return f.Value
+	}
 	if t == NoValue {
 		name := "this call"
 		if call, ok := e.(*ast.Call); ok {
@@ -44,6 +51,12 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return String
 	case *ast.BoolLit:
 		return Bool
+	case *ast.NullLit:
+		return Null
+	case *ast.Is:
+		return c.isExpr(e)
+	case *ast.Else:
+		return c.elseExpr(e)
 	case *ast.Paren:
 		return c.value(e.X)
 	case *ast.Ident:
@@ -121,6 +134,9 @@ func (c *checker) this(e *ast.This) Type {
 // or nil after reporting an error.
 func (c *checker) fieldOf(m *ast.Member) (*Field, *Class) {
 	t := c.value(m.X)
+	if c.mayBeNull(m.X, t) {
+		t = t.(*Optional).Inner
+	}
 	cls, ok := t.(*Class)
 	if !ok {
 		if !silent(t) {
@@ -239,6 +255,20 @@ func (c *checker) binary(e *ast.Binary) Type {
 	switch e.Op {
 	case lexer.EQ, lexer.NE:
 		if x == y {
+			return Bool
+		}
+		_, xOpt := x.(*Optional)
+		_, yOpt := y.(*Optional)
+		switch {
+		case x == Null && yOpt, y == Null && xOpt:
+			return Bool
+		case x == Null || y == Null:
+			other, t := e.X, x
+			if x == Null {
+				other, t = e.Y, y
+			}
+			d := c.errorf(e.Span(), "`%s` can never be null", c.text(other))
+			d.Notes = []string{fmt.Sprintf("it is %s; only `T?` values can be null", t)}
 			return Bool
 		}
 		d := c.errorf(e.Span(), "cannot compare %s and %s with `%s`", x, y, opText(e.Op))
@@ -396,6 +426,9 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	t := c.value(m.X)
 	types := c.args(e)
 	name := m.Name.Name
+	if c.mayBeNull(m.X, t) {
+		t = t.(*Optional).Inner
+	}
 	if en, ok := t.(*Enum); ok {
 		sig := en.Methods[name]
 		if sig == nil {
@@ -447,7 +480,7 @@ func (c *checker) checkArgs(e *ast.Call, name string, sig *funcSig, types []Type
 		return
 	}
 	for i, t := range types {
-		if !assignable(t, sig.params[i]) {
+		if !assignable(t, sig.params[i]) && !c.nullMismatch(e.Args[i], t, sig.params[i]) {
 			p := sig.decl.Params[i]
 			c.errorf(e.Args[i].Span(), "argument `%s` of `%s` must be %s, found %s", p.Name.Name, name, sig.params[i], t).Notes = []string{
 				sig.declNote(),
@@ -472,6 +505,8 @@ func (c *checker) arityError(e *ast.Call, name string, want int, sig *funcSig) {
 // declNote says where a function, method or init is declared.
 func (sig *funcSig) declNote() string {
 	switch {
+	case sig.class != nil && sig.class.Decl.Builtin:
+		return fmt.Sprintf("`%s` is built in", sig.class.Name)
 	case sig.isInit && sig.decl == nil:
 		return fmt.Sprintf("`%s` has no `init`, so it is created with `%s()`", sig.class.Name, sig.class.Name)
 	case sig.isInit:
@@ -495,7 +530,7 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 			return
 		}
 		for i, t := range types {
-			if !assignable(t, want[i]) {
+			if !assignable(t, want[i]) && !c.mayBeNull(e.Args[i], t) {
 				c.errorf(e.Args[i].Span(), "`%s` needs %s here, found %s", name, want[i], t)
 			}
 		}
@@ -505,6 +540,9 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 	case "print":
 		if len(types) != 1 {
 			c.arityError(e, name, 1, nil)
+			return NoValue
+		}
+		if c.mayBeNull(e.Args[0], types[0]) {
 			return NoValue
 		}
 		switch t := types[0]; t.(type) {
@@ -532,6 +570,7 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 		}
 		_, isEnum := types[0].(*Enum)
 		switch t := types[0]; {
+		case c.mayBeNull(e.Args[0], t):
 		case t == String:
 			c.errorf(e.Args[0].Span(), "this is already a String")
 		case t != Int && t != Float && t != Bool && !isEnum && !silent(t):
@@ -544,9 +583,6 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 		return Invalid
 	case "Bool":
 		c.errorf(e.Fn.Span(), "there is no `Bool(...)` conversion")
-		return Invalid
-	case "Error":
-		c.errorf(e.Fn.Span(), "`Error` is not supported yet")
 		return Invalid
 	case "panic":
 		expect(String)

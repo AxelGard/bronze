@@ -1,0 +1,22 @@
+class Config
+{
+    mut port = 8080
+}
+
+func load(path: String) -> Config ! Error
+{
+    if path == ""
+    {
+        return Error("no path given")
+    }
+    return Config()
+}
+
+func main() -> Int
+{
+    con good = load("app.conf") else panic("could not load app.conf")
+    print(good.port)
+    con bad = load("") else panic("could not load the config")
+    print(bad.port)
+    return 0
+}

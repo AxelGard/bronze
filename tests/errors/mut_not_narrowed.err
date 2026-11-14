@@ -1,0 +1,2 @@
+error: `user` may be null
+  --> mut_not_narrowed.brz:16:15

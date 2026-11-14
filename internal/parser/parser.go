@@ -21,6 +21,8 @@ type parser struct {
 	toks  []lexer.Token
 	pos   int
 	diags diag.List
+
+	recovered int // how many times the parser recovered from an error
 }
 
 // bailout is panicked after a syntax error, and recovered at the statement
@@ -137,6 +139,7 @@ func (p *parser) decl() (d ast.Decl) {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			p.recovered++
 			bad := &ast.BadDecl{}
 			// Keep the name, so that uses of it don't cause more errors.
 			if k := p.toks[start].Kind; (k == lexer.FUNC || k == lexer.CLASS || k == lexer.ENUM) &&
@@ -203,15 +206,17 @@ func (p *parser) funcDecl() *ast.FuncDecl {
 	p.expect(lexer.RPAREN)
 	if p.at(lexer.ARROW) {
 		p.advance()
-		if p.at(lexer.BANG) {
-			p.notYet(p.tok().Span, "functions that can fail are")
+		if !p.at(lexer.BANG) {
+			fn.Result = p.typeExpr()
 		}
-		fn.Result = p.typeExpr()
 		if p.at(lexer.BANG) {
-			p.notYet(p.tok().Span, "functions that can fail are")
+			p.advance()
+			fn.Fail = p.typeExpr()
 		}
 	}
+	before := p.recovered
 	fn.Body = p.block()
+	fn.Bad = p.recovered > before
 	fn.Sp = start.To(fn.Body.Sp)
 	return fn
 }
@@ -220,7 +225,14 @@ func (p *parser) classDecl() *ast.ClassDecl {
 	start := p.expect(lexer.CLASS).Span
 	c := &ast.ClassDecl{Name: p.ident()}
 	if p.at(lexer.USE) {
-		p.notYet(p.tok().Span, "`use Error` is")
+		p.advance()
+		t := p.tok()
+		if t.Kind != lexer.IDENT || t.Text != "Error" {
+			p.failNote("`use` only works with `Error` for now",
+				"expected `Error` after `use`, found %s", describe(t))
+		}
+		p.advance()
+		c.UseError = true
 	}
 	p.skipNewlines()
 	p.expect(lexer.LBRACE)
@@ -249,6 +261,7 @@ func (p *parser) member(c *ast.ClassDecl) {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			p.recovered++
 			c.Bad = true
 			p.syncStmt()
 		}
@@ -293,6 +306,7 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			p.recovered++
 			e.Bad = true
 			p.syncStmt()
 		}
@@ -345,7 +359,11 @@ func (p *parser) typeExpr() *ast.TypeExpr {
 	name := p.ident()
 	t := &ast.TypeExpr{Name: name, Sp: name.Sp}
 	if p.at(lexer.QUEST) {
-		p.notYet(p.tok().Span, "`?` types are")
+		t.Optional = true
+		t.Sp = name.Sp.To(p.advance().Span)
+		if p.at(lexer.QUEST) {
+			p.fail(p.tok().Span, "`%s??` is not allowed: a `?` type is already nullable", name.Name)
+		}
 	}
 	return t
 }
@@ -396,6 +414,7 @@ func (p *parser) stmt() (s ast.Stmt) {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			p.recovered++
 			p.syncStmt()
 			s = &ast.BadStmt{Sp: p.toks[start].Span.To(p.prev())}
 		}
@@ -476,6 +495,10 @@ func (p *parser) simpleStmt() ast.Stmt {
 		p.fail(p.tok().Span, "`%s` is reserved for a later version", p.tok().Text)
 	case lexer.FUNC:
 		p.failHere("functions can only be declared at the top level")
+	case lexer.ELSE:
+		d := p.diags.Errorf(p.tok().Span, "`else` must be on the same line as the expression it handles")
+		d.Notes = []string{"only the `else` of an `if` can be on the line after the `}`"}
+		panic(bailout{})
 	}
 
 	x := p.expr()
@@ -492,7 +515,7 @@ func (p *parser) simpleStmt() ast.Stmt {
 		return &ast.Assign{Target: x, Value: v, Sp: x.Span().To(v.Span())}
 	}
 	switch x.(type) {
-	case *ast.Call, *ast.Match, *ast.BadExpr:
+	case *ast.Call, *ast.Match, *ast.Else, *ast.BadExpr:
 	default:
 		d := p.diags.Errorf(x.Span(), "this expression is not used")
 		d.Notes = []string{"only a call or a match can be used as a statement"}
@@ -545,10 +568,67 @@ func (p *parser) ifStmt() *ast.If {
 
 func (p *parser) expr() ast.Expr {
 	x := p.orExpr()
-	if p.at(lexer.ELSE) {
-		p.notYet(p.tok().Span, "`else` for errors and null is")
+	if !p.at(lexer.ELSE) {
+		return x
 	}
-	return x
+	p.advance()
+	e := &ast.Else{X: x}
+	if p.at(lexer.LPAREN) && p.peekKind(1) == lexer.IDENT && p.peekKind(2) == lexer.RPAREN {
+		// `(e)` binds the error if `return` or a block follows.
+		after := p.pos + 3
+		for p.toks[after].Kind == lexer.NEWLINE {
+			after++
+		}
+		if k := p.toks[after].Kind; k == lexer.RETURN || k == lexer.LBRACE {
+			p.advance()
+			e.Err = p.ident()
+			p.advance()
+		}
+	}
+	switch {
+	case e.Err != nil && !p.at(lexer.RETURN):
+		e.Body = p.block()
+	case p.at(lexer.RETURN):
+		p.advance()
+		e.Return = true
+		if canStartExpr(p.kind()) {
+			e.Value = p.orExpr()
+		}
+	default:
+		e.Value = p.orExpr()
+	}
+	e.Sp = x.Span()
+	switch {
+	case e.Body != nil:
+		e.Sp = e.Sp.To(e.Body.Sp)
+	case e.Value != nil:
+		e.Sp = e.Sp.To(e.Value.Span())
+	default:
+		e.Sp = e.Sp.To(p.prev())
+	}
+	if p.at(lexer.ELSE) {
+		d := p.diags.Errorf(p.tok().Span, "an expression can only have one `else`")
+		d.Help = []string{"handle one thing at a time: `con a = f() else return`, then `con b = a else ...`"}
+		panic(bailout{})
+	}
+	return e
+}
+
+func (p *parser) peekKind(n int) lexer.Kind {
+	if p.pos+n < len(p.toks) {
+		return p.toks[p.pos+n].Kind
+	}
+	return lexer.EOF
+}
+
+// canStartExpr reports whether a token can start an expression.
+func canStartExpr(k lexer.Kind) bool {
+	switch k {
+	case lexer.INT, lexer.FLOAT, lexer.STRING, lexer.TRUE, lexer.FALSE, lexer.NULL,
+		lexer.THIS, lexer.IDENT, lexer.LPAREN, lexer.MINUS, lexer.NOT, lexer.MATCH:
+		return true
+	}
+	return false
 }
 
 func (p *parser) orExpr() ast.Expr {
@@ -582,7 +662,12 @@ func isCmp(k lexer.Kind) bool {
 func (p *parser) cmpExpr() ast.Expr {
 	x := p.addExpr()
 	if p.at(lexer.IS) {
-		p.notYet(p.tok().Span, "`is` is")
+		p.advance()
+		x = &ast.Is{X: x, Class: p.ident()}
+		if isCmp(p.kind()) || p.at(lexer.IS) {
+			p.failHere("`is` can't be combined with another comparison; use `and`")
+		}
+		return x
 	}
 	if !isCmp(p.kind()) {
 		return x
@@ -681,6 +766,7 @@ func (p *parser) arm(m *ast.Match) {
 			if _, ok := r.(bailout); !ok {
 				panic(r)
 			}
+			p.recovered++
 			m.Bad = true
 			p.syncStmt()
 		}
@@ -777,7 +863,8 @@ func (p *parser) primary() ast.Expr {
 		end := p.advance().Span
 		return &ast.Paren{X: x, Sp: t.Span.To(end)}
 	case lexer.NULL:
-		p.notYet(t.Span, "`null` is")
+		p.advance()
+		return &ast.NullLit{Sp: t.Span}
 	case lexer.THIS:
 		p.advance()
 		return &ast.This{Sp: t.Span}

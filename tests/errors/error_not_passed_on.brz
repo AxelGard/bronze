@@ -1,0 +1,16 @@
+func parse_age(text: String) -> Int ! Error
+{
+    return Error("not a number: " + text)
+}
+
+func age_next_year(text: String) -> Int
+{
+    con age = parse_age(text) else return
+    return age + 1
+}
+
+func main() -> Int
+{
+    print(age_next_year("41"))
+    return 0
+}

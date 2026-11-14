@@ -1,0 +1,146 @@
+==================
+function
+==================
+
+func add(a: Int, b: Int) -> Int
+{
+    return a + b
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter name: (identifier) type: (type name: (identifier)))
+      (parameter name: (identifier) type: (type name: (identifier))))
+    result: (return_type (type name: (identifier)))
+    body: (block
+      (return_statement
+        (binary_expression left: (identifier) right: (identifier))))))
+
+==================
+bare return at the end of a line
+==================
+
+func f() -> ! Error
+{
+    save(x) else return
+    x = 1
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    result: (return_type (type name: (identifier)))
+    body: (block
+      (expression_statement
+        (else_expression
+          value: (call_expression
+            function: (identifier)
+            arguments: (argument_list (identifier)))
+          (else_handler)))
+      (assignment left: (identifier) right: (integer)))))
+
+==================
+class, enum and match
+==================
+
+class NotFound use Error
+{
+    con id = 0
+}
+
+enum Status
+{
+    Active
+    Frozen
+
+    func label() -> String
+    {
+        return match this
+        {
+            Status.Active => "active"
+            _ => "other"
+        }
+    }
+}
+
+---
+
+(source_file
+  (class_declaration
+    name: (identifier)
+    use: (identifier)
+    body: (class_body
+      (field_declaration name: (identifier) value: (integer))))
+  (enum_declaration
+    name: (identifier)
+    body: (enum_body
+      (enum_case (identifier))
+      (enum_case (identifier))
+      (function_declaration
+        name: (identifier)
+        parameters: (parameter_list)
+        result: (return_type (type name: (identifier)))
+        body: (block
+          (return_statement
+            (match_expression
+              value: (this)
+              (match_arm
+                pattern: (pattern enum: (identifier) case: (identifier))
+                value: (string))
+              (match_arm
+                pattern: (pattern (identifier))
+                value: (string)))))))))
+
+==================
+null, is and the error else
+==================
+
+func f(a: Account?) -> Int
+{
+    con b = a else (e)
+    {
+        print(e.message)
+        return 0
+    }
+    if e is NotFound and a != null
+    {
+        return 1
+    }
+    return 2
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter name: (identifier) type: (type name: (identifier))))
+    result: (return_type (type name: (identifier)))
+    body: (block
+      (variable_declaration
+        name: (identifier)
+        value: (else_expression
+          value: (identifier)
+          (else_handler
+            error: (identifier)
+            (block
+              (expression_statement
+                (call_expression
+                  function: (identifier)
+                  arguments: (argument_list
+                    (member_expression object: (identifier) member: (identifier)))))
+              (return_statement (integer))))))
+      (if_statement
+        condition: (binary_expression
+          left: (is_expression value: (identifier) class: (identifier))
+          right: (binary_expression left: (identifier) right: (null)))
+        consequence: (block (return_statement (integer))))
+      (return_statement (integer)))))

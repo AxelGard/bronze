@@ -29,14 +29,23 @@ func dump(b *strings.Builder, n Node) {
 		for _, p := range n.Params {
 			fmt.Fprintf(b, " (%s %s)", p.Name.Name, typeString(p.Type))
 		}
+		if n.Result != nil || n.Fail != nil {
+			b.WriteString(" ->")
+		}
 		if n.Result != nil {
-			fmt.Fprintf(b, " -> %s", typeString(n.Result))
+			fmt.Fprintf(b, " %s", typeString(n.Result))
+		}
+		if n.Fail != nil {
+			fmt.Fprintf(b, " ! %s", typeString(n.Fail))
 		}
 		b.WriteByte(' ')
 		dump(b, n.Body)
 		b.WriteByte(')')
 	case *ClassDecl:
 		fmt.Fprintf(b, "(class %s", n.Name.Name)
+		if n.UseError {
+			b.WriteString(" use Error")
+		}
 		for _, f := range n.Fields {
 			b.WriteByte(' ')
 			dump(b, f)
@@ -184,6 +193,30 @@ func dump(b *strings.Builder, n Node) {
 		case PatAny:
 			b.WriteByte('_')
 		}
+	case *NullLit:
+		b.WriteString("null")
+	case *Is:
+		b.WriteString("(is ")
+		dump(b, n.X)
+		fmt.Fprintf(b, " %s)", n.Class.Name)
+	case *Else:
+		b.WriteString("(else ")
+		dump(b, n.X)
+		if n.Err != nil {
+			fmt.Fprintf(b, " (%s)", n.Err.Name)
+		}
+		if n.Return {
+			b.WriteString(" return")
+		}
+		if n.Value != nil {
+			b.WriteByte(' ')
+			dump(b, n.Value)
+		}
+		if n.Body != nil {
+			b.WriteByte(' ')
+			dump(b, n.Body)
+		}
+		b.WriteByte(')')
 	case *Paren:
 		b.WriteString("(paren ")
 		dump(b, n.X)

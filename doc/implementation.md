@@ -27,7 +27,7 @@ source.brz
 | `internal/interp/` | tree-walking interpreter, panics with Bronze stack traces |
 | `internal/diag/` | positions, spans, diagnostics and their terminal formatting |
 | `tests/run/`, `tests/errors/` | golden tests (see [tests/README.md](../tests/README.md)) |
-| `editors/tree-sitter-bronze/` | (to be created) tree-sitter grammar for Neovim |
+| `editors/tree-sitter-bronze/` | tree-sitter grammar and highlight queries for Neovim |
 
 ## Principles
 
@@ -43,7 +43,11 @@ source.brz
 - Values: a small Go type per Bronze type (`int64`, `float64`, `bool`, `string`), wrapped in a `Value` interface or tagged struct.
 - Environments: one per block scope, linked to the parent. The checker could resolve each variable to (depth, index) so the interpreter doesn't need map lookups, but maps are fine for 0.1.
 - `return` is implemented by unwinding: statement execution returns a "control" result (normal / return-with-value) rather than using Go panics.
+- The exception is a `return` inside an error or null handler (`f() else return`, `else (e) { ... }`). That can sit deep inside an expression, so it unwinds with a Go `panic` of a private signal value, recovered by the function call it returns from.
+- A call to a function that can fail returns its error wrapped in a `*Failure`. Only an `else` unwraps it; the checker makes sure no other code sees one.
 - The call stack is tracked explicitly (function name + call position) so a Bronze panic can print a Bronze stack trace.
+- The program runs in its own goroutine. A Bronze panic records the trace and stops that goroutine with `runtime.Goexit`, so it doesn't unwind through every call as a Go panic.
+- Built-in declarations that can be written in Bronze, like the `Error` class, are in a small prelude (`internal/parser/prelude.go`) that the checker and the interpreter add to every program.
 
 ## Alternatives considered
 

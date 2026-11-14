@@ -13,11 +13,7 @@ import (
 
 // pending lists golden tests that need features not implemented yet. They
 // are skipped; remove them from here as the features land.
-var pending = map[string]string{
-	"run/bank":               "classes, enums, errors, null",
-	"errors/maybe_null":      "null",
-	"errors/unhandled_error": "errors",
-}
+var pending = map[string]string{}
 
 func TestRun(t *testing.T) {
 	golden(t, "run", func(t *testing.T, base string) {

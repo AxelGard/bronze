@@ -1,0 +1,14 @@
+func parse_age(text: String) -> Int ! Error
+{
+    return Error("not a number: " + text)
+}
+
+func main() -> Int
+{
+    con age = parse_age("x") else (e)
+    {
+        print(e.message)
+    }
+    print(age)
+    return 0
+}

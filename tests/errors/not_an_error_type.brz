@@ -1,0 +1,15 @@
+class Account
+{
+    mut balance = 0
+}
+
+func open() -> Account ! Account
+{
+    return Account()
+}
+
+func main() -> Int
+{
+    con a = open() else panic("no")
+    return 0
+}

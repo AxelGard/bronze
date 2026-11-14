@@ -20,6 +20,9 @@ func (c *checker) matchStmt(m *ast.Match) { c.checkMatch(m, true) }
 
 func (c *checker) checkMatch(m *ast.Match, stmt bool) Type {
 	t := c.value(m.X)
+	if c.mayBeNull(m.X, t) {
+		t = Invalid
+	}
 	en, _ := t.(*Enum)
 	known := en != nil || t == Int || t == String || t == Bool
 	if !known && !silent(t) {

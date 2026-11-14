@@ -1,0 +1,19 @@
+class User
+{
+    con name = ""
+}
+
+func find(name: String) -> User?
+{
+    return null
+}
+
+func main() -> Int
+{
+    mut user = find("ada")
+    if user != null
+    {
+        print(user.name)
+    }
+    return 0
+}

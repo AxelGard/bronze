@@ -5,15 +5,38 @@ import (
 	"cmp"
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/AxelGard/bronze/internal/ast"
 	"github.com/AxelGard/bronze/internal/diag"
 	"github.com/AxelGard/bronze/internal/lexer"
+	"github.com/AxelGard/bronze/internal/parser"
 )
 
 // Value is a Bronze value: int64 (Int), float64 (Float), bool (Bool),
-// string (String), *Object (an object of a class) or *Case (an enum case).
+// string (String), *Object (an object of a class), *Case (an enum case),
+// or nil (null). A call to a function that can fail may also give a
+// *Failure, which only an `else` sees.
 type Value any
+
+// Failure is the result of a call that failed with an error.
+type Failure struct {
+	Err *Object
+}
+
+// isError reports whether v is an Error, or an object of a class that
+// uses Error.
+func isError(v Value) bool {
+	obj, ok := v.(*Object)
+	return ok && (obj.Class.UseError || obj.Class.Builtin && obj.Class.Name.Name == "Error")
+}
+
+// returnSignal unwinds from an `else return` or `else (e) { ... }`
+// handler, which can sit deep inside an expression, to the function call
+// it returns from.
+type returnSignal struct {
+	value Value
+}
 
 // Case is one case of an enum. There is one *Case per case, so `==`
 // compares cases.
@@ -85,7 +108,7 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 		classes: map[string]*class{},
 		enums:   map[string]*enum{},
 	}
-	for _, d := range file.Decls {
+	for _, d := range append(append([]ast.Decl{}, parser.Prelude()...), file.Decls...) {
 		switch d := d.(type) {
 		case *ast.FuncDecl:
 			in.funcs[d.Name.Name] = d
@@ -111,18 +134,20 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 		}
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			bp, ok := r.(*Panic)
-			if !ok {
-				panic(r) // a bug in bronze, not in the program
-			}
-			p = bp
-		}
+	// The program runs in its own goroutine, so that a Bronze panic can
+	// stop it with runtime.Goexit instead of unwinding through every call
+	// as a Go panic.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		main := in.funcs["main"]
+		code = int(in.call("main", main, nil, nil, main.Name.Sp).(int64))
 	}()
-	main := in.funcs["main"]
-	result := in.call("main", main, nil, nil, main.Name.Sp)
-	return int(result.(int64)), nil
+	<-done
+	if in.panic != nil {
+		return 0, in.panic
+	}
+	return code, nil
 }
 
 type interp struct {
@@ -132,6 +157,7 @@ type interp struct {
 	classes map[string]*class
 	enums   map[string]*enum
 	stack   []*frame
+	panic   *Panic // set when the program panics
 }
 
 type enum struct {
@@ -175,7 +201,8 @@ func (e *env) set(name string, v Value) {
 	panic("interp: unknown variable " + name)
 }
 
-// fail raises a Bronze panic at span.
+// fail raises a Bronze panic at span: it records the panic and stops the
+// program's goroutine.
 func (in *interp) fail(span diag.Span, format string, args ...any) {
 	in.stack[len(in.stack)-1].line = span.Start.Line
 	p := &Panic{Message: fmt.Sprintf(format, args...)}
@@ -183,7 +210,8 @@ func (in *interp) fail(span diag.Span, format string, args ...any) {
 		f := in.stack[i]
 		p.Trace = append(p.Trace, Frame{Func: f.name, File: in.src.Name, Line: f.line})
 	}
-	panic(p)
+	in.panic = p
+	runtime.Goexit()
 }
 
 // ---------------------------------------------------------------------
@@ -202,21 +230,35 @@ func (in *interp) enter(name string, line int, this Value, at diag.Span) {
 
 func (in *interp) leave() { in.stack = in.stack[:len(in.stack)-1] }
 
-// call calls a function, or a method when this is not nil.
+// call calls a function, or a method when this is not nil. If the function
+// can fail and returns an error, the result is a *Failure.
 func (in *interp) call(name string, fn *ast.FuncDecl, this Value, args []Value, at diag.Span) Value {
 	in.enter(name, fn.Name.Sp.Start.Line, this, at)
 	result := in.body(fn, args)
 	in.leave()
+	if fn.Fail != nil && isError(result) {
+		return &Failure{Err: result.(*Object)}
+	}
 	return result
 }
 
-// body runs the body of fn in the current frame.
-func (in *interp) body(fn *ast.FuncDecl, args []Value) Value {
+// body runs the body of fn in the current frame, and returns what it
+// returns.
+func (in *interp) body(fn *ast.FuncDecl, args []Value) (result Value) {
 	e := &env{vars: make(map[string]Value, len(fn.Params))}
 	for i, p := range fn.Params {
 		e.vars[p.Name.Name] = args[i]
 	}
-	_, result := in.block(fn.Body, e)
+	defer func() {
+		if r := recover(); r != nil {
+			sig, ok := r.(*returnSignal)
+			if !ok {
+				panic(r)
+			}
+			result = sig.value
+		}
+	}()
+	_, result = in.block(fn.Body, e)
 	return result
 }
 
@@ -231,6 +273,11 @@ func (in *interp) construct(cls *class, args []Value, at diag.Span) *Object {
 	}
 	in.enter(cls.decl.Name.Name+".init", line, obj, at)
 	empty := &env{vars: map[string]Value{}}
+	if cls.decl.UseError {
+		for _, f := range in.classes["Error"].decl.Fields {
+			obj.Fields[f.Name.Name] = in.expr(f.Value, empty)
+		}
+	}
 	for _, f := range cls.decl.Fields {
 		obj.Fields[f.Name.Name] = in.expr(f.Value, empty)
 	}
@@ -315,6 +362,13 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 		return x.Value
 	case *ast.BoolLit:
 		return x.Value
+	case *ast.NullLit:
+		return nil
+	case *ast.Is:
+		obj := in.expr(x.X, e).(*Object)
+		return x.Class.Name == "Error" || obj.Class.Name.Name == x.Class.Name
+	case *ast.Else:
+		return in.elseExpr(x, e)
 	case *ast.Ident:
 		return e.lookup(x.Name)
 	case *ast.Paren:
@@ -519,4 +573,40 @@ func (in *interp) matches(p *ast.Pattern, v Value) bool {
 		return v == Value(in.enums[p.Enum.Name].cases[p.Case.Name])
 	}
 	panic("interp: unknown pattern")
+}
+
+// elseExpr runs `x else handler`. The handler runs if x failed (for an
+// error else) or is null (for a null else).
+func (in *interp) elseExpr(x *ast.Else, e *env) Value {
+	v := in.expr(x.X, e)
+	var err Value
+	switch x.Kind {
+	case ast.ElseError:
+		f, ok := v.(*Failure)
+		if !ok {
+			return v
+		}
+		err = f.Err
+	case ast.ElseNull:
+		if v != nil {
+			return v
+		}
+	}
+
+	he := e
+	if x.Err != nil {
+		he = &env{parent: e, vars: map[string]Value{x.Err.Name: err}}
+	}
+	switch {
+	case x.Body != nil:
+		if ret, v := in.block(x.Body, he); ret {
+			panic(&returnSignal{value: v})
+		}
+		panic("interp: an else block did not leave") // the checker ensures it does
+	case x.Return && x.Value == nil:
+		panic(&returnSignal{value: err}) // nil for a null else
+	case x.Return:
+		panic(&returnSignal{value: in.expr(x.Value, he)})
+	}
+	return in.expr(x.Value, he)
 }

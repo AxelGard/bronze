@@ -116,8 +116,8 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			"block on the next line is skipped",
-			"class A\n{\n    func f() -> ! E\n    {\n        g()\n    }\n}\nfunc h()\n{\n    if x is B\n    {\n        g()\n    }\n}",
-			[]string{"3:17 functions that can fail are not supported yet", "10:10 `is` is not supported yet"},
+			"class A\n{\n    func f() -> Int Int\n    {\n        g()\n    }\n}\nfunc h()\n{\n    if x == )\n    {\n        g()\n    }\n}",
+			[]string{"3:21 expected `{`, found `Int`", "10:13 expected an expression, found `)`"},
 		},
 		{
 			"enum members",
@@ -152,9 +152,15 @@ func TestErrors(t *testing.T) {
 			[]string{"3:9 `for` is reserved for a later version, and can't be used as a name"},
 		},
 		{
-			"not yet",
-			"class B use Error {}\nfunc f()\n{\n    con a = null\n}",
-			[]string{"1:9 `use Error` is not supported yet", "4:13 `null` is not supported yet"},
+			"errors and null",
+			"class B use Thing {}\nfunc f() -> Int?? { }\nfunc g()\n{\n    con a = f() else 1 else 2\n    h()\n    else return\n    con b = x is A == true\n}",
+			[]string{
+				"1:13 expected `Error` after `use`, found `Thing`",
+				"2:17 `Int??` is not allowed: a `?` type is already nullable",
+				"5:24 an expression can only have one `else`",
+				"7:5 `else` must be on the same line as the expression it handles",
+				"8:20 `is` can't be combined with another comparison; use `and`",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -248,6 +254,40 @@ func TestEnumAndMatch(t *testing.T) {
 	m := f.Decls[0].(*ast.FuncDecl).Body.Stmts[0].(*ast.Return).Value.(*ast.Match)
 	if !m.Bad || len(m.Arms) != 2 {
 		t.Errorf("bad %v, %d arms", m.Bad, len(m.Arms))
+	}
+}
+
+func TestErrorsAndNull(t *testing.T) {
+	f, diags := parse(t, "class NotFound use Error\n{\n}\nfunc find(id: Int) -> Account? ! NotFound\n{\n    return null\n}\nfunc save() -> ! Error\n{\n}")
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := "(class NotFound use Error)\n(func find (id Int) -> Account? ! NotFound (block (return null)))\n(func save -> ! Error (block))"
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+
+	tests := []struct{ src, want string }{
+		{"con a = find(1) else return", "(con a (else (call find 1) return))"},
+		{"con a = find(1) else return Error(\"x\")", `(con a (else (call find 1) return (call Error "x")))`},
+		{"con a = find(1) else (e) return 0", "(con a (else (call find 1) (e) return 0))"},
+		{"con a = find(1) else (e)\n{\n    print(e.message)\n    return\n}", "(con a (else (call find 1) (e) (block (call print (. e message)) (return))))"},
+		{"con a = find(1) else 0", "(con a (else (call find 1) 0))"},
+		{"con a = find(1) else (x)", "(con a (else (call find 1) (paren x)))"},
+		{"con a = f() else panic(\"no\")", `(con a (else (call f) (call panic "no")))`},
+		{"save() else return", "(block (else (call save) return))"},
+		{"con b = e is NotFound and x == null", "(con b (and (is e NotFound) (== x null)))"},
+		{"con c = a + 1 else b or c", "(con c (else (+ a 1) (or b c)))"},
+	}
+	for _, tt := range tests {
+		got := body(t, tt.src)
+		want := "(block " + tt.want + ")"
+		if strings.HasPrefix(tt.want, "(block") {
+			want = tt.want
+		}
+		if got != want {
+			t.Errorf("%q:\ngot  %s\nwant %s", tt.src, got, want)
+		}
 	}
 }
 

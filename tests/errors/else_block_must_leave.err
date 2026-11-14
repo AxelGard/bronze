@@ -1,0 +1,2 @@
+error: this block must leave the function
+  --> else_block_must_leave.brz:11:5

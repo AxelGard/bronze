@@ -417,3 +417,137 @@ func main() -> Int
 		t.Errorf("got\n%s\nwant\n%s", out, want)
 	}
 }
+
+const errorProgram = `class NotFound use Error
+{
+    con id = 0
+
+    func init(id: Int)
+    {
+        this.id = id
+        this.message = "no item " + String(id)
+    }
+}
+
+class Item
+{
+    con id = 0
+
+    func init(id: Int)
+    {
+        this.id = id
+    }
+}
+
+func find(id: Int) -> Item ! NotFound
+{
+    if id < 0
+    {
+        return NotFound(id)
+    }
+    return Item(id)
+}
+
+func check(id: Int) -> ! Error
+{
+    if id == 0
+    {
+        return Error("zero")
+    }
+}
+
+// passes errors on, and turns NotFound into a plain Error
+func twice(id: Int) -> Int ! Error
+{
+    check(id) else return
+    con item = find(id) else (e) return Error("wrapped: " + e.message)
+    return item.id * 2
+}
+
+func lookup(id: Int) -> Item?
+{
+    if id > 10
+    {
+        return null
+    }
+    return Item(id)
+}
+
+func first(id: Int) -> Item? ! Error
+{
+    check(id) else return
+    return lookup(id)
+}
+
+func describe(id: Int) -> String
+{
+    con n = twice(id) else (e)
+    {
+        if e is NotFound
+        {
+            return "never: twice wraps NotFound"
+        }
+        return "failed: " + e.message
+    }
+    return "ok: " + String(n)
+}
+`
+
+func TestErrorsAndNull(t *testing.T) {
+	tests := []struct{ body, want string }{
+		{"print((find(3) else Item(0)).id)\n    print((find(-1) else Item(0)).id)", "3\n0\n"},
+		{"print(describe(4))", "ok: 8\n"},
+		{"print(describe(0))", "failed: zero\n"},
+		{"print(describe(-2))", "failed: wrapped: no item -2\n"},
+		{"con e = Error(\"plain\")\n    print(e.message)\n    print(e is Error)\n    print(e is NotFound)", "plain\ntrue\nfalse\n"},
+		{"con e = NotFound(5)\n    print(e.message)\n    print(e.id)\n    print(e is NotFound and e is Error)", "no item 5\n5\ntrue\n"},
+		{"print((lookup(11) else Item(99)).id)", "99\n"},
+		{"print((lookup(3) else Item(99)).id)", "3\n"},
+		{"con a = lookup(12)\n    print(a == null)\n    con b = lookup(1)\n    print(b != null)", "true\ntrue\n"},
+		{"con a = first(20) else panic(\"no\")\n    print(a == null)", "true\n"},
+		{"con a = first(0) else Item(7)\n    print((a else Item(8)).id)", "7\n"},
+		{"check(1) else panic(\"no\")\n    print(\"fine\")", "fine\n"},
+	}
+	for _, tt := range tests {
+		out, _, p := run(t, errorProgram+"func main() -> Int\n{\n    "+tt.body+"\n    return 0\n}\n")
+		if p != nil {
+			t.Fatalf("%s: panic: %s", tt.body, p.Message)
+		}
+		if out != tt.want {
+			t.Errorf("%s:\ngot\n%s\nwant\n%s", tt.body, out, tt.want)
+		}
+	}
+}
+
+func TestElseReturn(t *testing.T) {
+	src := errorProgram + `func size(id: Int) -> Int
+{
+    // a return deep inside an expression leaves the function
+    con n = 1 + (lookup(id) else return -1).id
+    return n
+}
+
+func report(id: Int)
+{
+    con item = lookup(id) else return
+    print("found " + String(item.id))
+}
+
+func main() -> Int
+{
+    print(size(4))
+    print(size(40))
+    report(2)
+    report(20)
+    con x = find(-5) else panic("find failed")
+    return 0
+}
+`
+	out, _, p := run(t, src)
+	if want := "5\n-1\nfound 2\n"; out != want {
+		t.Errorf("got\n%s\nwant\n%s", out, want)
+	}
+	if p == nil || p.Message != "find failed" || len(p.Trace) != 1 {
+		t.Errorf("panic %+v", p)
+	}
+}

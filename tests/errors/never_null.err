@@ -1,0 +1,2 @@
+error: `user` can never be null
+  --> never_null.brz:9:8

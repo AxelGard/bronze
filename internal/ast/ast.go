@@ -39,12 +39,14 @@ func (f *File) Span() diag.Span { return f.Sp }
 // ---------------------------------------------------------------------
 // Declarations
 
-// FuncDecl is `func name(params) -> result { body }`.
+// FuncDecl is `func name(params) -> result ! fail { body }`.
 type FuncDecl struct {
 	Name   *Ident
 	Params []*Param
-	Result *TypeExpr // nil if the function returns nothing
+	Result *TypeExpr // nil if the function returns no value
+	Fail   *TypeExpr // the error type after `!`, or nil
 	Body   *Block
+	Bad    bool // the body had a syntax error
 	Sp     diag.Span
 }
 
@@ -62,13 +64,15 @@ type TypeExpr struct {
 	Sp       diag.Span
 }
 
-// ClassDecl is `class Name { fields and methods }`.
+// ClassDecl is `class Name use Error { fields and methods }`.
 type ClassDecl struct {
-	Name    *Ident
-	Fields  []*Field
-	Methods []*FuncDecl
-	Bad     bool // some member had a syntax error
-	Sp      diag.Span
+	Name     *Ident
+	UseError bool // `use Error`
+	Fields   []*Field
+	Methods  []*FuncDecl
+	Bad      bool // some member had a syntax error
+	Builtin  bool // declared by bronze itself, like Error
+	Sp       diag.Span
 }
 
 // Field is `con name: Type = value` or `mut name = value` in a class.
@@ -216,6 +220,42 @@ type BoolLit struct {
 	Sp    diag.Span
 }
 
+// NullLit is `null`.
+type NullLit struct {
+	Sp diag.Span
+}
+
+// Is is `x is Class`.
+type Is struct {
+	X     Expr
+	Class *Ident
+}
+
+// ElseKind says what an `else` handles. The checker sets it.
+type ElseKind int
+
+const (
+	ElseError ElseKind = iota // a failure of a call that can fail
+	ElseNull                  // a null
+)
+
+// Else is `x else handler`:
+//
+//	x else return            Return, no Value
+//	x else return v          Return, Value
+//	x else (e) return v      Err, Return, Value
+//	x else (e) { ... }       Err, Body
+//	x else fallback          Value
+type Else struct {
+	X      Expr
+	Err    *Ident // the bound error, or nil
+	Return bool
+	Value  Expr   // the returned value or the fallback; nil for a bare return
+	Body   *Block // the block, or nil
+	Kind   ElseKind
+	Sp     diag.Span
+}
+
 // Unary is `-x` or `not x`. Op is lexer.MINUS or lexer.NOT.
 type Unary struct {
 	Op lexer.Kind
@@ -303,6 +343,9 @@ func (e *FloatLit) Span() diag.Span  { return e.Sp }
 func (e *StringLit) Span() diag.Span { return e.Sp }
 func (e *BoolLit) Span() diag.Span   { return e.Sp }
 func (e *Unary) Span() diag.Span     { return e.Sp }
+func (e *NullLit) Span() diag.Span   { return e.Sp }
+func (e *Is) Span() diag.Span        { return e.X.Span().To(e.Class.Sp) }
+func (e *Else) Span() diag.Span      { return e.Sp }
 func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
 func (e *Call) Span() diag.Span      { return e.Sp }
 func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
@@ -318,6 +361,9 @@ func (*FloatLit) exprNode()  {}
 func (*StringLit) exprNode() {}
 func (*BoolLit) exprNode()   {}
 func (*Unary) exprNode()     {}
+func (*NullLit) exprNode()   {}
+func (*Is) exprNode()        {}
+func (*Else) exprNode()      {}
 func (*Binary) exprNode()    {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}

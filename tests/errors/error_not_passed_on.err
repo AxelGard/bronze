@@ -1,0 +1,2 @@
+error: `else return` passes the error on, but `age_next_year` can't fail
+  --> error_not_passed_on.brz:8:15

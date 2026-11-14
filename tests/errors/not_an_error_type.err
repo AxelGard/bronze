@@ -1,0 +1,2 @@
+error: `Account` is not an error type
+  --> not_an_error_type.brz:6:26
