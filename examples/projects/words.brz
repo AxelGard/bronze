@@ -1,0 +1,197 @@
+// words.brz
+//
+// A mini project for 0.2.0: counting the words in a text.
+// Shows maps, string methods, string interpolation, `for` over strings,
+// lists and maps, and `T?` with `else`.
+// Run it with:  bronze run examples/projects/words.brz
+
+
+// ------------------------------------------------------------------
+// Cleaning the text
+// ------------------------------------------------------------------
+
+// Keeps letters, digits, apostrophes and spaces; anything else becomes a
+// space. Upper case becomes lower case.
+func clean(text: String) -> String
+{
+    con keep = "abcdefghijklmnopqrstuvwxyz0123456789' "
+    mut out = ""
+    for c in text.to_lower()
+    {
+        if keep.contains(c)
+        {
+            out += c
+        }
+        else
+        {
+            out += " "
+        }
+    }
+    return out
+}
+
+func words_of(text: String) -> List<String>
+{
+    con words: List<String> = []
+    for part in clean(text).split(" ")
+    {
+        con w = part.trim()
+        if w == ""
+        {
+            continue
+        }
+        words.append(w)
+    }
+    return words
+}
+
+
+// ------------------------------------------------------------------
+// Counting
+// ------------------------------------------------------------------
+
+func count(words: List<String>) -> Map<String, Int>
+{
+    con counts: Map<String, Int> = {}
+    for w in words
+    {
+        if counts.contains(w)
+        {
+            counts[w] += 1
+        }
+        else
+        {
+            counts[w] = 1
+        }
+    }
+    return counts
+}
+
+// The n most common words, most common first. Ties keep the order the
+// words first appeared in.
+func top(counts: Map<String, Int>, n: Int) -> List<String>
+{
+    con left: Map<String, Int> = {}
+    for w, c in counts
+    {
+        left[w] = c
+    }
+    con result: List<String> = []
+    while result.length() < n and left.length() > 0
+    {
+        mut best = ""
+        mut most = 0
+        for w, c in left
+        {
+            if c > most
+            {
+                best = w
+                most = c
+            }
+        }
+        result.append(best)
+        left.remove(best)
+    }
+    return result
+}
+
+// The words grouped by their first letter.
+func by_letter(words: List<String>) -> Map<String, List<String>>
+{
+    con groups: Map<String, List<String>> = {}
+    for w in words
+    {
+        con letter = w[0] else ""
+        con group = groups[letter] else []
+        if not group.contains(w)
+        {
+            group.append(w)
+        }
+        groups[letter] = group
+    }
+    return groups
+}
+
+func longest(words: List<String>) -> String?
+{
+    mut best: String? = null
+    mut size = 0
+    for w in words
+    {
+        if w.length() > size
+        {
+            best = w
+            size = w.length()
+        }
+    }
+    return best
+}
+
+
+// ------------------------------------------------------------------
+// main
+// ------------------------------------------------------------------
+
+func main() -> Int
+{
+    con text = "The quick brown fox jumps over the lazy dog. The dog sleeps; " +
+        "the fox doesn't. Quick, quick!"
+
+    con words = words_of(text)
+    print("{words.length()} words")
+    print("first five: {words[..5]}")
+
+    con counts = count(words)
+    print("{counts.length()} different words")
+    print("'the' appears {counts["the"] else 0} times")
+    print("'cat' appears {counts["cat"] else 0} times")
+
+    for w in top(counts, 3)
+    {
+        con n = counts[w] else 0
+        print("  {w}: {n}")
+    }
+
+    con groups = by_letter(words)
+    con letters = groups.keys()
+    letters.sort()
+    print("letters: {letters.join("")}")
+    print("q words: {groups["q"] else []}")
+    print("d words: {groups["d"] else []}")
+
+    con long = longest(words) else "none"
+    print("longest: {long} ({long.length()} letters)")
+
+    con title = words[..4]
+    for i, w in title
+    {
+        con first = w[0] else ""
+        title[i] = first.to_upper() + w[1..]
+    }
+    print(title.join(" "))
+
+    print("{counts}")
+    return 0
+}
+
+
+/*
+    Expected output:
+
+    17 words
+    first five: ["the", "quick", "brown", "fox", "jumps"]
+    10 different words
+    'the' appears 4 times
+    'cat' appears 0 times
+      the: 4
+      quick: 3
+      fox: 2
+    letters: bdfjloqst
+    q words: ["quick"]
+    d words: ["dog", "doesn't"]
+    longest: doesn't (7 letters)
+    The Quick Brown Fox
+    {"the": 4, "quick": 3, "brown": 1, "fox": 2, "jumps": 1, "over": 1, "lazy": 1, "dog": 2, "sleeps": 1, "doesn't": 1}
+
+    Exit code: 0
+*/

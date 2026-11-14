@@ -1,6 +1,6 @@
 # Language reference
 
-Bronze 0.1.0 in one place. The [guide](../guide/first-program.md) explains the same things with examples.
+Bronze 0.2.0 in one place. The [guide](../guide/first-program.md) explains the same things with examples.
 
 ## Source files
 

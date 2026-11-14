@@ -22,7 +22,7 @@ install:
 # The tree-sitter grammar (editors/tree-sitter-bronze); needs the tree-sitter
 # CLI. Every valid example program must parse without errors.
 TS_DIR = editors/tree-sitter-bronze
-TS_VALID = examples/core.brz examples/projects/counter.brz examples/projects/bank.brz $(wildcard tests/run/*.brz tests/panics/*.brz)
+TS_VALID = $(wildcard examples/*.brz examples/projects/*.brz tests/run/*.brz tests/panics/*.brz)
 
 tree-sitter:
 	cd $(TS_DIR) && tree-sitter generate && tree-sitter test

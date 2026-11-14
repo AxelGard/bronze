@@ -1,0 +1,260 @@
+// algorithms.brz
+//
+// The proof for 0.2.0: small algorithms with lists, ranges and loops.
+// Shows `for`, ranges, `break`/`continue`, `+=`, lists and their methods,
+// indexing with `else`, slicing, `Int?`, and string interpolation.
+// Run it with:  bronze run examples/algorithms.brz
+
+
+// ------------------------------------------------------------------
+// Sorting
+// ------------------------------------------------------------------
+
+// Insertion sort, in place.
+func insertion_sort(xs: List<Int>)
+{
+    for i in 1..xs.length()
+    {
+        con x = xs[i] else 0
+        mut j = i - 1
+        while j >= 0
+        {
+            con y = xs[j] else 0
+            if y <= x
+            {
+                break
+            }
+            xs[j + 1] = y
+            j -= 1
+        }
+        xs[j + 1] = x
+    }
+}
+
+// Merge sort: returns a new, sorted list.
+func merge_sort(xs: List<Int>) -> List<Int>
+{
+    if xs.length() <= 1
+    {
+        return xs[..]
+    }
+    con mid = xs.length() / 2
+    con left = merge_sort(xs[..mid])
+    con right = merge_sort(xs[mid..])
+
+    con merged: List<Int> = []
+    mut i = 0
+    mut j = 0
+    while i < left.length() and j < right.length()
+    {
+        con a = left[i] else 0
+        con b = right[j] else 0
+        if a <= b
+        {
+            merged.append(a)
+            i += 1
+        }
+        else
+        {
+            merged.append(b)
+            j += 1
+        }
+    }
+    for x in left[i..]
+    {
+        merged.append(x)
+    }
+    for x in right[j..]
+    {
+        merged.append(x)
+    }
+    return merged
+}
+
+
+// ------------------------------------------------------------------
+// Searching
+// ------------------------------------------------------------------
+
+// Binary search in a sorted list: the index of x, or null.
+func binary_search(xs: List<Int>, x: Int) -> Int?
+{
+    mut lo = 0
+    mut hi = xs.length()
+    while lo < hi
+    {
+        con mid = (lo + hi) / 2
+        con y = xs[mid] else 0
+        if y == x
+        {
+            return mid
+        }
+        if y < x
+        {
+            lo = mid + 1
+        }
+        else
+        {
+            hi = mid
+        }
+    }
+    return null
+}
+
+func largest(xs: List<Int>) -> Int?
+{
+    mut best = xs[0] else return null
+    for x in xs[1..]
+    {
+        if x > best
+        {
+            best = x
+        }
+    }
+    return best
+}
+
+
+// ------------------------------------------------------------------
+// Numbers
+// ------------------------------------------------------------------
+
+// The sieve of Eratosthenes: every prime up to n.
+func primes(n: Int) -> List<Int>
+{
+    con is_prime: List<Bool> = []
+    for _ in 0..=n
+    {
+        is_prime.append(true)
+    }
+    con found: List<Int> = []
+    for i in 2..=n
+    {
+        if is_prime[i] == false
+        {
+            continue
+        }
+        found.append(i)
+        mut j = i * i
+        while j <= n
+        {
+            is_prime[j] = false
+            j += i
+        }
+    }
+    return found
+}
+
+func fibonacci(count: Int) -> List<Int>
+{
+    con fib = [0, 1]
+    while fib.length() < count
+    {
+        con a = fib[-2] else 0
+        con b = fib[-1] else 0
+        fib.append(a + b)
+    }
+    return fib[..count]
+}
+
+func gcd(a: Int, b: Int) -> Int
+{
+    mut x = a
+    mut y = b
+    while y != 0
+    {
+        con r = x % y
+        x = y
+        y = r
+    }
+    return x
+}
+
+// A table of n, n² and n³, one row per n.
+func powers(n: Int) -> List<List<Int>>
+{
+    con rows: List<List<Int>> = []
+    for i in 1..=n
+    {
+        rows.append([i, i * i, i * i * i])
+    }
+    return rows
+}
+
+
+// ------------------------------------------------------------------
+// main
+// ------------------------------------------------------------------
+
+func main() -> Int
+{
+    con values = [38, 27, 43, 3, 9, 82, 10]
+
+    con sorted = merge_sort(values)
+    print("merge sort: {sorted}")
+    print("unchanged:  {values}")
+
+    con by_insertion = values[..]
+    insertion_sort(by_insertion)
+    print("insertion:  {by_insertion}")
+    print("same: {by_insertion == sorted}")
+
+    con builtin = values[..]
+    builtin.sort()
+    builtin.reverse()
+    print("descending: {builtin}")
+
+    print("43 is at {binary_search(sorted, 43) else -1}")
+    print("5 is at {binary_search(sorted, 5) else -1}")
+    print("largest: {largest(values) else 0}")
+    print("largest of none: {largest([]) == null}")
+
+    con ps = primes(50)
+    print("{ps.length()} primes up to 50: {ps}")
+    print("the last three: {ps[-3..]}")
+
+    print("fibonacci: {fibonacci(12)}")
+    print("gcd(84, 36) = {gcd(84, 36)}")
+
+    for row in powers(4)
+    {
+        print(row)
+    }
+
+    mut total = 0
+    for i, x in values
+    {
+        if i % 2 == 0
+        {
+            total += x
+        }
+    }
+    print("sum at even indexes: {total}")
+    return 0
+}
+
+
+/*
+    Expected output:
+
+    merge sort: [3, 9, 10, 27, 38, 43, 82]
+    unchanged:  [38, 27, 43, 3, 9, 82, 10]
+    insertion:  [3, 9, 10, 27, 38, 43, 82]
+    same: true
+    descending: [82, 43, 38, 27, 10, 9, 3]
+    43 is at 5
+    5 is at -1
+    largest: 82
+    largest of none: true
+    15 primes up to 50: [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+    the last three: [41, 43, 47]
+    fibonacci: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+    gcd(84, 36) = 12
+    [1, 1, 1]
+    [2, 4, 8]
+    [3, 9, 27]
+    [4, 16, 64]
+    sum at even indexes: 100
+
+    Exit code: 0
+*/

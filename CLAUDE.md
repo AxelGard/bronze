@@ -13,7 +13,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `doc/implementation.md` | Architecture and implementation principles |
 | `doc/open-questions.md` | Everything not decided yet |
 | `doc/*.md` (others) | Decided design: syntax, types, classes, errors, namespaces, projects, core values |
-| `examples/` | Programs that run; each has its expected output at the bottom, and a test checks it (`tests/golden_test.go`). Only programs that run go here |
+| `examples/` | Programs that run (`core.brz`, `algorithms.brz`, `projects/`); each has its expected output at the bottom, and a test checks it (`tests/golden_test.go`). Only programs that run go here |
 | `doc/explorations/*.brz` | Design explorations and worksheets with later features and undecided syntax, marked `[decided]` / `[proposal]` / `[exploration]` / `[worksheet]` |
 | `cmd/bronze/` | CLI entry point; the logic is in `internal/cli` |
 | `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline |
@@ -28,7 +28,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 
 ## Current state
 
-0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 has started with the LSP (`bronze lsp`: diagnostics, definition, rename), which needs no new language decisions. The worksheet `doc/explorations/worksheet-0.2.brz` is answered and `doc/spec-0.2.md` is written; next is implementing it, in the work order in `doc/milestones.md`. Open: exit codes outside 0–255 (`doc/open-questions.md`).
+0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 is implemented too: all 9 steps of its work order in `doc/milestones.md`, as `doc/spec-0.2.md` describes (compound assignment, `break`/`continue`, `T?` for all types, ranges and `for`, lists, maps, slicing, string methods, interpolation, LSP hover). `examples/algorithms.brz` and `examples/projects/words.brz` run, and the website documents it. Not yet tagged as a release. Open: exit codes outside 0–255 (`doc/open-questions.md`).
 
 ## Commands
 

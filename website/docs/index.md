@@ -62,7 +62,7 @@ Ada's account is frozen
 
 Bronze is young. Version **0.1.0** is out: one-file programs with functions, `Int`/`Float`/`Bool`/`String`, `if` and `while`, classes, enums, `match`, errors and null safety. It runs on a tree-walking interpreter written in Go, and comes with a language server and a tree-sitter grammar for editors.
 
-This site describes only what works today. Lists, maps, `for` loops and string interpolation come in 0.2.0.
+Version **0.2.0** adds `for` loops and ranges, `break` and `continue`, lists, maps, string methods and interpolation, `+=`, `T?` for every type, and hover in the language server. This site describes 0.2.0, and only what works.
 
 ## Where to go next
 
