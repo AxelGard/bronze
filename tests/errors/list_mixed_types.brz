@@ -1,0 +1,5 @@
+func main() -> Int
+{
+    con values = [1, 2, "three"]
+    return 0
+}

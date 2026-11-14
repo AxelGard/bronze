@@ -33,6 +33,9 @@ The panic message and the stack trace go to stderr.
 | `assert(condition, "text")` with a false condition | `assertion failed: text` |
 | `Int` division or `%` by zero | `division by zero` |
 | calls nested more than 10 000 deep | `stack overflow` |
+| `xs[i] = v` or `xs[i] += v` out of range | `index 5 out of range for a list of length 3` |
+| `xs.insert(i, x)` out of range | `index 5 out of range for insert into a list of length 3` |
+| changing a list while a `for` loops over it | `list changed while looping over it` |
 
 ## panic and assert
 

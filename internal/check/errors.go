@@ -87,7 +87,7 @@ func (c *checker) handler(e *ast.Else, value Type, errType *Class) Type {
 		if value == NoValue {
 			ft = c.expr(e.Value) // the message below beats "returns nothing"
 		} else {
-			ft = c.value(e.Value)
+			ft = c.valueFor(e.Value, value)
 		}
 		switch {
 		case value == NoValue:

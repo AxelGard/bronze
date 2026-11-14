@@ -52,6 +52,8 @@ func TestStatements(t *testing.T) {
 		{"while true\n{\nbreak\ncontinue\n}", "(block (while true (block (break) (continue))))"},
 		{"for i in 0..n\n{\nf(i)\n}", "(block (for i in (.. 0 n) (block (call f i))))"},
 		{"for _, x in xs { f(x) }", "(block (for _ x in xs (block (call f x))))"},
+		{"con xs: List<List<Int>> = [[1, 2], [], [3,\n4,],]", "(block (con xs: List<List<Int>> (list (list 1 2) (list) (list 3 4))))"},
+		{"mut m: Map<String, List<Int>?>= xs[i + 1][0]\nxs[0] = 1\nxs[i] += 2", "(block (mut m: Map<String, List<Int>?> (index (index xs (+ i 1)) 0)) (= (index xs 0) 1) (+= (index xs i) 2))"},
 		{"con r = 1 + 1..=n * 2 == xs", "(block (con r (== (..= (+ 1 1) (* n 2)) xs)))"},
 	}
 	for _, tt := range tests {

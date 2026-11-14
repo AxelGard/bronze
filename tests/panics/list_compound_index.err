@@ -1,0 +1,2 @@
+panic: index 2 out of range for a list of length 2
+  at main (list_compound_index.brz:6)

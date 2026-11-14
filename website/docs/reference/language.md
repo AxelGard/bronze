@@ -15,7 +15,7 @@ A program is one UTF-8 file ending in `.brz`. Its top level holds `func`, `class
 | `Float` literals | `2.0`, `3.14159`, `1.5e-3`: digits on both sides of the `.` |
 | `String` literals | `"hello"`, with the escapes `\n` `\t` `\"` `\\` `\{` |
 | Operators | `+ - * / %` `== != < <= > >=` `..` `..=` `=` `+= -= *= /= %=` `->` `=>` `!` `?` `.` |
-| Punctuation | `( ) { } , :` |
+| Punctuation | `( ) { } [ ] , :` |
 | Comments | `// to the end of the line`, `/* a block */` (block comments don't nest) |
 
 A `{` in a string without a `\` is an error, so that string interpolation can be added later without changing what existing programs mean.
@@ -38,7 +38,7 @@ test  type  super  copy
 
 A newline ends a statement. It doesn't when:
 
-- it is inside `( )`
+- it is inside `( )` or `[ ]`
 - the line ends in a binary operator (`+`, `and`, `==`, ...), `,`, `->`, `=>`, `=`, `+=` (and the other `op=`), `.` or `!`
 
 A `{` may be on the next line, and so may the `else` of an `if`. The `else` that handles an error or a null must be on the same line as the expression it handles.
@@ -53,6 +53,7 @@ A `{` may be on the next line, and so may the `else` of an `if`. The `else` that
 | `String` | UTF-8 text |
 | a class `C` | a reference to an object of `C` |
 | an enum `E` | one of its cases |
+| `List<T>` | a shared reference to a list of `T`s; `T` can't be a `T?` |
 | `Error` | the built-in error class |
 | `T?` | a `T`, or `null`, for any type `T` (but not `T??`) |
 | `T ! E` | return types only: a `T`, or a failure with `E` |
@@ -67,14 +68,14 @@ From the lowest precedence to the highest:
 | `x else handler` | `x` is a `T ! E` or a `T?` | `T` (see [Errors](../guide/errors.md), [Null](../guide/null.md)) |
 | `or` | `Bool` | `Bool`, short-circuit |
 | `and` | `Bool` | `Bool`, short-circuit |
-| `== !=` | two values of the same type, a `T?` and a `T`, or a `T?` and `null` | `Bool` |
+| `== !=` | two values of the same type, a `T?` and a `T`, or a `T?` and `null`; lists by value | `Bool` |
 | `< <= > >=` | two `Int`s, two `Float`s or two `String`s | `Bool` |
 | `x is C` | `x` is an error, `C` is `Error` or a class that uses it | `Bool` |
 | `a..b`, `a..=b` | two `Int`s | the `Int`s from `a` up to `b`, without or with `b`; a `List<Int>` outside a `for` |
 | `+ -` | two `Int`s or two `Float`s; `+` also joins two `String`s | the same type |
 | `* / %` | two `Int`s or two `Float`s (`%` only `Int`) | the same type |
 | `not x`, `-x` | `Bool`; `Int` or `Float` | the same type |
-| `f(...)`, `x.name` | | |
+| `f(...)`, `x.name`, `xs[i]` | `xs[i]`: a `List<T>` and an `Int` | `xs[i]` is a `T?` |
 
 Comparisons and ranges can't be chained (`a < b < c` and `a..b..c` are errors). `Int` and `Float` never mix: convert with `Float(...)`. `==` on objects compares identity; on enums, the case.
 
@@ -82,12 +83,14 @@ Comparisons and ranges can't be chained (`a < b < c` and `a..b..c` are errors). 
 
 | Name | Takes | Does |
 |---|---|---|
-| `print(x)` | one `Int`, `Float`, `Bool`, `String` or enum value | prints it and a newline |
+| `print(x)` | one `Int`, `Float`, `Bool`, `String` or enum value, or a list of them | prints it and a newline |
 | `String(x)` | the same types | the text `print` would show |
 | `Float(n)` | an `Int` | the same number as a `Float` |
 | `Error(message)` | a `String` | a new `Error` |
 | `panic(message)` | a `String` | stops the program; usable wherever a value is expected |
 | `assert(condition, message)` | a `Bool` and a `String` | panics with `assertion failed: message` if the condition is false |
+
+Lists have the methods `length`, `append`, `insert`, `remove_at`, `pop`, `contains`, `index_of`, `reverse`, `sort` and `join`; see [Lists](../guide/lists.md#methods).
 
 ## Statements
 
@@ -95,8 +98,8 @@ Comparisons and ranges can't be chained (`a < b < c` and `a..b..c` are errors). 
 |---|---|
 | `con x = e`, `con x: T = e` | a variable that can't be assigned again |
 | `mut x = e`, `mut x: T = e` | a variable that can |
-| `x = e`, `obj.field = e` | assignment |
-| `x += e`, `obj.field -= e`, also `*=`, `/=`, `%=` | `x = x + e`, with the same type rules as the operator; the target is evaluated once |
+| `x = e`, `obj.field = e`, `xs[i] = e` | assignment; `xs[i]` out of range panics |
+| `x += e`, `obj.field -= e`, `xs[i] *= e`, also `/=`, `%=` | `x = x + e`, with the same type rules as the operator; the target is evaluated once |
 | `if c { } else if c { } else { }` | |
 | `while c { }` | |
 | `for x in e { }`, `for i, x in e { }` | `e` is a range or a list; over a list, `i` is the index. `x` can be `_`. Loop variables can't be assigned to |
@@ -134,7 +137,8 @@ enum Name { cases, one per line, then methods }
 - `Int` arithmetic wraps around on overflow.
 - `Int` `/` rounds toward zero, and `%` has the sign of the left operand. Dividing an `Int` by zero panics.
 - `Float` division by zero gives `inf`, `-inf` or `NaN`.
-- Objects are shared: assigning or passing one never copies it.
+- Objects and lists are shared: assigning or passing one never copies it.
+- Changing a list's length or order while a `for` loops over it panics.
 - Calls nested more than 10 000 deep panic with `stack overflow`.
 - A panic prints a stack trace to stderr and exits with 101.
 
@@ -147,6 +151,7 @@ enum Name { cases, one per line, then methods }
 | `Bool` | `true`, `false` |
 | `String` | the text as it is |
 | enum | the case name: `Frozen` |
+| `List<T>` | `[1, 2, 3]`, `[]`; a `String` inside a list is quoted, with `\n`, `\t`, `\"` and `\\` escaped: `["a, b"]` |
 
 ## Grammar
 
@@ -160,7 +165,9 @@ param       = IDENT ":" type
 ret_type    = type [ "!" type ]                     // T, or T ! E
             | "!" type                              // nothing, or E
 type        = type_name [ "?" ]
-type_name   = "Int" | "Float" | "Bool" | "String" | IDENT
+type_name   = "Int" | "Float" | "Bool" | "String"
+            | "List" "<" type ">"
+            | IDENT
 
 class_decl  = "class" IDENT [ "use" "Error" ] "{" { NEWLINE } { member { NEWLINE } } "}"
 member      = field | func_decl
@@ -178,7 +185,7 @@ stmt        = var_decl | assign | compound | if_stmt | while_stmt | for_stmt
 var_decl    = ( "con" | "mut" ) IDENT [ ":" type ] "=" expr
 assign      = target "=" expr
 compound    = target ( "+=" | "-=" | "*=" | "/=" | "%=" ) expr
-target      = IDENT | postfix "." IDENT
+target      = IDENT | postfix "." IDENT | postfix "[" expr "]"
 if_stmt     = "if" expr block { "else" "if" expr block } [ "else" block ]
 while_stmt  = "while" expr block
 for_stmt    = "for" loop_var [ "," loop_var ] "in" expr block
@@ -199,10 +206,11 @@ range_expr  = add_expr [ ( ".." | "..=" ) add_expr ]
 add_expr    = mul_expr { ( "+" | "-" ) mul_expr }
 mul_expr    = unary { ( "*" | "/" | "%" ) unary }
 unary       = ( "not" | "-" ) unary | postfix
-postfix     = primary { "(" [ args ] ")" | "." IDENT }
+postfix     = primary { "(" [ args ] ")" | "." IDENT | "[" expr "]" }
 args        = expr { "," expr }
 primary     = INT | FLOAT | STRING | "true" | "false" | "null" | "this"
-            | IDENT | "(" expr ")" | match_expr
+            | IDENT | "(" expr ")" | match_expr | list_lit
+list_lit    = "[" [ expr { "," expr } [ "," ] ] "]"
 
 match_expr  = "match" expr "{" { NEWLINE } { arm NEWLINE { NEWLINE } } "}"
 arm         = pattern "=>" ( expr | block )         // a block only in a match statement

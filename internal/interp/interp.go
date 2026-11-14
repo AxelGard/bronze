@@ -336,6 +336,9 @@ func (in *interp) stmt(s ast.Stmt, e *env) (ctl, Value) {
 		case *ast.Member:
 			obj := in.expr(t.X, e).(*Object)
 			obj.Fields[t.Name.Name] = in.expr(s.Value, e)
+		case *ast.Index:
+			sl := in.indexTarget(t, e)
+			sl.set(in.expr(s.Value, e))
 		}
 	case *ast.Compound:
 		in.compound(s, e)
@@ -479,6 +482,9 @@ func (in *interp) compound(s *ast.Compound, e *env) {
 		obj := in.expr(t.X, e).(*Object)
 		old := obj.Fields[t.Name.Name]
 		obj.Fields[t.Name.Name] = in.arith(s.Op, old, in.expr(s.Value, e), s.Sp)
+	case *ast.Index:
+		sl := in.indexTarget(t, e)
+		sl.set(in.arith(s.Op, sl.get(), in.expr(s.Value, e), s.Sp))
 	}
 }
 
@@ -542,6 +548,14 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 			}
 		}
 		return l
+	case *ast.ListLit:
+		l := &List{Elems: make([]Value, len(x.Elems))}
+		for i, el := range x.Elems {
+			l.Elems[i] = in.expr(el, e)
+		}
+		return l
+	case *ast.Index:
+		return in.index(x, e)
 	case *ast.Call:
 		return in.callExpr(x, e)
 	}
@@ -558,9 +572,9 @@ func (in *interp) binary(x *ast.Binary, e *env) Value {
 	a, b := in.expr(x.X, e), in.expr(x.Y, e)
 	switch x.Op {
 	case lexer.EQ:
-		return a == b
+		return equal(a, b)
 	case lexer.NE:
-		return a != b
+		return !equal(a, b)
 	}
 	return in.arith(x.Op, a, b, x.Span())
 }
@@ -638,6 +652,9 @@ func (in *interp) callExpr(x *ast.Call, e *env) Value {
 	if m, ok := x.Fn.(*ast.Member); ok {
 		recv := in.expr(m.X, e)
 		args := in.args(x, e)
+		if l, ok := recv.(*List); ok {
+			return in.listMethod(l, m.Name.Name, args, x.Sp)
+		}
 		var typeName string
 		var fn *ast.FuncDecl
 		switch recv := recv.(type) {

@@ -367,14 +367,48 @@ func (p *parser) typeExpr() *ast.TypeExpr {
 	}
 	name := p.ident()
 	t := &ast.TypeExpr{Name: name, Sp: name.Sp}
-	if p.at(lexer.QUEST) {
-		t.Optional = true
+	if p.at(lexer.LT) {
+		p.advance()
+		for {
+			t.Args = append(t.Args, p.typeExpr())
+			if !p.at(lexer.COMMA) {
+				break
+			}
+			p.advance()
+		}
+		p.closeAngle()
 		t.Sp = name.Sp.To(p.advance().Span)
+	}
+	if p.at(lexer.QUEST) {
+		base := ast.Dump(t)
+		t.Optional = true
+		t.Sp = t.Sp.To(p.advance().Span)
 		if p.at(lexer.QUEST) {
-			p.fail(p.tok().Span, "`%s??` is not allowed: a `?` type is already nullable", name.Name)
+			p.fail(p.tok().Span, "`%s??` is not allowed: a `?` type is already nullable", base)
 		}
 	}
 	return t
+}
+
+// closeAngle requires the `>` that closes type arguments. In `List<Int>=`
+// the lexer sees `>=`, which is split into `>` and `=` here.
+func (p *parser) closeAngle() {
+	t := p.tok()
+	switch t.Kind {
+	case lexer.GT:
+		return
+	case lexer.GE:
+		gt, assign := t, t
+		gt.Kind, gt.Text = lexer.GT, ">"
+		gt.Span.End = t.Span.Start
+		gt.Span.End.Offset++
+		gt.Span.End.Col++
+		assign.Kind, assign.Text = lexer.ASSIGN, "="
+		assign.Span.Start = gt.Span.End
+		p.toks = append(p.toks[:p.pos], append([]lexer.Token{gt, assign}, p.toks[p.pos+1:]...)...)
+		return
+	}
+	p.failHere("expected `,` or `>` in the type arguments, found %s", describe(t))
 }
 
 // endOfLine requires the end of a statement or declaration: a newline, or
@@ -520,7 +554,7 @@ func (p *parser) simpleStmt() ast.Stmt {
 	if op, ok := compoundOps[p.kind()]; p.at(lexer.ASSIGN) || ok {
 		opTok := p.advance()
 		switch x.(type) {
-		case *ast.Ident, *ast.Member:
+		case *ast.Ident, *ast.Member, *ast.Index:
 		case *ast.This:
 			p.fail(x.Span(), "cannot assign to `this`")
 		default:
@@ -669,7 +703,7 @@ func (p *parser) peekKind(n int) lexer.Kind {
 func canStartExpr(k lexer.Kind) bool {
 	switch k {
 	case lexer.INT, lexer.FLOAT, lexer.STRING, lexer.TRUE, lexer.FALSE, lexer.NULL,
-		lexer.THIS, lexer.IDENT, lexer.LPAREN, lexer.MINUS, lexer.NOT, lexer.MATCH:
+		lexer.THIS, lexer.IDENT, lexer.LPAREN, lexer.MINUS, lexer.NOT, lexer.MATCH, lexer.LBRACK:
 		return true
 	}
 	return false
@@ -792,6 +826,14 @@ func (p *parser) postfix() ast.Expr {
 		case lexer.DOT:
 			p.advance()
 			x = &ast.Member{X: x, Name: p.ident()}
+		case lexer.LBRACK:
+			open := p.advance().Span
+			ix := &ast.Index{X: x, Index: p.expr()}
+			if !p.at(lexer.RBRACK) {
+				p.closeBracket(open, "`]`")
+			}
+			ix.Sp = x.Span().To(p.advance().Span)
+			x = ix
 		default:
 			return x
 		}
@@ -894,6 +936,32 @@ func (p *parser) closeParen(open diag.Span, expected string) {
 	p.failHere("expected %s, found %s", expected, describe(p.tok()))
 }
 
+// closeBracket reports a missing `]`, like closeParen.
+func (p *parser) closeBracket(open diag.Span, expected string) {
+	if p.at(lexer.EOF) || p.tok().Span.Start.Line > p.prev().End.Line {
+		p.fail(open, "`[` is not closed")
+	}
+	p.failHere("expected %s, found %s", expected, describe(p.tok()))
+}
+
+// listLit parses `[a, b, c]`, which may end in a `,`.
+func (p *parser) listLit() *ast.ListLit {
+	open := p.expect(lexer.LBRACK).Span
+	l := &ast.ListLit{}
+	for !p.at(lexer.RBRACK) {
+		l.Elems = append(l.Elems, p.expr())
+		if !p.at(lexer.COMMA) {
+			break
+		}
+		p.advance()
+	}
+	if !p.at(lexer.RBRACK) {
+		p.closeBracket(open, "`,` or `]` in the list")
+	}
+	l.Sp = open.To(p.advance().Span)
+	return l
+}
+
 func (p *parser) primary() ast.Expr {
 	t := p.tok()
 	switch t.Kind {
@@ -927,6 +995,8 @@ func (p *parser) primary() ast.Expr {
 		return &ast.This{Sp: t.Span}
 	case lexer.MATCH:
 		return p.match()
+	case lexer.LBRACK:
+		return p.listLit()
 	}
 	p.failHere("expected an expression, found %s", describe(t))
 	return nil

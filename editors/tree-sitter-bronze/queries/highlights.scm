@@ -6,7 +6,7 @@
 ; types
 (type name: (identifier) @type)
 ((type name: (identifier) @type.builtin)
-  (#any-of? @type.builtin "Int" "Float" "Bool" "String" "Error"))
+  (#any-of? @type.builtin "Int" "Float" "Bool" "String" "Error" "List" "Map"))
 (class_declaration name: (identifier) @type)
 (class_declaration use: (identifier) @type)
 (enum_declaration name: (identifier) @type)
@@ -61,5 +61,5 @@
 
 ; operators and punctuation
 ["+" "-" "*" "/" "%" "==" "!=" "<" "<=" ">" ">=" "=" "+=" "-=" "*=" "/=" "%=" ".." "..=" "->" "=>" "!" "?"] @operator
-["(" ")" "{" "}"] @punctuation.bracket
+["(" ")" "{" "}" "[" "]"] @punctuation.bracket
 ["," "." ":"] @punctuation.delimiter

@@ -1,0 +1,3 @@
+panic: list changed while looping over it
+  at add_twice (list_changed_looping.brz:3)
+  at main      (list_changed_looping.brz:17)

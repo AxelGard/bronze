@@ -43,6 +43,7 @@ func TestValidPrograms(t *testing.T) {
 		"func f(a: Int) -> String\n{\n    return String(a) + String(1.5) + String(true)\n}",
 		"func f()\n{\n    mut x: Float = 1.0\n    x = x * 2.0\n    assert(x > 1.0, \"big\")\n}",
 		"func f() -> Int\n{\n    con x = panic(\"later\")\n    return x + 1\n}",
+		"func f() -> List<Int>\n{\n    con xs: List<Int> = []\n    mut ys = [xs, []]\n    ys = []\n    ys[0] = []\n    if xs == [] or [] != xs\n    {\n        return []\n    }\n    con zs = xs[0] else 0\n    return ys[0] else []\n}",
 		"func f(n: Int?, s: String?) -> Int\n{\n    mut total: Int? = null\n    total = 3\n    if n == 5 or s != \"a\"\n    {\n        return 1\n    }\n    if n != null\n    {\n        return n + 1\n    }\n    return 0\n}",
 	}
 	for _, src := range ok {
@@ -86,6 +87,15 @@ func TestErrors(t *testing.T) {
 		{"for errors", "func f()\n{\n    for i, x in 0..3\n    {\n        i = 2\n    }\n    for c in 5\n    {\n        c += 1\n    }\n    for n in 1.5..3\n    {\n        con n = 1\n    }\n}",
 			[]string{"3:12 a range gives one value per pass, so it takes one loop variable", "5:9 cannot assign to `i`: it is a loop variable",
 				"7:14 cannot loop over Int", "9:9 cannot assign to `c`: it is a loop variable", "11:14 a range needs Int bounds, found Float", "13:13 `n` is already a loop variable"}},
+		{"list errors", "func f(xs: List<Int?>, ys: List, zs: Int<String>)\n{\n    con a = []\n    con b = [1, \"a\"]\n    con c: List<Int> = [1, \"a\"]\n    con d = 5\n    con e = d[0]\n}",
+			[]string{"1:17 a list's elements can't be a `?` type, like Int?", "1:28 `List` needs one type argument, the type of its elements",
+				"1:38 `Int` takes no type arguments", "3:13 `[]` needs a type here", "4:17 list elements have different types: Int and String",
+				"5:28 this element is String, but the list holds Int", "7:13 cannot index Int"}},
+		{"list methods", "class Item\n{\n}\nfunc f()\n{\n    con xs = [1, 2]\n    xs.append(\"s\")\n    xs.join(\",\")\n    [Item()].sort()\n    xs.nope()\n    print([Item()])\n    xs[0] = \"a\"\n    xs[\"a\"] = 1\n}",
+			[]string{"7:15 argument `x` of `append` must be Int, found String", "8:8 `join` works on a List<String>, not on List<Int>",
+				"9:14 `sort` works on lists of Int, Float or String, not on List<Item>", "10:8 List<Int> has no method `nope`",
+				"11:11 cannot print a value of type List<Item>", "12:13 cannot assign String to an element of List<Int>, which holds Int",
+				"13:8 an index must be an Int, found String"}},
 		{"break outside loop", "func f()\n{\n    while true\n    {\n        break\n    }\n    continue\n    break\n}",
 			[]string{"7:5 `continue` outside a loop", "8:5 `break` outside a loop"}},
 		{"and needs bool", "func f() -> Bool\n{\n    return 1 and true\n}",

@@ -574,3 +574,10 @@ func TestLoopsAndCompound(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestFormatList(t *testing.T) {
+	l := &List{Elems: []Value{"a\"b\\\n\t", int64(1), 2.0, &List{}}}
+	if got, want := Format(l), `["a\"b\\\n\t", 1, 2.0, []]`; got != want {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}

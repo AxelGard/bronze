@@ -1,0 +1,2 @@
+error: `nums[0]` may be null
+  --> list_index_maybe_null.brz:4:18

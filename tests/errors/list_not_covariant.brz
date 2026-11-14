@@ -1,0 +1,14 @@
+class NotFound use Error
+{
+}
+
+func report(errors: List<Error>)
+{
+}
+
+func main() -> Int
+{
+    con missing = [NotFound()]
+    report(missing)
+    return 0
+}

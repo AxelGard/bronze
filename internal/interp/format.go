@@ -19,8 +19,50 @@ func Format(v Value) string {
 		return v
 	case *Case:
 		return v.Name
+	case *List:
+		var b strings.Builder
+		b.WriteByte('[')
+		for i, x := range v.Elems {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(formatInner(x))
+		}
+		b.WriteByte(']')
+		return b.String()
 	}
 	panic("interp: cannot format value")
+}
+
+// formatInner formats a value inside a list or a map, where Strings are
+// quoted.
+func formatInner(v Value) string {
+	if s, ok := v.(string); ok {
+		return quote(s)
+	}
+	return Format(v)
+}
+
+// quote writes a String in quotes, with `\n`, `\t`, `"` and `\` escaped.
+func quote(s string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case '\n':
+			b.WriteString(`\n`)
+		case '\t':
+			b.WriteString(`\t`)
+		case '"':
+			b.WriteString(`\"`)
+		case '\\':
+			b.WriteString(`\\`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 // FormatFloat writes the shortest text that reads back as the same

@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    con nums = [1, 2, 3]
+    con n: Int = nums[0]
+    return n
+}

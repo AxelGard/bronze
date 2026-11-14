@@ -1,0 +1,2 @@
+error: `[]` needs a type here
+  --> empty_list_needs_type.brz:3:17

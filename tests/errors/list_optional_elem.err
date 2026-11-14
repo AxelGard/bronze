@@ -1,0 +1,2 @@
+error: a list's elements can't be a `?` type, like Int?
+  --> list_optional_elem.brz:1:23

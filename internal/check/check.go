@@ -174,7 +174,7 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 			}
 			continue
 		}
-		if cd, ok := d.(*ast.ClassDecl); (!ok || !cd.Builtin) && (builtinFuncs[name.Name] || builtinTypes[name.Name] != nil) {
+		if cd, ok := d.(*ast.ClassDecl); (!ok || !cd.Builtin) && (builtinFuncs[name.Name] || builtinTypes[name.Name] != nil || genericTypes[name.Name]) {
 			c.errorf(name.Sp, "`%s` is a built-in name and can't be declared again", name.Name)
 			continue
 		}
@@ -430,9 +430,12 @@ func (c *checker) fieldType(f *Field) Type {
 	f.state = 1
 	saveFn, saveScope, saveLoops := c.fn, c.scope, c.loops
 	c.fn, c.scope, c.loops = nil, &scope{vars: map[string]*variable{}}, 0
-	t := c.value(f.Decl.Value)
+	var want Type
 	if f.Decl.Type != nil {
-		want := c.resolveType(f.Decl.Type)
+		want = c.resolveType(f.Decl.Type)
+	}
+	t := c.valueFor(f.Decl.Value, want)
+	if f.Decl.Type != nil {
 		if !assignable(t, want) {
 			c.errorf(f.Decl.Value.Span(), "field `%s` is declared as %s, but the value is %s", f.Name, want, t)
 		}
@@ -452,7 +455,7 @@ func (c *checker) fieldType(f *Field) Type {
 }
 
 func (c *checker) resolveType(t *ast.TypeExpr) Type {
-	base := c.resolveName(t.Name)
+	base := c.resolveBase(t)
 	if !t.Optional || silent(base) {
 		return base
 	}
@@ -528,7 +531,7 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 		d.Notes = []string{fmt.Sprintf("the enum is declared at line %d", en.Decl.Name.Sp.Start.Line)}
 		return
 	}
-	if builtinFuncs[n] || builtinTypes[n] != nil {
+	if builtinFuncs[n] || builtinTypes[n] != nil || genericTypes[n] {
 		c.errorf(name.Sp, "`%s` is a built-in name and can't be used for a variable", n)
 		return
 	}
@@ -615,9 +618,12 @@ func (c *checker) blockStmts(b *ast.Block) {
 func (c *checker) stmt(s ast.Stmt) {
 	switch s := s.(type) {
 	case *ast.VarDecl:
-		t := c.value(s.Value)
+		var want Type
 		if s.Type != nil {
-			want := c.resolveType(s.Type)
+			want = c.resolveType(s.Type)
+		}
+		t := c.valueFor(s.Value, want)
+		if s.Type != nil {
 			if !assignable(t, want) && !c.nullMismatch(s.Value, t, want) {
 				c.errorf(s.Value.Span(), "`%s` is declared as %s, but the value is %s", s.Name.Name, want, t)
 			}
@@ -642,6 +648,8 @@ func (c *checker) stmt(s ast.Stmt) {
 			c.assignVar(target, s.Value)
 		case *ast.Member:
 			c.assignField(target, s.Value)
+		case *ast.Index:
+			c.assignIndex(target, s.Value)
 		}
 
 	case *ast.Compound:
@@ -687,8 +695,8 @@ func (c *checker) stmt(s ast.Stmt) {
 }
 
 func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
-	t := c.value(value)
 	want := c.varTarget(id)
+	t := c.valueFor(value, want)
 	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
 		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, want)
 	}
@@ -742,7 +750,7 @@ func (c *checker) varTarget(id *ast.Ident) Type {
 
 func (c *checker) assignField(m *ast.Member, value ast.Expr) {
 	want := c.fieldTarget(m)
-	t := c.value(value)
+	t := c.valueFor(value, want)
 	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
 		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, m.Name.Name, want)
 	}
@@ -781,6 +789,8 @@ func (c *checker) compound(s *ast.Compound) {
 		want = c.varTarget(target)
 	case *ast.Member:
 		want = c.fieldTarget(target)
+	case *ast.Index:
+		want = c.indexTarget(target)
 	}
 	t := c.value(s.Value)
 	if want == nil || silent(want) || silent(t) {
@@ -881,7 +891,11 @@ func (c *checker) checkReturn(at diag.Span, value ast.Expr) {
 		}
 		return
 	}
-	t := c.value(value)
+	var expect Type
+	if want != NoValue {
+		expect = want
+	}
+	t := c.valueFor(value, expect)
 	switch {
 	case silent(t):
 	case c.fn.isInit:

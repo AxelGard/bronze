@@ -1,0 +1,2 @@
+panic: index 3 out of range for a list of length 3
+  at main (list_index_assign.brz:6)

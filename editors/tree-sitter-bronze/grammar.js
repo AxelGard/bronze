@@ -21,7 +21,10 @@ const PREC = {
   postfix: 9,
 };
 
-const commaSep = (rule) => optional(seq(rule, repeat(seq(',', rule))));
+const commaSep1 = (rule) => seq(rule, repeat(seq(',', rule)));
+const commaSep = (rule) => optional(commaSep1(rule));
+// like commaSep, but a `,` may end the list
+const trailingCommaSep = (rule) => optional(seq(commaSep1(rule), optional(',')));
 
 module.exports = grammar({
   name: 'bronze',
@@ -60,7 +63,12 @@ module.exports = grammar({
     return_type: ($) =>
       choice(seq($.type, optional(seq('!', $.type))), seq('!', $.type)),
 
-    type: ($) => seq(field('name', $.identifier), optional('?')),
+    type: ($) =>
+      seq(
+        field('name', $.identifier),
+        optional(seq('<', commaSep1($.type), '>')),
+        optional('?'),
+      ),
 
     class_declaration: ($) =>
       seq(
@@ -120,14 +128,14 @@ module.exports = grammar({
 
     assignment: ($) =>
       seq(
-        field('left', choice($.identifier, $.member_expression)),
+        field('left', choice($.identifier, $.member_expression, $.index_expression)),
         '=',
         field('right', $._expression),
       ),
 
     compound_assignment: ($) =>
       seq(
-        field('left', choice($.identifier, $.member_expression)),
+        field('left', choice($.identifier, $.member_expression, $.index_expression)),
         field('operator', choice('+=', '-=', '*=', '/=', '%=')),
         field('right', $._expression),
       ),
@@ -181,7 +189,9 @@ module.exports = grammar({
         $.is_expression,
         $.call_expression,
         $.member_expression,
+        $.index_expression,
         $.match_expression,
+        $.list,
         $.parenthesized_expression,
         $.identifier,
         $.integer,
@@ -246,6 +256,11 @@ module.exports = grammar({
 
     member_expression: ($) =>
       prec(PREC.postfix, seq(field('object', $._expression), '.', field('member', $.identifier))),
+
+    index_expression: ($) =>
+      prec(PREC.postfix, seq(field('object', $._expression), '[', field('index', $._expression), ']')),
+
+    list: ($) => seq('[', trailingCommaSep($._expression), ']'),
 
     match_expression: ($) =>
       seq('match', field('value', $._expression), '{', repeat($.match_arm), '}'),

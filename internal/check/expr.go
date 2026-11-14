@@ -71,6 +71,10 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return c.binary(e)
 	case *ast.Range:
 		return c.rangeExpr(e)
+	case *ast.ListLit:
+		return c.listLit(e, nil)
+	case *ast.Index:
+		return c.index(e)
 	case *ast.Call:
 		return c.call(e)
 	case *ast.Match:
@@ -104,7 +108,7 @@ func (c *checker) ident(e *ast.Ident) Type {
 		d.Help = []string{fmt.Sprintf("use one of its cases, like `%s.%s`", en.Name, en.someCase())}
 		return Invalid
 	}
-	if builtinTypes[e.Name] != nil {
+	if builtinTypes[e.Name] != nil || genericTypes[e.Name] {
 		c.errorf(e.Sp, "`%s` is a type, not a value", e.Name)
 		return Invalid
 	}
@@ -252,7 +256,17 @@ func (c *checker) binary(e *ast.Binary) Type {
 		return Bool
 	}
 
-	x, y := c.value(e.X), c.value(e.Y)
+	var x, y Type
+	switch {
+	case isLiteral(e.Y):
+		x = c.value(e.X)
+		y = c.valueFor(e.Y, x)
+	case isLiteral(e.X):
+		y = c.value(e.Y)
+		x = c.valueFor(e.X, y)
+	default:
+		x, y = c.value(e.X), c.value(e.Y)
+	}
 	if silent(x) || silent(y) {
 		if isCmp(e.Op) {
 			return Bool
@@ -294,7 +308,7 @@ func (c *checker) binary(e *ast.Binary) Type {
 			return Bool
 		}
 		var d *diag.Diagnostic
-		if x == y {
+		if identical(x, y) {
 			d = c.errorf(e.Span(), "cannot compare %s values with `%s`", x, opText(e.Op))
 		} else {
 			d = c.errorf(e.Span(), "cannot compare %s and %s with `%s`", x, y, opText(e.Op))
@@ -429,7 +443,7 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 	}
 	if sig, ok := c.funcs[id.Name]; ok {
 		c.ref(id, sig.sym)
-		c.checkArgs(e, id.Name, sig, c.args(e))
+		c.checkArgs(e, id.Name, sig, c.argsFor(e, sig.params))
 		return sig.result
 	}
 	if cls, ok := c.classes[id.Name]; ok {
@@ -461,9 +475,9 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 // construct checks `Counter(args)`: the init is chosen by the number of
 // arguments.
 func (c *checker) construct(e *ast.Call, cls *Class) Type {
-	types := c.args(e)
-	sig, ok := cls.Inits[len(types)]
+	sig, ok := cls.Inits[len(e.Args)]
 	if !ok {
+		types := c.args(e)
 		arities := cls.initArities()
 		if len(arities) == 1 {
 			c.arityError(e, cls.Name, arities[0], cls.Inits[arities[0]])
@@ -477,31 +491,35 @@ func (c *checker) construct(e *ast.Call, cls *Class) Type {
 		d.Notes = []string{fmt.Sprintf("its `init`s take %s arguments", strings.Join(ns, " or "))}
 		return cls
 	}
-	c.checkArgs(e, cls.Name, sig, types)
+	c.checkArgs(e, cls.Name, sig, c.argsFor(e, sig.params))
 	return cls
 }
 
 func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	t := c.value(m.X)
-	types := c.args(e)
 	name := m.Name.Name
 	if c.mayBeNull(m.X, t) {
 		t = t.(*Optional).Inner
 	}
+	if l, ok := t.(*List); ok {
+		return c.listMethod(e, m, l)
+	}
 	if en, ok := t.(*Enum); ok {
 		sig := en.Methods[name]
 		if sig == nil {
+			c.args(e)
 			if !en.Decl.Bad {
 				c.errorf(m.Name.Sp, "`%s` has no method `%s`", en.Name, name)
 			}
 			return Invalid
 		}
 		c.ref(m.Name, sig.sym)
-		c.checkArgs(e, name, sig, types)
+		c.checkArgs(e, name, sig, c.argsFor(e, sig.params))
 		return sig.result
 	}
 	cls, ok := t.(*Class)
 	if !ok {
+		c.args(e)
 		if !silent(t) {
 			c.errorf(m.Name.Sp, "%s has no methods", t)
 		}
@@ -509,6 +527,7 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	}
 	sig := cls.Methods[name]
 	if sig == nil {
+		c.args(e)
 		switch {
 		case name == "init":
 			d := c.errorf(m.Name.Sp, "`init` can't be called directly")
@@ -522,7 +541,7 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		return Invalid
 	}
 	c.ref(m.Name, sig.sym)
-	c.checkArgs(e, name, sig, types)
+	c.checkArgs(e, name, sig, c.argsFor(e, sig.params))
 	return sig.result
 }
 
@@ -610,9 +629,8 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 		case *Class:
 			d := c.errorf(e.Args[0].Span(), "cannot print an object of class %s", t)
 			d.Help = []string{"print its fields instead"}
-		case *Enum:
 		default:
-			if !silent(t) && t != Int && t != Float && t != Bool && t != String {
+			if !silent(t) && !printable(t) {
 				c.errorf(e.Args[0].Span(), "cannot print a value of type %s", t)
 			}
 		}
@@ -629,12 +647,11 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 			c.arityError(e, name, 1, nil)
 			return String
 		}
-		_, isEnum := types[0].(*Enum)
 		switch t := types[0]; {
 		case c.mayBeNull(e.Args[0], t):
 		case t == String:
 			c.errorf(e.Args[0].Span(), "this is already a String")
-		case t != Int && t != Float && t != Bool && !isEnum && !silent(t):
+		case !printable(t) && !silent(t):
 			c.errorf(e.Args[0].Span(), "cannot convert %s to String", t)
 		}
 		return String

@@ -262,4 +262,4 @@ guest
 
 ## Next
 
-[Panics](panics.md).
+[Lists](lists.md).

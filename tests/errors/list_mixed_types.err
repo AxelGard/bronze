@@ -1,0 +1,2 @@
+error: list elements have different types: Int and String
+  --> list_mixed_types.brz:3:25

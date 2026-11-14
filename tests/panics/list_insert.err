@@ -1,0 +1,2 @@
+panic: index 5 out of range for insert into a list of length 4
+  at main (list_insert.brz:6)

@@ -1,0 +1,8 @@
+func main() -> Int
+{
+    con counts = [0, 0]
+    counts[1] += 5
+    print(counts)
+    counts[2] += 1
+    return 0
+}

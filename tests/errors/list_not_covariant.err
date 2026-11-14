@@ -1,0 +1,2 @@
+error: argument `errors` of `report` must be List<Error>, found List<NotFound>
+  --> list_not_covariant.brz:12:12

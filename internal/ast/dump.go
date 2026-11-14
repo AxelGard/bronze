@@ -79,6 +79,8 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(')')
 	case *BadDecl:
 		b.WriteString("(bad-decl)")
+	case *TypeExpr:
+		b.WriteString(typeString(n))
 	case *Block:
 		b.WriteString("(block")
 		for _, s := range n.Stmts {
@@ -181,6 +183,19 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(' ')
 		dump(b, n.Hi)
 		b.WriteByte(')')
+	case *ListLit:
+		b.WriteString("(list")
+		for _, x := range n.Elems {
+			b.WriteByte(' ')
+			dump(b, x)
+		}
+		b.WriteByte(')')
+	case *Index:
+		b.WriteString("(index ")
+		dump(b, n.X)
+		b.WriteByte(' ')
+		dump(b, n.Index)
+		b.WriteByte(')')
 	case *Call:
 		b.WriteString("(call ")
 		dump(b, n.Fn)
@@ -259,8 +274,16 @@ func dump(b *strings.Builder, n Node) {
 }
 
 func typeString(t *TypeExpr) string {
-	if t.Optional {
-		return t.Name.Name + "?"
+	s := t.Name.Name
+	if len(t.Args) > 0 {
+		var args []string
+		for _, a := range t.Args {
+			args = append(args, typeString(a))
+		}
+		s += "<" + strings.Join(args, ", ") + ">"
 	}
-	return t.Name.Name
+	if t.Optional {
+		s += "?"
+	}
+	return s
 }

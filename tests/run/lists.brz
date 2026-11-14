@@ -1,0 +1,112 @@
+class Item
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+}
+
+class NotFound use Error
+{
+}
+
+func total(nums: List<Int>) -> Int
+{
+    mut sum = 0
+    for n in nums
+    {
+        sum += n
+    }
+    return sum
+}
+
+// lists are shared: this changes the caller's list
+func double_all(nums: List<Int>)
+{
+    for i, n in nums
+    {
+        nums[i] = n * 2
+    }
+}
+
+func first_or_zero(nums: List<Int>) -> Int
+{
+    return nums[0] else 0
+}
+
+func main() -> Int
+{
+    con nums = [3, 1, 2]
+    print(nums)
+    print(total(nums))
+    double_all(nums)
+    print(nums)
+
+    // indexing gives a T?; negative indexes count from the end
+    print(nums[0] else -1)
+    print(nums[-1] else -1)
+    print(nums[3] == null)
+    print(nums[1] == 2)
+    print(first_or_zero([]))
+
+    // assignment and compound assignment
+    nums[0] = 30
+    nums[-1] += 5
+    print(nums)
+
+    // methods
+    nums.append(10)
+    nums.insert(0, 7)
+    print(nums)
+    print(nums.length())
+    print(nums.pop() else 0)
+    print(nums.remove_at(0) else 0)
+    print(nums.remove_at(10) == null)
+    nums.sort()
+    print(nums)
+    nums.reverse()
+    print(nums)
+    print(nums.contains(30))
+    print(nums.index_of(2) else -1)
+    print(nums.index_of(99) == null)
+
+    // == compares by value
+    print(nums == [30, 9, 2])
+    print(nums != [30, 9])
+
+    // strings inside a list are quoted
+    con words: List<String> = []
+    words.append("a, b")
+    words.append("tab\there")
+    print(words)
+    print(words.join(" | "))
+    print(["say \"hi\""])
+
+    // nested lists
+    mut grid: List<List<Int>> = [[1, 2], [], [3]]
+    print(grid)
+    grid[1] = [4]
+    print(grid == [[1, 2], [4], [3]])
+
+    // with an expected type, elements only need to fit it
+    con errs: List<Error> = [NotFound(), Error("x")]
+    print(errs.length())
+
+    // objects in a list are shared, and compared by identity
+    con ada = Item("Ada")
+    con items = [ada, Item("Grace")]
+    print(items.contains(ada))
+    print(items.contains(Item("Ada")))
+
+    print([1.5, 2.0])
+    con fs = [2.5, 0.0 / 0.0, -1.0]
+    fs.sort()
+    print(fs)
+    print(String([true, false]))
+    con empty: List<Float> = []
+    print(empty)
+    print(empty == [])
+    return 0
+}

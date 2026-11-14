@@ -1,0 +1,8 @@
+func main() -> Int
+{
+    con nums = [1, 2, 3]
+    nums.insert(3, 4)
+    print(nums)
+    nums.insert(5, 6)
+    return 0
+}

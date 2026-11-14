@@ -64,6 +64,7 @@ nav:
       - Enums and match: guide/enums-and-match.md
       - Errors: guide/errors.md
       - "Null and T?": guide/null.md
+      - Lists: guide/lists.md
       - Panics: guide/panics.md
   - Reference:
       - The bronze command: reference/cli.md

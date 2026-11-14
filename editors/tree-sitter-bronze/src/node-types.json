@@ -32,11 +32,19 @@
           "named": true
         },
         {
+          "type": "index_expression",
+          "named": true
+        },
+        {
           "type": "integer",
           "named": true
         },
         {
           "type": "is_expression",
+          "named": true
+        },
+        {
+          "type": "list",
           "named": true
         },
         {
@@ -91,6 +99,10 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "member_expression",
             "named": true
           }
@@ -125,11 +137,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -205,11 +225,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -337,11 +365,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -478,11 +514,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -593,6 +637,10 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "member_expression",
             "named": true
           }
@@ -653,11 +701,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -733,11 +789,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -833,11 +897,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -912,11 +984,19 @@
           "named": true
         },
         {
+          "type": "index_expression",
+          "named": true
+        },
+        {
           "type": "integer",
           "named": true
         },
         {
           "type": "is_expression",
+          "named": true
+        },
+        {
+          "type": "list",
           "named": true
         },
         {
@@ -1051,11 +1131,19 @@
           "named": true
         },
         {
+          "type": "index_expression",
+          "named": true
+        },
+        {
           "type": "integer",
           "named": true
         },
         {
           "type": "is_expression",
+          "named": true
+        },
+        {
+          "type": "list",
           "named": true
         },
         {
@@ -1150,11 +1238,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1240,11 +1336,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1390,11 +1494,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1448,6 +1560,176 @@
     }
   },
   {
+    "type": "index_expression",
+    "named": true,
+    "fields": {
+      "index": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "call_expression",
+            "named": true
+          },
+          {
+            "type": "else_expression",
+            "named": true
+          },
+          {
+            "type": "false",
+            "named": true
+          },
+          {
+            "type": "float",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "index_expression",
+            "named": true
+          },
+          {
+            "type": "integer",
+            "named": true
+          },
+          {
+            "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
+            "named": true
+          },
+          {
+            "type": "match_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "range_expression",
+            "named": true
+          },
+          {
+            "type": "string",
+            "named": true
+          },
+          {
+            "type": "this",
+            "named": true
+          },
+          {
+            "type": "true",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          }
+        ]
+      },
+      "object": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "call_expression",
+            "named": true
+          },
+          {
+            "type": "else_expression",
+            "named": true
+          },
+          {
+            "type": "false",
+            "named": true
+          },
+          {
+            "type": "float",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "index_expression",
+            "named": true
+          },
+          {
+            "type": "integer",
+            "named": true
+          },
+          {
+            "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
+            "named": true
+          },
+          {
+            "type": "match_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "range_expression",
+            "named": true
+          },
+          {
+            "type": "string",
+            "named": true
+          },
+          {
+            "type": "this",
+            "named": true
+          },
+          {
+            "type": "true",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "is_expression",
     "named": true,
     "fields": {
@@ -1490,11 +1772,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1535,6 +1825,93 @@
           }
         ]
       }
+    }
+  },
+  {
+    "type": "list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "binary_expression",
+          "named": true
+        },
+        {
+          "type": "call_expression",
+          "named": true
+        },
+        {
+          "type": "else_expression",
+          "named": true
+        },
+        {
+          "type": "false",
+          "named": true
+        },
+        {
+          "type": "float",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "index_expression",
+          "named": true
+        },
+        {
+          "type": "integer",
+          "named": true
+        },
+        {
+          "type": "is_expression",
+          "named": true
+        },
+        {
+          "type": "list",
+          "named": true
+        },
+        {
+          "type": "match_expression",
+          "named": true
+        },
+        {
+          "type": "member_expression",
+          "named": true
+        },
+        {
+          "type": "null",
+          "named": true
+        },
+        {
+          "type": "parenthesized_expression",
+          "named": true
+        },
+        {
+          "type": "range_expression",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        },
+        {
+          "type": "this",
+          "named": true
+        },
+        {
+          "type": "true",
+          "named": true
+        },
+        {
+          "type": "unary_expression",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -1584,11 +1961,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1664,11 +2049,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1764,11 +2157,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -1885,11 +2286,19 @@
           "named": true
         },
         {
+          "type": "index_expression",
+          "named": true
+        },
+        {
           "type": "integer",
           "named": true
         },
         {
           "type": "is_expression",
+          "named": true
+        },
+        {
+          "type": "list",
           "named": true
         },
         {
@@ -2016,11 +2425,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -2104,11 +2521,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -2184,11 +2609,19 @@
           "named": true
         },
         {
+          "type": "index_expression",
+          "named": true
+        },
+        {
           "type": "integer",
           "named": true
         },
         {
           "type": "is_expression",
+          "named": true
+        },
+        {
+          "type": "list",
           "named": true
         },
         {
@@ -2298,6 +2731,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "type",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -2333,11 +2776,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -2447,11 +2898,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -2537,11 +2996,19 @@
             "named": true
           },
           {
+            "type": "index_expression",
+            "named": true
+          },
+          {
             "type": "integer",
             "named": true
           },
           {
             "type": "is_expression",
+            "named": true
+          },
+          {
+            "type": "list",
             "named": true
           },
           {
@@ -2698,6 +3165,14 @@
   },
   {
     "type": "?",
+    "named": false
+  },
+  {
+    "type": "[",
+    "named": false
+  },
+  {
+    "type": "]",
     "named": false
   },
   {

@@ -57,10 +57,11 @@ type Param struct {
 	Sp   diag.Span
 }
 
-// TypeExpr is a written type: `Int`, `Account?`.
+// TypeExpr is a written type: `Int`, `Account?`, `List<Int>`.
 type TypeExpr struct {
 	Name     *Ident
-	Optional bool // T?
+	Args     []*TypeExpr // the type arguments, as in `Map<String, Int>`
+	Optional bool        // T?
 	Sp       diag.Span
 }
 
@@ -133,7 +134,7 @@ type VarDecl struct {
 
 // Assign is `target = value`.
 type Assign struct {
-	Target Expr // an *Ident or a *Member
+	Target Expr // an *Ident, a *Member or an *Index
 	Value  Expr
 	Sp     diag.Span
 }
@@ -142,7 +143,7 @@ type Assign struct {
 // lexer.PLUS for `+=`, and so on.
 type Compound struct {
 	Op     lexer.Kind
-	Target Expr // an *Ident or a *Member
+	Target Expr // an *Ident, a *Member or an *Index
 	Value  Expr
 	OpSp   diag.Span // the `op=`
 	Sp     diag.Span
@@ -363,6 +364,19 @@ type Pattern struct {
 	Sp   diag.Span
 }
 
+// ListLit is `[a, b, c]`.
+type ListLit struct {
+	Elems []Expr
+	Sp    diag.Span
+}
+
+// Index is `x[i]`.
+type Index struct {
+	X     Expr
+	Index Expr
+	Sp    diag.Span
+}
+
 // Call is `fn(args)`.
 type Call struct {
 	Fn   Expr
@@ -392,6 +406,8 @@ func (e *Is) Span() diag.Span        { return e.X.Span().To(e.Class.Sp) }
 func (e *Else) Span() diag.Span      { return e.Sp }
 func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
 func (e *Range) Span() diag.Span     { return e.Lo.Span().To(e.Hi.Span()) }
+func (e *ListLit) Span() diag.Span   { return e.Sp }
+func (e *Index) Span() diag.Span     { return e.Sp }
 func (e *Call) Span() diag.Span      { return e.Sp }
 func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
 func (e *This) Span() diag.Span      { return e.Sp }
@@ -411,6 +427,8 @@ func (*Is) exprNode()        {}
 func (*Else) exprNode()      {}
 func (*Binary) exprNode()    {}
 func (*Range) exprNode()     {}
+func (*ListLit) exprNode()   {}
+func (*Index) exprNode()     {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}
 func (*This) exprNode()      {}

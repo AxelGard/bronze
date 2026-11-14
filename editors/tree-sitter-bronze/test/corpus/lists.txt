@@ -1,0 +1,34 @@
+==================
+Lists, types and indexing
+==================
+
+func f(grid: List<List<Int>>) -> List<String>?
+{
+    con xs: List<Int> = [1, 2,]
+    xs[0] += grid[0][1] else 0
+    return []
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter
+        name: (identifier)
+        type: (type name: (identifier) (type name: (identifier) (type name: (identifier))))))
+    result: (return_type (type name: (identifier) (type name: (identifier))))
+    body: (block
+      (variable_declaration
+        name: (identifier)
+        type: (type name: (identifier) (type name: (identifier)))
+        value: (list (integer) (integer)))
+      (compound_assignment
+        left: (index_expression object: (identifier) index: (integer))
+        right: (else_expression
+          value: (index_expression
+            object: (index_expression object: (identifier) index: (integer))
+            index: (integer))
+          (else_handler fallback: (integer))))
+      (return_statement (list)))))
