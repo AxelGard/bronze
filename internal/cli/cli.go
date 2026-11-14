@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
+	"strings"
 
 	"github.com/AxelGard/bronze/internal/ast"
 	"github.com/AxelGard/bronze/internal/check"
@@ -14,8 +16,19 @@ import (
 	"github.com/AxelGard/bronze/internal/parser"
 )
 
-// Version is the version of Bronze this tool implements.
-const Version = "0.0.0-dev"
+// Version is the version of Bronze this tool implements. Release builds
+// set it from the git tag (see `make dist`); `go install ...@v0.1.0` sets
+// the module version, which init picks up.
+var Version = "0.0.0-dev"
+
+func init() {
+	if Version != "0.0.0-dev" {
+		return
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && strings.HasPrefix(info.Main.Version, "v") {
+		Version = strings.TrimPrefix(info.Main.Version, "v")
+	}
+}
 
 // PanicExit is the exit code of a program that panics.
 const PanicExit = 101

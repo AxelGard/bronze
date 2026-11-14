@@ -38,7 +38,10 @@ bin/bronze run examples/projects/bank.brz
 make fmt vet
 make tree-sitter  # generate and test the tree-sitter grammar (needs the tree-sitter CLI)
 make install      # bronze into ~/.local/bin, and the parser into Neovim (scripts/install.sh)
+make dist VERSION=v0.1.0   # release archives for macOS and Linux into dist/
 ```
+
+Releases: pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which tests, runs `make dist`, and publishes a GitHub Release. `scripts/get-bronze.sh` downloads from `releases/latest`, so only tags with a suffix (`v0.2.0-rc1`) are prereleases. Release builds set `cli.Version` from the tag.
 
 Go 1.26, module `github.com/AxelGard/bronze`, standard library only.
 

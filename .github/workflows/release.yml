@@ -1,0 +1,45 @@
+# Publishes a release when a version tag is pushed:
+#
+#   git tag v0.1.0
+#   git push origin v0.1.0
+#
+# It runs the tests, builds bronze for macOS and Linux (make dist), and
+# creates a GitHub Release with the archives and their checksums.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build
+        run: make dist VERSION=${{ github.ref_name }}
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # v0.2.0-rc1 is a prerelease; v0.2.0 is not, so that
+          # releases/latest (used by the download script) finds it.
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" dist/*.tar.gz dist/checksums.txt \
+            --title "Bronze $TAG" --generate-notes --verify-tag $prerelease
