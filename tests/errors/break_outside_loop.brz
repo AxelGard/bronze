@@ -1,0 +1,10 @@
+func main() -> Int
+{
+    mut i = 0
+    while i < 3
+    {
+        i += 1
+    }
+    break
+    return 0
+}

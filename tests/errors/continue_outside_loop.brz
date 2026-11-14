@@ -1,0 +1,16 @@
+func skip(n: Int)
+{
+    if n > 0
+    {
+        continue
+    }
+}
+
+func main() -> Int
+{
+    while true
+    {
+        skip(1)
+    }
+    return 0
+}

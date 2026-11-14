@@ -1,0 +1,2 @@
+error: cannot add Int and Float
+  --> compound_types.brz:4:5

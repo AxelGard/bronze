@@ -14,7 +14,7 @@ const (
 	INT
 	FLOAT
 	STRING
-	RESERVED // a word reserved for a later version, such as `for`
+	RESERVED // a word reserved for a later version, such as `data`
 
 	// operators
 	PLUS    // +
@@ -34,12 +34,21 @@ const (
 	BANG    // !
 	QUEST   // ?
 	DOT     // .
+	DOTDOT  // ..
+	DOTDOTE // ..=
+	PLUSEQ  // +=
+	MINUSEQ // -=
+	STAREQ  // *=
+	SLASHEQ // /=
+	PERCEQ  // %=
 
 	// punctuation
 	LPAREN // (
 	RPAREN // )
 	LBRACE // {
 	RBRACE // }
+	LBRACK // [
+	RBRACK // ]
 	COMMA  // ,
 	COLON  // :
 
@@ -63,6 +72,10 @@ const (
 	NULL
 	MATCH
 	IS
+	FOR
+	IN
+	BREAK
+	CONTINUE
 )
 
 var kindNames = [...]string{
@@ -91,10 +104,19 @@ var kindNames = [...]string{
 	BANG:     "`!`",
 	QUEST:    "`?`",
 	DOT:      "`.`",
+	DOTDOT:   "`..`",
+	DOTDOTE:  "`..=`",
+	PLUSEQ:   "`+=`",
+	MINUSEQ:  "`-=`",
+	STAREQ:   "`*=`",
+	SLASHEQ:  "`/=`",
+	PERCEQ:   "`%=`",
 	LPAREN:   "`(`",
 	RPAREN:   "`)`",
 	LBRACE:   "`{`",
 	RBRACE:   "`}`",
+	LBRACK:   "`[`",
+	RBRACK:   "`]`",
 	COMMA:    "`,`",
 	COLON:    "`:`",
 	FUNC:     "`func`",
@@ -116,6 +138,10 @@ var kindNames = [...]string{
 	NULL:     "`null`",
 	MATCH:    "`match`",
 	IS:       "`is`",
+	FOR:      "`for`",
+	IN:       "`in`",
+	BREAK:    "`break`",
+	CONTINUE: "`continue`",
 }
 
 // String returns a description of the kind for error messages, such as
@@ -123,31 +149,35 @@ var kindNames = [...]string{
 func (k Kind) String() string { return kindNames[k] }
 
 var keywords = map[string]Kind{
-	"func":   FUNC,
-	"return": RETURN,
-	"con":    CON,
-	"mut":    MUT,
-	"if":     IF,
-	"else":   ELSE,
-	"while":  WHILE,
-	"and":    AND,
-	"or":     OR,
-	"not":    NOT,
-	"true":   TRUE,
-	"false":  FALSE,
-	"class":  CLASS,
-	"enum":   ENUM,
-	"use":    USE,
-	"this":   THIS,
-	"null":   NULL,
-	"match":  MATCH,
-	"is":     IS,
+	"func":     FUNC,
+	"return":   RETURN,
+	"con":      CON,
+	"mut":      MUT,
+	"if":       IF,
+	"else":     ELSE,
+	"while":    WHILE,
+	"and":      AND,
+	"or":       OR,
+	"not":      NOT,
+	"true":     TRUE,
+	"false":    FALSE,
+	"class":    CLASS,
+	"enum":     ENUM,
+	"use":      USE,
+	"this":     THIS,
+	"null":     NULL,
+	"match":    MATCH,
+	"is":       IS,
+	"for":      FOR,
+	"in":       IN,
+	"break":    BREAK,
+	"continue": CONTINUE,
 }
 
 var reserved = map[string]bool{
 	"data": true, "interface": true, "namespace": true, "import": true,
 	"override": true, "static": true, "private": true, "protected": true,
-	"for": true, "in": true, "break": true, "continue": true, "test": true,
+	"test": true,
 	"type": true, "super": true, "copy": true,
 }
 
@@ -167,7 +197,8 @@ type Token struct {
 func (k Kind) continues() bool {
 	switch k {
 	case PLUS, MINUS, STAR, SLASH, PERCENT, EQ, NE, LT, LE, GT, GE,
-		AND, OR, NOT, IS, COMMA, ARROW, FATARR, ASSIGN, DOT, BANG:
+		AND, OR, NOT, IS, COMMA, ARROW, FATARR, ASSIGN, DOT, BANG,
+		DOTDOT, DOTDOTE, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ, PERCEQ:
 		return true
 	}
 	return false

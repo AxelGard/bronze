@@ -1,0 +1,36 @@
+==================
+Compound assignment, break and continue
+==================
+
+func f()
+{
+    while true
+    {
+        n += 1
+        this.total -= n * 2
+        if n > 3
+        {
+            break
+        }
+        continue
+    }
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (while_statement
+        condition: (true)
+        body: (block
+          (compound_assignment left: (identifier) right: (integer))
+          (compound_assignment
+            left: (member_expression object: (this) member: (identifier))
+            right: (binary_expression left: (identifier) right: (integer)))
+          (if_statement
+            condition: (binary_expression left: (identifier) right: (integer))
+            consequence: (block (break_statement)))
+          (continue_statement))))))

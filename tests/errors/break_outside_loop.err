@@ -1,0 +1,2 @@
+error: `break` outside a loop
+  --> break_outside_loop.brz:8:5

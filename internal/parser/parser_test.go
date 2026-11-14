@@ -47,6 +47,9 @@ func TestStatements(t *testing.T) {
 		{"if a\n{\nf()\n}\nelse if b\n{\ng()\n}\nelse\n{\nh()\n}",
 			"(block (if a (block (call f)) else (if b (block (call g)) else (block (call h)))))"},
 		{"if a { f() }\ng()", "(block (if a (block (call f))) (call g))"},
+		{"x += 1\nthis.n -= y * 2\nx *= 3\nx /= 4\nx %= 5",
+			"(block (+= x 1) (-= (. this n) (* y 2)) (*= x 3) (/= x 4) (%= x 5))"},
+		{"while true\n{\nbreak\ncontinue\n}", "(block (while true (block (break) (continue))))"},
 	}
 	for _, tt := range tests {
 		if got := body(t, tt.src); got != tt.want {
@@ -148,8 +151,8 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			"reserved word",
-			"func f()\n{\n    con for = 1\n}",
-			[]string{"3:9 `for` is reserved for a later version, and can't be used as a name"},
+			"func f()\n{\n    con data = 1\n}",
+			[]string{"3:9 `data` is reserved for a later version, and can't be used as a name"},
 		},
 		{
 			"errors and null",

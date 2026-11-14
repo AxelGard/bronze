@@ -55,7 +55,51 @@ print(total)
 55
 ```
 
-`while` is the only loop for now. `for`, `break` and `continue` come in 0.2.0.
+## break and continue
+
+`break` leaves the innermost loop. `continue` skips the rest of the block and goes on to the next pass:
+
+```bronze
+mut n = 0
+while true
+{
+    n += 1
+    if n % 2 == 0
+    {
+        continue
+    }
+    if n > 7
+    {
+        break
+    }
+    print(n)
+}
+```
+
+```text title="Output"
+1
+3
+5
+7
+```
+
+Outside a loop they are errors:
+
+```bronze
+func main() -> Int
+{
+    break
+    return 0
+}
+```
+
+```text title="Output"
+error: `break` outside a loop
+  --> main.brz:3:5
+  |
+3 |     break
+  |     ^^^^^
+```
 
 ## FizzBuzz
 

@@ -1,0 +1,2 @@
+error: `continue` outside a loop
+  --> continue_outside_loop.brz:5:9

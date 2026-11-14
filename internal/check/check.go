@@ -77,6 +77,7 @@ type checker struct {
 
 	fn    *funcSig // the function being checked; nil in a field's value
 	scope *scope
+	loops int // how many loops the statement being checked is in
 }
 
 type funcSig struct {
@@ -426,8 +427,8 @@ func (c *checker) fieldType(f *Field) Type {
 		return Invalid
 	}
 	f.state = 1
-	saveFn, saveScope := c.fn, c.scope
-	c.fn, c.scope = nil, &scope{vars: map[string]*variable{}}
+	saveFn, saveScope, saveLoops := c.fn, c.scope, c.loops
+	c.fn, c.scope, c.loops = nil, &scope{vars: map[string]*variable{}}, 0
 	t := c.value(f.Decl.Value)
 	if f.Decl.Type != nil {
 		want := c.resolveType(f.Decl.Type)
@@ -442,7 +443,7 @@ func (c *checker) fieldType(f *Field) Type {
 		}
 		t = Invalid
 	}
-	c.fn, c.scope = saveFn, saveScope
+	c.fn, c.scope, c.loops = saveFn, saveScope, saveLoops
 	if f.state == 1 {
 		f.typ, f.state = t, 2
 	}
@@ -486,7 +487,7 @@ func (c *checker) funcBody(sig *funcSig) {
 	if sig.decl.Bad {
 		return
 	}
-	c.fn = sig
+	c.fn, c.loops = sig, 0
 	c.scope = &scope{vars: map[string]*variable{}}
 	for i, p := range sig.decl.Params {
 		c.declare(p.Name, &variable{kind: Param, typ: sig.params[i], decl: p.Name.Sp})
@@ -645,12 +646,27 @@ func (c *checker) stmt(s ast.Stmt) {
 			c.assignField(target, s.Value)
 		}
 
+	case *ast.Compound:
+		c.compound(s)
+
+	case *ast.Break:
+		if c.loops == 0 {
+			c.errorf(s.Sp, "`break` outside a loop")
+		}
+
+	case *ast.Continue:
+		if c.loops == 0 {
+			c.errorf(s.Sp, "`continue` outside a loop")
+		}
+
 	case *ast.If:
 		c.ifStmt(s)
 
 	case *ast.While:
 		c.cond(s.Cond)
+		c.loops++
 		c.block(s.Body)
+		c.loops--
 
 	case *ast.Return:
 		c.returnStmt(s)
@@ -671,6 +687,15 @@ func (c *checker) stmt(s ast.Stmt) {
 
 func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
 	t := c.value(value)
+	want := c.varTarget(id)
+	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
+		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, want)
+	}
+}
+
+// varTarget checks that id is a variable that can be assigned to, and
+// returns its type, or nil after reporting an error.
+func (c *checker) varTarget(id *ast.Ident) Type {
 	v := c.scope.lookup(id.Name)
 	if v != nil {
 		c.ref(id, v.sym)
@@ -689,14 +714,14 @@ func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
 				d.Help = []string{fmt.Sprintf("declare it with `mut %s = ...`", id.Name)}
 			}
 		}
-		return
+		return nil
 	}
 	switch v.kind {
 	case Con:
 		d := c.errorf(id.Sp, "cannot assign to `%s`: it is declared with `con`", id.Name)
 		d.Notes = []string{fmt.Sprintf("`%s` is declared at line %d", id.Name, v.decl.Start.Line)}
 		d.Help = []string{"declare it with `mut` if it needs to change"}
-		return
+		return nil
 	case Param:
 		d := c.errorf(id.Sp, "cannot assign to `%s`: parameters can't be changed", id.Name)
 		if c.thisField(id.Name) != nil {
@@ -704,18 +729,26 @@ func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
 		} else {
 			d.Help = []string{fmt.Sprintf("copy it into a variable first: `mut %s_ = %s`", id.Name, id.Name)}
 		}
-		return
+		return nil
 	}
-	if !assignable(t, v.typ) && !c.nullMismatch(value, t, v.typ) {
-		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, v.typ)
-	}
+	c.info.Types[id] = v.typ
+	return v.typ
 }
 
 func (c *checker) assignField(m *ast.Member, value ast.Expr) {
-	f, cls := c.fieldOf(m)
+	want := c.fieldTarget(m)
 	t := c.value(value)
+	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
+		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, m.Name.Name, want)
+	}
+}
+
+// fieldTarget checks that m is a field that can be assigned to, and
+// returns its type, or nil after reporting an error.
+func (c *checker) fieldTarget(m *ast.Member) Type {
+	f, cls := c.fieldOf(m)
 	if f == nil {
-		return
+		return nil
 	}
 	ft := c.fieldType(f)
 	if !f.Mut {
@@ -727,12 +760,32 @@ func (c *checker) assignField(m *ast.Member, value ast.Expr) {
 				"a `con` field can only be set in `init`, through `this`",
 			}
 			d.Help = []string{"declare it with `mut` if it needs to change"}
-			return
+			return nil
 		}
 	}
-	if !assignable(t, ft) && !c.nullMismatch(value, t, ft) {
-		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, f.Name, ft)
+	c.info.Types[m] = ft
+	return ft
+}
+
+// compound checks `target op= value`: the target must be assignable, and
+// `target op value` must be a value of the target's type.
+func (c *checker) compound(s *ast.Compound) {
+	var want Type
+	switch target := s.Target.(type) {
+	case *ast.Ident:
+		want = c.varTarget(target)
+	case *ast.Member:
+		want = c.fieldTarget(target)
 	}
+	t := c.value(s.Value)
+	if want == nil || silent(want) || silent(t) {
+		return
+	}
+	if c.mayBeNull(s.Target, want) || c.mayBeNull(s.Value, t) {
+		return
+	}
+	label := fmt.Sprintf("%s %s= %s", want, opText(s.Op), t)
+	c.arith(s.Op, s, s.Target, s.Value, want, t, label, true)
 }
 
 // thisField returns the field of `this` with the given name, if the

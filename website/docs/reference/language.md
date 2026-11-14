@@ -14,7 +14,7 @@ A program is one UTF-8 file ending in `.brz`. Its top level holds `func`, `class
 | `Int` literals | `0`, `42`, `1_000_000` (decimal only) |
 | `Float` literals | `2.0`, `3.14159`, `1.5e-3`: digits on both sides of the `.` |
 | `String` literals | `"hello"`, with the escapes `\n` `\t` `\"` `\\` `\{` |
-| Operators | `+ - * / %` `== != < <= > >=` `=` `->` `=>` `!` `?` `.` |
+| Operators | `+ - * / %` `== != < <= > >=` `=` `+= -= *= /= %=` `->` `=>` `!` `?` `.` |
 | Punctuation | `( ) { } , :` |
 | Comments | `// to the end of the line`, `/* a block */` (block comments don't nest) |
 
@@ -23,15 +23,15 @@ A `{` in a string without a `\` is an error, so that string interpolation can be
 ### Keywords
 
 ```text
-func  return  con  mut  if  else  while  and  or  not  true  false
-class  enum  use  this  null  match  is
+func  return  con  mut  if  else  while  for  in  break  continue
+and  or  not  true  false  class  enum  use  this  null  match  is
 ```
 
 These are reserved for later versions, and can't be used as names:
 
 ```text
 data  interface  namespace  import  override  static  private  protected
-for  in  break  continue  test  type  super  copy
+test  type  super  copy
 ```
 
 ## Newlines
@@ -39,7 +39,7 @@ for  in  break  continue  test  type  super  copy
 A newline ends a statement. It doesn't when:
 
 - it is inside `( )`
-- the line ends in a binary operator (`+`, `and`, `==`, ...), `,`, `->`, `=>`, `=`, `.` or `!`
+- the line ends in a binary operator (`+`, `and`, `==`, ...), `,`, `->`, `=>`, `=`, `+=` (and the other `op=`), `.` or `!`
 
 A `{` may be on the next line, and so may the `else` of an `if`. The `else` that handles an error or a null must be on the same line as the expression it handles.
 
@@ -95,8 +95,10 @@ Comparisons can't be chained (`a < b < c` is an error). `Int` and `Float` never 
 | `con x = e`, `con x: T = e` | a variable that can't be assigned again |
 | `mut x = e`, `mut x: T = e` | a variable that can |
 | `x = e`, `obj.field = e` | assignment |
+| `x += e`, `obj.field -= e`, also `*=`, `/=`, `%=` | `x = x + e`, with the same type rules as the operator; the target is evaluated once |
 | `if c { } else if c { } else { }` | |
 | `while c { }` | |
+| `break`, `continue` | leave the innermost loop, or go on to its next pass; only inside a loop |
 | `return`, `return e` | |
 | `match e { ... }` | a `match` whose value is not used; its arms are calls or blocks |
 | `f(...)` | a call; a call that can fail needs an `else` |
@@ -166,12 +168,14 @@ enum_decl   = "enum" IDENT "{" { NEWLINE } { ( IDENT | func_decl ) { NEWLINE } }
 
 block       = "{" { NEWLINE } { stmt NEWLINE { NEWLINE } } "}"
 
-stmt        = var_decl | assign | if_stmt | while_stmt | return_stmt
+stmt        = var_decl | assign | compound | if_stmt | while_stmt
+            | "break" | "continue" | return_stmt
             | match_expr                            // a match statement
             | expr                                  // a call, maybe with an error else
 
 var_decl    = ( "con" | "mut" ) IDENT [ ":" type ] "=" expr
 assign      = target "=" expr
+compound    = target ( "+=" | "-=" | "*=" | "/=" | "%=" ) expr
 target      = IDENT | postfix "." IDENT
 if_stmt     = "if" expr block { "else" "if" expr block } [ "else" block ]
 while_stmt  = "while" expr block

@@ -40,6 +40,23 @@ print(count)
 1
 ```
 
+`+=`, `-=`, `*=`, `/=` and `%=` change a variable in place: `count += 2` is the same as `count = count + 2`, with the same type rules as the operator.
+
+```bronze
+mut total = 10
+total += 5
+total *= 2
+mut word = "bron"
+word += "ze"
+print(total)
+print(word)
+```
+
+```text title="Output"
+30
+bronze
+```
+
 The type comes from the value. You can also write it:
 
 ```bronze

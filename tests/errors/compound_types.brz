@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    mut count = 0
+    count += 1.5
+    return count
+}

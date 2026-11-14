@@ -104,6 +104,16 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(' ')
 		dump(b, n.Value)
 		b.WriteByte(')')
+	case *Compound:
+		fmt.Fprintf(b, "(%s= ", strings.Trim(n.Op.String(), "`"))
+		dump(b, n.Target)
+		b.WriteByte(' ')
+		dump(b, n.Value)
+		b.WriteByte(')')
+	case *Break:
+		b.WriteString("(break)")
+	case *Continue:
+		b.WriteString("(continue)")
 	case *If:
 		b.WriteString("(if ")
 		dump(b, n.Cond)

@@ -1,0 +1,2 @@
+error: cannot assign to `total`: it is declared with `con`
+  --> compound_con.brz:4:5

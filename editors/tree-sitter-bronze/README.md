@@ -1,8 +1,8 @@
 # tree-sitter-bronze
 
-A [tree-sitter](https://tree-sitter.github.io) grammar for Bronze 0.1, used for highlighting.
+A [tree-sitter](https://tree-sitter.github.io) grammar for Bronze 0.2, used for highlighting.
 
-It follows [doc/spec-0.1.md](../../doc/spec-0.1.md), but more loosely than the real parser: newlines are ignored (except after a bare `return`), and there are no type rules. It only needs to be right for valid programs.
+It follows [doc/spec-0.1.md](../../doc/spec-0.1.md) and [doc/spec-0.2.md](../../doc/spec-0.2.md), but more loosely than the real parser: newlines are ignored (except after a bare `return`), and there are no type rules. It only needs to be right for valid programs.
 
 | File | What |
 |---|---|

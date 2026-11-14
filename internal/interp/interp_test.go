@@ -551,3 +551,26 @@ func main() -> Int
 		t.Errorf("panic %+v", p)
 	}
 }
+
+func TestLoopsAndCompound(t *testing.T) {
+	got := prints(t, `    mut i = 0
+    mut sum = 0
+    while i < 100
+    {
+        i += 1
+        if i % 3 != 0
+        {
+            continue
+        }
+        sum += i
+        if sum > 20
+        {
+            break
+        }
+    }
+    print(i)
+    print(sum)`)
+	if got != "12\n30\n" {
+		t.Errorf("got %q", got)
+	}
+}

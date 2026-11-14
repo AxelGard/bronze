@@ -55,10 +55,10 @@
 ["func" "return"] @keyword.function
 ["con" "mut" "class" "enum" "use"] @keyword
 ["if" "else" "match"] @keyword.conditional
-"while" @keyword.repeat
+["while" (break_statement) (continue_statement)] @keyword.repeat
 ["and" "or" "not" "is"] @keyword.operator
 
 ; operators and punctuation
-["+" "-" "*" "/" "%" "==" "!=" "<" "<=" ">" ">=" "=" "->" "=>" "!" "?"] @operator
+["+" "-" "*" "/" "%" "==" "!=" "<" "<=" ">" ">=" "=" "+=" "-=" "*=" "/=" "%=" "->" "=>" "!" "?"] @operator
 ["(" ")" "{" "}"] @punctuation.bracket
 ["," "." ":"] @punctuation.delimiter

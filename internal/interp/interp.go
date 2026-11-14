@@ -38,6 +38,22 @@ type returnSignal struct {
 	value Value
 }
 
+// loopSignal unwinds from a `break` or `continue` in an `else (e) { ... }`
+// handler to the loop it acts on.
+type loopSignal struct {
+	ctl ctl
+}
+
+// ctl says how a statement ended.
+type ctl int
+
+const (
+	ctlNext     ctl = iota // go on with the next statement
+	ctlReturn              // a `return` ran
+	ctlBreak               // a `break` ran
+	ctlContinue            // a `continue` ran
+)
+
 // Case is one case of an enum. There is one *Case per case, so `==`
 // compares cases.
 type Case struct {
@@ -291,19 +307,19 @@ func (in *interp) construct(cls *class, args []Value, at diag.Span) *Object {
 // ---------------------------------------------------------------------
 // Statements
 
-// block runs a block in a new scope inside e. It reports whether a
-// `return` ran, and the returned value.
-func (in *interp) block(b *ast.Block, parent *env) (bool, Value) {
+// block runs a block in a new scope inside e. It reports how the block
+// ended, and the returned value if a `return` ran.
+func (in *interp) block(b *ast.Block, parent *env) (ctl, Value) {
 	e := &env{parent: parent, vars: map[string]Value{}}
 	for _, s := range b.Stmts {
-		if ret, v := in.stmt(s, e); ret {
-			return true, v
+		if c, v := in.stmt(s, e); c != ctlNext {
+			return c, v
 		}
 	}
-	return false, nil
+	return ctlNext, nil
 }
 
-func (in *interp) stmt(s ast.Stmt, e *env) (bool, Value) {
+func (in *interp) stmt(s ast.Stmt, e *env) (ctl, Value) {
 	switch s := s.(type) {
 	case *ast.VarDecl:
 		e.vars[s.Name.Name] = in.expr(s.Value, e)
@@ -315,6 +331,8 @@ func (in *interp) stmt(s ast.Stmt, e *env) (bool, Value) {
 			obj := in.expr(t.X, e).(*Object)
 			obj.Fields[t.Name.Name] = in.expr(s.Value, e)
 		}
+	case *ast.Compound:
+		in.compound(s, e)
 	case *ast.ExprStmt:
 		if m, ok := s.X.(*ast.Match); ok {
 			return in.matchStmt(m, e)
@@ -332,21 +350,60 @@ func (in *interp) stmt(s ast.Stmt, e *env) (bool, Value) {
 		}
 	case *ast.While:
 		for in.expr(s.Cond, e).(bool) {
-			if ret, v := in.block(s.Body, e); ret {
-				return true, v
+			c, v := in.loopBody(s.Body, e)
+			if c == ctlReturn {
+				return c, v
+			}
+			if c == ctlBreak {
+				break
 			}
 		}
+	case *ast.Break:
+		return ctlBreak, nil
+	case *ast.Continue:
+		return ctlContinue, nil
 	case *ast.Return:
 		if s.Value == nil {
-			return true, nil
+			return ctlReturn, nil
 		}
-		return true, in.expr(s.Value, e)
+		return ctlReturn, in.expr(s.Value, e)
 	case *ast.Block:
 		return in.block(s, e)
 	default:
 		panic(fmt.Sprintf("interp: unexpected statement %T", s))
 	}
-	return false, nil
+	return ctlNext, nil
+}
+
+// loopBody runs one pass of a loop's body. A `break` or `continue` in an
+// error handler inside it arrives as a loopSignal.
+func (in *interp) loopBody(b *ast.Block, e *env) (c ctl, v Value) {
+	depth := len(in.stack)
+	defer func() {
+		if r := recover(); r != nil {
+			sig, ok := r.(*loopSignal)
+			if !ok {
+				panic(r)
+			}
+			in.stack = in.stack[:depth]
+			c, v = sig.ctl, nil
+		}
+	}()
+	return in.block(b, e)
+}
+
+// compound runs `target op= value`. The parts of the target are evaluated
+// once, before the value.
+func (in *interp) compound(s *ast.Compound, e *env) {
+	switch t := s.Target.(type) {
+	case *ast.Ident:
+		old := e.lookup(t.Name)
+		e.set(t.Name, in.arith(s.Op, old, in.expr(s.Value, e), s.Sp))
+	case *ast.Member:
+		obj := in.expr(t.X, e).(*Object)
+		old := obj.Fields[t.Name.Name]
+		obj.Fields[t.Name.Name] = in.arith(s.Op, old, in.expr(s.Value, e), s.Sp)
+	}
 }
 
 // ---------------------------------------------------------------------
@@ -419,10 +476,16 @@ func (in *interp) binary(x *ast.Binary, e *env) Value {
 	case lexer.NE:
 		return a != b
 	}
+	return in.arith(x.Op, a, b, x.Span())
+}
+
+// arith applies an arithmetic or ordering operator. A division by zero
+// panics at span.
+func (in *interp) arith(op lexer.Kind, a, b Value, span diag.Span) Value {
 	switch a := a.(type) {
 	case int64:
 		b := b.(int64)
-		switch x.Op {
+		switch op {
 		case lexer.PLUS:
 			return a + b
 		case lexer.MINUS:
@@ -431,17 +494,17 @@ func (in *interp) binary(x *ast.Binary, e *env) Value {
 			return a * b
 		case lexer.SLASH, lexer.PERCENT:
 			if b == 0 {
-				in.fail(x.Span(), "division by zero")
+				in.fail(span, "division by zero")
 			}
-			if x.Op == lexer.SLASH {
+			if op == lexer.SLASH {
 				return a / b
 			}
 			return a % b
 		}
-		return order(x.Op, a, b)
+		return order(op, a, b)
 	case float64:
 		b := b.(float64)
-		switch x.Op {
+		switch op {
 		case lexer.PLUS:
 			return a + b
 		case lexer.MINUS:
@@ -451,15 +514,15 @@ func (in *interp) binary(x *ast.Binary, e *env) Value {
 		case lexer.SLASH:
 			return a / b
 		}
-		return order(x.Op, a, b)
+		return order(op, a, b)
 	case string:
 		b := b.(string)
-		if x.Op == lexer.PLUS {
+		if op == lexer.PLUS {
 			return a + b
 		}
-		return order(x.Op, a, b)
+		return order(op, a, b)
 	}
-	panic(fmt.Sprintf("interp: bad operands %T %s %T", a, x.Op, b))
+	panic(fmt.Sprintf("interp: bad operands %T %s %T", a, op, b))
 }
 
 // order applies < <= > >=. For Floats, every comparison with NaN is false.
@@ -540,8 +603,8 @@ func (in *interp) match(m *ast.Match, e *env) Value {
 }
 
 // matchStmt runs a match statement. A block arm can return from the
-// function.
-func (in *interp) matchStmt(m *ast.Match, e *env) (bool, Value) {
+// function, or break or continue a loop around the match.
+func (in *interp) matchStmt(m *ast.Match, e *env) (ctl, Value) {
 	v := in.expr(m.X, e)
 	for _, arm := range m.Arms {
 		if !in.matches(arm.Pattern, v) {
@@ -554,7 +617,7 @@ func (in *interp) matchStmt(m *ast.Match, e *env) (bool, Value) {
 			return in.matchStmt(inner, e)
 		}
 		in.expr(arm.Value, e)
-		return false, nil
+		return ctlNext, nil
 	}
 	panic("interp: no match arm for " + Format(v))
 }
@@ -599,8 +662,11 @@ func (in *interp) elseExpr(x *ast.Else, e *env) Value {
 	}
 	switch {
 	case x.Body != nil:
-		if ret, v := in.block(x.Body, he); ret {
+		switch c, v := in.block(x.Body, he); c {
+		case ctlReturn:
 			panic(&returnSignal{value: v})
+		case ctlBreak, ctlContinue:
+			panic(&loopSignal{ctl: c})
 		}
 		panic("interp: an else block did not leave") // the checker ensures it does
 	case x.Return && x.Value == nil:

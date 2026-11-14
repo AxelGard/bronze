@@ -489,6 +489,10 @@ func (p *parser) simpleStmt() ast.Stmt {
 			r.Sp = t.Span.To(r.Value.Span())
 		}
 		return r
+	case lexer.BREAK:
+		return &ast.Break{Sp: p.advance().Span}
+	case lexer.CONTINUE:
+		return &ast.Continue{Sp: p.advance().Span}
 	case lexer.LBRACE:
 		p.failHere("unexpected `{`")
 	case lexer.RESERVED:
@@ -502,8 +506,8 @@ func (p *parser) simpleStmt() ast.Stmt {
 	}
 
 	x := p.expr()
-	if p.at(lexer.ASSIGN) {
-		p.advance()
+	if op, ok := compoundOps[p.kind()]; p.at(lexer.ASSIGN) || ok {
+		opTok := p.advance()
 		switch x.(type) {
 		case *ast.Ident, *ast.Member:
 		case *ast.This:
@@ -512,6 +516,9 @@ func (p *parser) simpleStmt() ast.Stmt {
 			p.fail(x.Span(), "cannot assign to this expression")
 		}
 		v := p.expr()
+		if ok {
+			return &ast.Compound{Op: op, Target: x, Value: v, OpSp: opTok.Span, Sp: x.Span().To(v.Span())}
+		}
 		return &ast.Assign{Target: x, Value: v, Sp: x.Span().To(v.Span())}
 	}
 	switch x.(type) {
@@ -522,6 +529,15 @@ func (p *parser) simpleStmt() ast.Stmt {
 		panic(bailout{})
 	}
 	return &ast.ExprStmt{X: x}
+}
+
+// compoundOps maps each `op=` to its operator.
+var compoundOps = map[lexer.Kind]lexer.Kind{
+	lexer.PLUSEQ:  lexer.PLUS,
+	lexer.MINUSEQ: lexer.MINUS,
+	lexer.STAREQ:  lexer.STAR,
+	lexer.SLASHEQ: lexer.SLASH,
+	lexer.PERCEQ:  lexer.PERCENT,
 }
 
 func (p *parser) varDecl() *ast.VarDecl {

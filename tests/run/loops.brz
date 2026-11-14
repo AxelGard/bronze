@@ -1,0 +1,89 @@
+class Counter
+{
+    mut count = 0
+}
+
+func check(n: Int) -> Int ! Error
+{
+    if n % 4 == 0
+    {
+        return Error("multiple of four")
+    }
+    return n
+}
+
+func main() -> Int
+{
+    // += and friends
+    mut total = 0
+    mut i = 0
+    while true
+    {
+        i += 1
+        if i % 2 == 0
+        {
+            continue
+        }
+        if i > 9
+        {
+            break
+        }
+        total += i
+    }
+    print(total)
+
+    mut text = "a"
+    text += "b"
+    print(text)
+
+    mut x = 3.0
+    x *= 2.0
+    x -= 1.0
+    x /= 2.0
+    print(x)
+
+    con c = Counter()
+    c.count += 42
+    c.count %= 10
+    print(c.count)
+
+    // nested loops: break leaves the inner one
+    mut row = 0
+    while row < 3
+    {
+        row += 1
+        mut col = 0
+        while true
+        {
+            col += 1
+            if col > row
+            {
+                break
+            }
+            print(row * 10 + col)
+        }
+    }
+
+    // break and continue in a match, and in an error handler
+    mut n = 0
+    while n < 10
+    {
+        n += 1
+        con v = check(n) else (e)
+        {
+            if n == 4
+            {
+                continue
+            }
+            print(n)
+            return 0
+        }
+        match v
+        {
+            3 => { continue }
+            _ => { print(v) }
+        }
+    }
+    print(n)
+    return 0
+}

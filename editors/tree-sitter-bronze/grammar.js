@@ -1,5 +1,5 @@
 /**
- * Tree-sitter grammar for Bronze 0.1 (doc/spec-0.1.md), for editor
+ * Tree-sitter grammar for Bronze 0.2 (doc/spec-0.2.md), for editor
  * highlighting.
  *
  * It is looser than the real parser: newlines are ignored, so statements
@@ -98,8 +98,11 @@ module.exports = grammar({
       choice(
         $.variable_declaration,
         $.assignment,
+        $.compound_assignment,
         $.if_statement,
         $.while_statement,
+        $.break_statement,
+        $.continue_statement,
         $.return_statement,
         $.expression_statement,
       ),
@@ -120,6 +123,13 @@ module.exports = grammar({
         field('right', $._expression),
       ),
 
+    compound_assignment: ($) =>
+      seq(
+        field('left', choice($.identifier, $.member_expression)),
+        field('operator', choice('+=', '-=', '*=', '/=', '%=')),
+        field('right', $._expression),
+      ),
+
     if_statement: ($) =>
       prec.right(
         seq(
@@ -132,6 +142,10 @@ module.exports = grammar({
 
     while_statement: ($) =>
       seq('while', field('condition', $._expression), field('body', $.block)),
+
+    break_statement: (_) => 'break',
+
+    continue_statement: (_) => 'continue',
 
     return_statement: ($) => $._return,
 

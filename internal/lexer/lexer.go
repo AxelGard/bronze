@@ -24,7 +24,7 @@ type lexer struct {
 	tokens []Token
 	diags  diag.List
 
-	brackets []Kind // open ( and {, innermost last
+	brackets []Kind // open (, [ and {, innermost last
 	newline  bool   // a newline was seen since the last token
 	nlPos    int    // offset of that newline
 }
@@ -61,7 +61,7 @@ func (l *lexer) wantNewline() bool {
 	if len(l.tokens) == 0 {
 		return false
 	}
-	if n := len(l.brackets); n > 0 && l.brackets[n-1] == LPAREN {
+	if n := len(l.brackets); n > 0 && l.brackets[n-1] != LBRACE {
 		return false
 	}
 	last := l.tokens[len(l.tokens)-1].Kind
@@ -122,10 +122,12 @@ var ops = []struct {
 	kind Kind
 }{
 	// longest first
+	{"..=", DOTDOTE},
 	{"==", EQ}, {"!=", NE}, {"<=", LE}, {">=", GE}, {"->", ARROW}, {"=>", FATARR},
+	{"..", DOTDOT}, {"+=", PLUSEQ}, {"-=", MINUSEQ}, {"*=", STAREQ}, {"/=", SLASHEQ}, {"%=", PERCEQ},
 	{"+", PLUS}, {"-", MINUS}, {"*", STAR}, {"/", SLASH}, {"%", PERCENT},
 	{"<", LT}, {">", GT}, {"=", ASSIGN}, {"!", BANG}, {"?", QUEST}, {".", DOT},
-	{"(", LPAREN}, {")", RPAREN}, {"{", LBRACE}, {"}", RBRACE}, {",", COMMA}, {":", COLON},
+	{"(", LPAREN}, {")", RPAREN}, {"{", LBRACE}, {"}", RBRACE}, {"[", LBRACK}, {"]", RBRACK}, {",", COMMA}, {":", COLON},
 }
 
 func (l *lexer) next() {
@@ -146,7 +148,7 @@ func (l *lexer) next() {
 	}
 
 	for _, op := range ops {
-		if strings.HasPrefix(string(l.text[l.pos:min(l.pos+2, len(l.text))]), op.text) {
+		if strings.HasPrefix(string(l.text[l.pos:min(l.pos+3, len(l.text))]), op.text) {
 			l.pos += len(op.text)
 			// Emit first: a newline before `)` is still inside the ( ).
 			l.emit(Token{Kind: op.kind, Text: op.text, Span: l.span(start, l.pos)})
@@ -159,17 +161,14 @@ func (l *lexer) next() {
 	l.errorf(start, l.pos, "unexpected character %q", r)
 }
 
-// bracket tracks open brackets, for the newline rule inside ( ).
+// bracket tracks open brackets, for the newline rule inside ( ) and [ ].
 func (l *lexer) bracket(k Kind) {
 	switch k {
-	case LPAREN, LBRACE:
+	case LPAREN, LBRACK, LBRACE:
 		l.brackets = append(l.brackets, k)
-	case RPAREN, RBRACE:
+	case RPAREN, RBRACK, RBRACE:
 		// Pop to the matching bracket; mismatches are the parser's problem.
-		open := LPAREN
-		if k == RBRACE {
-			open = LBRACE
-		}
+		open := map[Kind]Kind{RPAREN: LPAREN, RBRACK: LBRACK, RBRACE: LBRACE}[k]
 		for i := len(l.brackets) - 1; i >= 0; i-- {
 			if l.brackets[i] == open {
 				l.brackets = l.brackets[:i]

@@ -84,8 +84,8 @@ func TestLiterals(t *testing.T) {
 }
 
 func TestKeywords(t *testing.T) {
-	toks, _ := lex(t, "func con mut for x")
-	want := []Kind{FUNC, CON, MUT, RESERVED, IDENT}
+	toks, _ := lex(t, "func con mut for data x")
+	want := []Kind{FUNC, CON, MUT, FOR, RESERVED, IDENT}
 	for i, k := range want {
 		if toks[i].Kind != k {
 			t.Errorf("token %d: got %v, want %v", i, toks[i].Kind, k)
@@ -123,5 +123,28 @@ func TestPositions(t *testing.T) {
 	b := toks[2]
 	if b.Span.Start.Line != 2 || b.Span.Start.Col != 3 || b.Span.End.Col != 5 {
 		t.Errorf("bc at %+v", b.Span)
+	}
+}
+
+func TestOperators02(t *testing.T) {
+	toks, _ := lex(t, "a..b ..= += -= *= /= %= [ ] .")
+	want := []Kind{IDENT, DOTDOT, IDENT, DOTDOTE, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ, PERCEQ, LBRACK, RBRACK, DOT}
+	for i, k := range want {
+		if toks[i].Kind != k {
+			t.Errorf("token %d: got %v, want %v", i, toks[i].Kind, k)
+		}
+	}
+	toks, _ = lex(t, "1..5")
+	if toks[0].Kind != INT || toks[1].Kind != DOTDOT || toks[2].Kind != INT {
+		t.Errorf("1..5: %v %v %v", toks[0].Kind, toks[1].Kind, toks[2].Kind)
+	}
+}
+
+func TestNoNewlineInBrackets(t *testing.T) {
+	toks, _ := lex(t, "[1,\n2\n]")
+	for _, tok := range toks[:len(toks)-2] {
+		if tok.Kind == NEWLINE {
+			t.Fatalf("NEWLINE inside [ ]")
+		}
 	}
 }

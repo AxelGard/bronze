@@ -280,7 +280,7 @@ func (c *checker) binary(e *ast.Binary) Type {
 		}
 		d := c.errorf(e.Span(), "cannot compare %s and %s with `%s`", x, y, opText(e.Op))
 		d.Label = label
-		c.mixedHelp(d, e, x, y)
+		c.mixedHelp(d, e, e.X, e.Y, x, y, false)
 		return Bool
 
 	case lexer.LT, lexer.LE, lexer.GT, lexer.GE:
@@ -294,33 +294,39 @@ func (c *checker) binary(e *ast.Binary) Type {
 			d = c.errorf(e.Span(), "cannot compare %s and %s with `%s`", x, y, opText(e.Op))
 		}
 		d.Label = label
-		c.mixedHelp(d, e, x, y)
+		c.mixedHelp(d, e, e.X, e.Y, x, y, false)
 		return Bool
 	}
 
-	// arithmetic
+	return c.arith(e.Op, e, e.X, e.Y, x, y, label, false)
+}
+
+// arith checks `x op y` for an arithmetic operator, where e is the whole
+// expression and ex and ey its sides. In a compound assignment (`ex op=
+// ey`), ex is the target.
+func (c *checker) arith(op lexer.Kind, e, ex, ey ast.Node, x, y Type, label string, compound bool) Type {
 	switch {
 	case x == y && x == Int:
 		return Int
-	case x == y && x == Float && e.Op != lexer.PERCENT:
+	case x == y && x == Float && op != lexer.PERCENT:
 		return Float
-	case x == y && x == String && e.Op == lexer.PLUS:
+	case x == y && x == String && op == lexer.PLUS:
 		return String
 	}
 	var d *diag.Diagnostic
 	if x == Float && y == Float {
 		d = c.errorf(e.Span(), "cannot use `%%` on Float")
 	} else {
-		d = c.errorf(e.Span(), "cannot "+arithVerbs[e.Op], x, y)
+		d = c.errorf(e.Span(), "cannot "+arithVerbs[op], x, y)
 	}
 	d.Label = label
-	c.mixedHelp(d, e, x, y)
-	if e.Op == lexer.PLUS && (x == String) != (y == String) {
-		other := e.X
+	c.mixedHelp(d, e, ex, ey, x, y, compound)
+	if op == lexer.PLUS && (x == String) != (y == String) {
+		other := ex
 		if x == String {
-			other = e.Y
+			other = ey
 		}
-		if t := c.info.Types[other]; t == Int || t == Float || t == Bool {
+		if t := c.info.Types[other.(ast.Expr)]; (t == Int || t == Float || t == Bool) && !(compound && other == ex) {
 			d.Help = append(d.Help, "convert explicitly: "+c.replaced(e, other, "String"))
 		}
 	}
@@ -328,14 +334,18 @@ func (c *checker) binary(e *ast.Binary) Type {
 }
 
 // mixedHelp adds "convert explicitly: Float(a) / 2.0" when one side of e is
-// an Int and the other a Float.
-func (c *checker) mixedHelp(d *diag.Diagnostic, e *ast.Binary, x, y Type) {
+// an Int and the other a Float. The target of a compound assignment can't
+// be converted.
+func (c *checker) mixedHelp(d *diag.Diagnostic, e, ex, ey ast.Node, x, y Type, compound bool) {
 	if !(isNumeric(x) && isNumeric(y) && x != y) {
 		return
 	}
-	intSide := e.X
+	intSide := ex
 	if y == Int {
-		intSide = e.Y
+		intSide = ey
+	}
+	if compound && intSide == ex {
+		return
 	}
 	d.Help = append(d.Help, "convert explicitly: "+c.replaced(e, intSide, "Float"))
 }

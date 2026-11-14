@@ -138,6 +138,16 @@ type Assign struct {
 	Sp     diag.Span
 }
 
+// Compound is `target op= value`. Op is the arithmetic operator:
+// lexer.PLUS for `+=`, and so on.
+type Compound struct {
+	Op     lexer.Kind
+	Target Expr // an *Ident or a *Member
+	Value  Expr
+	OpSp   diag.Span // the `op=`
+	Sp     diag.Span
+}
+
 // If is `if cond { then } else ...`. Else is nil, a *Block, or an *If.
 type If struct {
 	Cond Expr
@@ -151,6 +161,16 @@ type While struct {
 	Cond Expr
 	Body *Block
 	Sp   diag.Span
+}
+
+// Break is `break`.
+type Break struct {
+	Sp diag.Span
+}
+
+// Continue is `continue`.
+type Continue struct {
+	Sp diag.Span
 }
 
 // Return is `return` or `return value`.
@@ -172,6 +192,9 @@ type BadStmt struct {
 func (s *Block) Span() diag.Span    { return s.Sp }
 func (s *VarDecl) Span() diag.Span  { return s.Sp }
 func (s *Assign) Span() diag.Span   { return s.Sp }
+func (s *Compound) Span() diag.Span { return s.Sp }
+func (s *Break) Span() diag.Span    { return s.Sp }
+func (s *Continue) Span() diag.Span { return s.Sp }
 func (s *If) Span() diag.Span       { return s.Sp }
 func (s *While) Span() diag.Span    { return s.Sp }
 func (s *Return) Span() diag.Span   { return s.Sp }
@@ -181,6 +204,9 @@ func (s *BadStmt) Span() diag.Span  { return s.Sp }
 func (*Block) stmtNode()    {}
 func (*VarDecl) stmtNode()  {}
 func (*Assign) stmtNode()   {}
+func (*Compound) stmtNode() {}
+func (*Break) stmtNode()    {}
+func (*Continue) stmtNode() {}
 func (*If) stmtNode()       {}
 func (*While) stmtNode()    {}
 func (*Return) stmtNode()   {}
