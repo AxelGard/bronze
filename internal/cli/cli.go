@@ -10,6 +10,7 @@ import (
 	"github.com/AxelGard/bronze/internal/check"
 	"github.com/AxelGard/bronze/internal/diag"
 	"github.com/AxelGard/bronze/internal/interp"
+	"github.com/AxelGard/bronze/internal/lsp"
 	"github.com/AxelGard/bronze/internal/parser"
 )
 
@@ -24,12 +25,18 @@ const usage = `bronze: the Bronze language tool
 Usage:
   bronze run <file.brz>     check, then run a program
   bronze check <file.brz>   check syntax and types only
+  bronze lsp                run the language server on stdin and stdout
   bronze version            print the version
 `
 
 // Main runs the bronze command with the given arguments (without the
 // program name) and returns the exit code.
 func Main(args []string, stdout, stderr io.Writer) int {
+	return MainIO(args, os.Stdin, stdout, stderr)
+}
+
+// MainIO is Main with stdin, which `bronze lsp` reads.
+func MainIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		fmt.Fprint(stderr, usage)
 		return 2
@@ -39,6 +46,8 @@ func Main(args []string, stdout, stderr io.Writer) int {
 	case "version":
 		fmt.Fprintln(stdout, "bronze", Version)
 		return 0
+	case "lsp":
+		return lsp.Serve(stdin, stdout, stderr, Version)
 	case "run", "check":
 		if len(args) != 2 {
 			fmt.Fprint(stderr, usage)

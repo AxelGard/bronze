@@ -1,0 +1,266 @@
+/*
+    worksheet-0.2.brz: open choices for 0.2.0                [worksheet]
+
+    0.2.0 adds: for, ranges, break/continue, lists, maps, string
+    interpolation, += and friends, slicing, and the LSP.
+
+    Already decided (doc/syntax.md, doc/types.md), not asked again here:
+      - for n in nums / for i, n in nums / for k, v in ages / for i in 0..10
+      - 0..10 excludes 10, 0..=10 includes it
+      - [1, 2, 3] is a List<Int>, {"Ada": 36} is a Map<String, Int>
+      - indexing returns T?, negative indexes count from the end
+      - slicing: word[2..5], word[2..=5], word[..3], word[2..]
+      - interpolation with {}, and \{ for a literal brace
+      - += -= *= /= %=
+
+    Fill in each `// CHOICE:` line with a letter (or your own answer).
+    (R) marks the option I'd pick, with the reason.
+*/
+
+
+/* ------------------------------------------------------------------
+    1. T? for all types
+
+    Indexing returns T?, so nums[0] is an Int?. But in 0.1, T? works only
+    for classes, enums and Error, and the milestones put "T? for all types"
+    in 0.4.
+
+    a) (R) Move "T? for all types" into 0.2: Int?, String?, List<Int>? ...
+           Indexing is then exactly as designed.
+    b)     Keep 0.4 as planned: in 0.2, indexing returns T and panics when
+           the index is out of range. Changes meaning later, so not great.
+------------------------------------------------------------------ */
+
+func first_or_zero(nums: List<Int>) -> Int
+{
+    return nums[0] else 0              // a): nums[0] is an Int?
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    2. Are lists and maps shared, like objects?
+
+    a) (R) Shared, like objects: passing or assigning a list never copies
+           it. `con` fixes the variable, not the list, so a `con` list can
+           still be appended to. Same rule as objects; cheap to pass.
+    b)     Values: assigning or passing copies (copy on write inside).
+           Safer, but different from objects, and 0.3 adds `copy T`
+           parameters for when a copy is wanted.
+------------------------------------------------------------------ */
+
+func add_one(nums: List<Int>)
+{
+    nums.append(1)                     // a): the caller sees the 1
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    3. == on lists and maps
+
+    a) (R) By value: [1, 2] == [1, 2] is true. Elements compare with
+           their own == (objects by identity, as always).
+    b)     By identity, like objects.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    4. Methods on lists, maps and strings in 0.2
+
+    Enough for small scripts and algorithms; more can come with the
+    standard library (0.6). Proposed set, cross out or add names:
+
+    List<T>     length()  append(x)  insert(i, x)  remove_at(i) -> T?
+                pop() -> T?  contains(x)  index_of(x) -> Int?
+                reverse()  sort()  (sort only for Int, Float, String)
+    Map<K, V>   length()  contains(key)  remove(key) -> V?
+                keys() -> List<K>  values() -> List<V>
+    String      length()  contains(s)  starts_with(s)  ends_with(s)
+                index_of(s) -> Int?  split(sep) -> List<String>
+                trim()  to_upper()  to_lower()  replace(old, new)
+    List<String> join(sep) -> String
+
+    Names follow `snake_case`, like the rest of Bronze.
+------------------------------------------------------------------ */
+
+// CHOICE: (keep all / remove: ... / add: ...)
+
+
+/* ------------------------------------------------------------------
+    5. Changing elements
+
+    nums[0] = 5           out of range: panic
+    ages["Zed"] = 1       adds the key, or replaces the value
+
+    a) (R) As above.
+    b)     nums[0] = 5 out of range grows the list. (No: hides bugs.)
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    6. Slices out of range
+
+    word = "bronze" (6 characters)
+
+    a) (R) Clamp, like Python: word[2..100] is "onze", word[10..] is "".
+           Slicing never fails, which suits text handling.
+    b)     Panic, like Go: word[2..100] stops the program.
+    c)     Return T?, like indexing: word[2..100] else "".
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    7. Strings: indexing gives what?
+
+    There is no Char type.
+
+    a) (R) A one-character String?: "bronze"[0] is "b" (a String?).
+    b)     No indexing on strings in 0.2, only slicing.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    8. Ranges outside for and slices
+
+    a) (R) Only in `for` and in slices for 0.2. No Range type yet.
+    b)     First-class values: con r = 0..10, with a Range type.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    9. The loop variable
+
+    a) (R) Like a `con`: assigning to n inside the loop is an error.
+    b)     Like a `mut`: can be changed, but only affects this pass.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    10. Changing a list while looping over it
+
+    for n in nums
+    {
+        nums.append(n)      // ?
+    }
+
+    a) (R) Panic: "nums changed while looping over it". Finds the bug.
+    b)     The loop sees the list as it was when the loop started.
+    c)     The loop sees the changes (can loop forever, like above).
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    11. Map order
+
+    for name, age in ages
+
+    a) (R) Insertion order: keys come in the order they were first added.
+           Output is predictable, and golden tests can rely on it.
+    b)     Sorted by key.
+    c)     Unspecified (like Go's random order).
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    12. Which types can be map keys
+
+    a) (R) Int, String, Bool and enums.
+    b)     Also objects (by identity).
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    13. Empty literals
+
+    con names: List<String> = []      [] needs a type, like null
+
+    For maps, {} next to Allman braces:
+
+    a) (R) {} with a written type: con ages: Map<String, Int> = {}
+    b)     Map<String, Int>() only, so {} is never a map.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    14. print and String() of lists and maps
+
+    a) (R) [1, 2, 3]   ["a", "b"]   {"Ada": 36}
+           Strings inside a collection are quoted, so ["a, b"] and
+           ["a", "b"] look different.
+    b)     [1, 2, 3]   [a, b]       {Ada: 36}
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    15. Interpolation
+
+    "{name} is {age + 1}" takes any expression whose type String() can
+    convert (Int, Float, Bool, String, enums, and lists and maps of them).
+
+    a) (R) Yes, any such expression.
+    b)     Only names and fields, no other expressions: "{age}", "{a.b}".
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    16. Compound assignment
+
+    a) (R) Wherever `=` works: x += 1, this.count += 1, nums[0] += 1,
+           and += on String concatenates.
+    b)     Only on variables.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    17. Multi-line strings (""" ... """) in 0.2?
+
+    They are designed (doc/types.md) but not on the 0.2 list.
+
+    a)     Yes, in 0.2.
+    b) (R) Later. 0.2 is already big.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    18. LSP
+
+    Started with `bronze lsp`, talking JSON-RPC over stdin/stdout.
+    0.2 lists: diagnostics, go to definition, rename.
+
+    a) (R) Those three, plus hover with the type (cheap: the checker
+           already knows every type).
+    b)     Only the three.
+------------------------------------------------------------------ */
+
+// CHOICE:

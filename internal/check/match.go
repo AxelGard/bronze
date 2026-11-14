@@ -142,6 +142,8 @@ func (c *checker) pattern(p *ast.Pattern, t Type, en *Enum) (string, bool) {
 			c.errorf(p.Enum.Sp, "unknown enum `%s`", name)
 			return "", false
 		}
+		c.ref(p.Enum, pe.Sym)
+		c.ref(p.Case, pe.CaseSym[p.Case.Name])
 		pt, key = pe, "c:"+p.Case.Name
 		if pe == en {
 			if _, ok := en.Cases[p.Case.Name]; !ok {

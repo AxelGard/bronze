@@ -11,6 +11,7 @@ import (
 // Info is what the checker learned about the program.
 type Info struct {
 	Types map[ast.Expr]Type // the type of every checked expression
+	Refs  []Ref             // every name that refers to a symbol
 }
 
 // Check checks a parsed file and returns all errors it finds. Bodies of
@@ -37,6 +38,7 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 			if cls == nil || cls.Decl != d {
 				continue
 			}
+			c.inPrelude = d.Builtin
 			for _, f := range d.Fields {
 				if fd := cls.Fields[f.Name.Name]; fd != nil && fd.Decl == f {
 					c.fieldType(fd)
@@ -45,6 +47,7 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 			for _, sig := range c.methodsInOrder(cls) {
 				c.funcBody(sig)
 			}
+			c.inPrelude = false
 		case *ast.EnumDecl:
 			en := c.enums[d.Name.Name]
 			if en == nil || en.Decl != d {
@@ -70,6 +73,8 @@ type checker struct {
 	broken  map[string]bool // names of declarations with syntax errors
 	errCls  *Class          // the built-in Error class
 
+	inPrelude bool // checking the prelude: don't record references
+
 	fn    *funcSig // the function being checked; nil in a field's value
 	scope *scope
 }
@@ -82,7 +87,8 @@ type funcSig struct {
 	class  *Class // for methods of a class: the class of `this`
 	enum   *Enum  // for methods of an enum: the enum of `this`
 	isInit bool
-	line   int // where it is declared
+	line   int     // where it is declared
+	sym    *Symbol // nil for init
 }
 
 // VarKind is how a variable was declared.
@@ -98,6 +104,7 @@ type variable struct {
 	kind VarKind
 	typ  Type
 	decl diag.Span
+	sym  *Symbol
 }
 
 type scope struct {
@@ -181,6 +188,7 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 				Fields:  map[string]*Field{},
 				Methods: map[string]*funcSig{},
 				Inits:   map[int]*funcSig{},
+				Sym:     c.newSym(name, SymClass, d.Builtin),
 			}
 		case *ast.EnumDecl:
 			enums = append(enums, d)
@@ -189,6 +197,8 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 				Decl:    d,
 				Cases:   map[string]int{},
 				Methods: map[string]*funcSig{},
+				Sym:     c.newSym(name, SymEnum, false),
+				CaseSym: map[string]*Symbol{},
 			}
 		}
 	}
@@ -200,7 +210,9 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 		}
 	}
 	for _, fn := range funcs {
-		c.funcs[fn.Name.Name] = c.signature(fn, nil)
+		sig := c.signature(fn, nil)
+		sig.sym = c.newSym(fn.Name, SymFunction, false)
+		c.funcs[fn.Name.Name] = sig
 	}
 	for _, d := range classes {
 		c.classMembers(c.classes[d.Name.Name])
@@ -308,7 +320,7 @@ func (c *checker) classMembers(cls *Class) {
 			}
 			continue
 		}
-		cls.Fields[f.Name.Name] = &Field{Name: f.Name.Name, Mut: f.Mut, Decl: f}
+		cls.Fields[f.Name.Name] = &Field{Name: f.Name.Name, Mut: f.Mut, Decl: f, sym: c.newSym(f.Name, SymField, d.Builtin)}
 	}
 	for _, m := range d.Methods {
 		name := m.Name.Name
@@ -338,6 +350,7 @@ func (c *checker) classMembers(cls *Class) {
 			}
 			continue
 		}
+		sig.sym = c.newSym(m.Name, SymMethod, d.Builtin)
 		cls.Methods[name] = sig
 	}
 	if len(cls.Inits) == 0 {
@@ -357,6 +370,7 @@ func (c *checker) enumMembers(en *Enum) {
 			continue
 		}
 		en.Cases[cs.Name] = i
+		en.CaseSym[cs.Name] = c.newSym(cs, SymCase, false)
 	}
 	for _, m := range d.Methods {
 		name := m.Name.Name
@@ -377,6 +391,7 @@ func (c *checker) enumMembers(en *Enum) {
 		}
 		sig := c.signature(m, nil)
 		sig.enum = en
+		sig.sym = c.newSym(m.Name, SymMethod, false)
 		en.Methods[name] = sig
 	}
 }
@@ -453,9 +468,11 @@ func (c *checker) resolveName(name *ast.Ident) Type {
 		return bt
 	}
 	if cls, ok := c.classes[name.Name]; ok {
+		c.ref(name, cls.Sym)
 		return cls
 	}
 	if en, ok := c.enums[name.Name]; ok {
+		c.ref(name, en.Sym)
 		return en
 	}
 	if c.broken[name.Name] {
@@ -516,6 +533,11 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 		c.errorf(name.Sp, "`%s` is a built-in name and can't be used for a variable", n)
 		return
 	}
+	kind := SymVariable
+	if v.kind == Param {
+		kind = SymParameter
+	}
+	v.sym = c.newSym(name, kind, false)
 	c.scope.vars[n] = v
 }
 
@@ -650,6 +672,9 @@ func (c *checker) stmt(s ast.Stmt) {
 func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
 	t := c.value(value)
 	v := c.scope.lookup(id.Name)
+	if v != nil {
+		c.ref(id, v.sym)
+	}
 	if v == nil {
 		switch {
 		case c.funcs[id.Name] != nil:

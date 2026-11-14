@@ -149,6 +149,9 @@ func (c *checker) isExpr(e *ast.Is) Type {
 		c.errorf(e.X.Span(), "`is` checks which kind of error this is, but it is %s", t)
 	}
 	name := e.Class.Name
+	if cls := c.classes[name]; cls != nil {
+		c.ref(e.Class, cls.Sym)
+	}
 	switch cls := c.classes[name]; {
 	case cls != nil && c.isError(cls):
 	case cls != nil:

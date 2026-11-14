@@ -60,6 +60,21 @@ func (s *Source) Line(n int) string {
 	return strings.TrimRight(string(s.Text[start:end]), "\r")
 }
 
+// LineStart returns the byte offset where line n (1-based) starts, or the
+// end of the text if there is no such line.
+func (s *Source) LineStart(n int) int {
+	if n < 1 {
+		return 0
+	}
+	if n > len(s.lines) {
+		return len(s.Text)
+	}
+	return s.lines[n-1]
+}
+
+// Lines returns the number of lines.
+func (s *Source) Lines() int { return len(s.lines) }
+
 // PosAt returns the position of a byte offset.
 func (s *Source) PosAt(offset int) Pos {
 	line := sort.Search(len(s.lines), func(i int) bool { return s.lines[i] > offset }) - 1

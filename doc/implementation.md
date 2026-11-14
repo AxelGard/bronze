@@ -25,9 +25,11 @@ source.brz
 | `internal/parser/` | recursive descent + precedence climbing; recovers from errors |
 | `internal/check/` | scopes, name resolution, types; annotates the ast |
 | `internal/interp/` | tree-walking interpreter, panics with Bronze stack traces |
+| `internal/lsp/` | the language server (`bronze lsp`): diagnostics, go to definition, rename. Uses the checker's symbols and references (`check.Info.Refs`) |
 | `internal/diag/` | positions, spans, diagnostics and their terminal formatting |
 | `tests/run/`, `tests/errors/` | golden tests (see [tests/README.md](../tests/README.md)) |
-| `editors/tree-sitter-bronze/` | tree-sitter grammar and highlight queries for Neovim |
+| `editors/tree-sitter-bronze/` | tree-sitter grammar and highlight queries |
+| `editors/nvim/` | Neovim plugin: filetype, parser registration with nvim-treesitter, `bronze lsp` |
 
 ## Principles
 

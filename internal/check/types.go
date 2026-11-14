@@ -119,6 +119,7 @@ type Class struct {
 	Methods map[string]*funcSig
 	Inits   map[int]*funcSig // by number of parameters
 	Super   *Class           // Error, for a class that uses Error
+	Sym     *Symbol
 }
 
 func (c *Class) String() string { return c.Name }
@@ -141,6 +142,7 @@ type Field struct {
 	Decl  *ast.Field
 	typ   Type // nil until the initial value is checked
 	state int  // 0: not checked, 1: being checked, 2: done
+	sym   *Symbol
 }
 
 // Enum is an enum type. Its values are its cases.
@@ -149,6 +151,8 @@ type Enum struct {
 	Decl    *ast.EnumDecl
 	Cases   map[string]int // case name to its position
 	Methods map[string]*funcSig
+	Sym     *Symbol
+	CaseSym map[string]*Symbol
 }
 
 func (e *Enum) String() string { return e.Name }

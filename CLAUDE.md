@@ -16,14 +16,17 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `examples/*.brz` (others) | Design explorations with later features and undecided syntax, marked `[decided]` / `[proposal]` / `[exploration]` |
 | `cmd/bronze/` | CLI entry point; the logic is in `internal/cli` |
 | `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline |
-| `internal/cli/` | `run`, `check`, `version`; `cli.Main` is also what the golden tests call |
+| `internal/cli/` | `run`, `check`, `lsp`, `version`; `cli.Main` is also what the golden tests call |
+| `internal/lsp/` | Language server: diagnostics, go to definition, rename |
 | `tests/run/`, `tests/errors/`, `tests/panics/` | Golden tests; see `tests/README.md` |
-| `editors/tree-sitter-bronze/` | Tree-sitter grammar and highlight queries for Neovim; see its README |
+| `editors/tree-sitter-bronze/` | Tree-sitter grammar and highlight queries; see its README |
+| `editors/nvim/` | Neovim plugin: filetype, tree-sitter registration, `bronze lsp` |
+| `scripts/install.sh` | Installs `bronze` and the Neovim parser (`make install`) |
 | `std/algo.bz` | Old leftover from before the redesign; ignore |
 
 ## Current state
 
-All 12 steps of the 0.1.0 work order in `doc/milestones.md` are done: `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (`make tree-sitter` to test it, `make nvim-install` to install it for Neovim). Open: exit codes outside 0–255 (`doc/open-questions.md`). Next is 0.2.0.
+0.1.0 is complete: all 12 steps of the work order in `doc/milestones.md`. `core.brz`, `counter.brz` and `bank.brz` run, every golden test passes (the `pending` map in `tests/golden_test.go` is empty; use it again for tests of features not built yet), and the tree-sitter grammar is in `editors/tree-sitter-bronze/` (it stays in this repo so it changes with the language; the author decided against a separate repo for now). 0.2.0 has started with the LSP (`bronze lsp`: diagnostics, definition, rename), which needs no new language decisions. The 0.2 language features wait for the author's answers in `examples/worksheet-0.2.brz`; once answered, write `doc/spec-0.2.md` from them. Open: exit codes outside 0–255 (`doc/open-questions.md`).
 
 ## Commands
 
@@ -34,6 +37,7 @@ make run-core    # build, then run examples/core.brz
 bin/bronze run examples/projects/bank.brz
 make fmt vet
 make tree-sitter  # generate and test the tree-sitter grammar (needs the tree-sitter CLI)
+make install      # bronze into ~/.local/bin, and the parser into Neovim (scripts/install.sh)
 ```
 
 Go 1.26, module `github.com/AxelGard/bronze`, standard library only.

@@ -81,19 +81,23 @@ func (c *checker) expr1(e ast.Expr) Type {
 
 func (c *checker) ident(e *ast.Ident) Type {
 	if v := c.scope.lookup(e.Name); v != nil {
+		c.ref(e, v.sym)
 		return v.typ
 	}
-	if _, ok := c.funcs[e.Name]; ok {
+	if sig, ok := c.funcs[e.Name]; ok {
+		c.ref(e, sig.sym)
 		d := c.errorf(e.Sp, "`%s` is a function, and functions can't be used as values yet", e.Name)
 		d.Help = []string{fmt.Sprintf("to call it, write `%s(...)`", e.Name)}
 		return Invalid
 	}
-	if _, ok := c.classes[e.Name]; ok {
+	if cls, ok := c.classes[e.Name]; ok {
+		c.ref(e, cls.Sym)
 		d := c.errorf(e.Sp, "`%s` is a class, not a value", e.Name)
 		d.Help = []string{fmt.Sprintf("to create an object, write `%s(...)`", e.Name)}
 		return Invalid
 	}
 	if en, ok := c.enums[e.Name]; ok {
+		c.ref(e, en.Sym)
 		d := c.errorf(e.Sp, "`%s` is an enum, not a value", e.Name)
 		d.Help = []string{fmt.Sprintf("use one of its cases, like `%s.%s`", en.Name, en.someCase())}
 		return Invalid
@@ -145,6 +149,7 @@ func (c *checker) fieldOf(m *ast.Member) (*Field, *Class) {
 		return nil, nil
 	}
 	if f := cls.Fields[m.Name.Name]; f != nil {
+		c.ref(m.Name, f.sym)
 		return f, cls
 	}
 	switch {
@@ -161,6 +166,7 @@ func (c *checker) fieldOf(m *ast.Member) (*Field, *Class) {
 
 func (c *checker) member(m *ast.Member) Type {
 	if en := c.enumName(m.X); en != nil {
+		c.ref(m.X.(*ast.Ident), en.Sym)
 		return c.enumCase(m, en)
 	}
 	f, _ := c.fieldOf(m)
@@ -183,6 +189,7 @@ func (c *checker) enumName(x ast.Expr) *Enum {
 func (c *checker) enumCase(m *ast.Member, en *Enum) Type {
 	name := m.Name.Name
 	if _, ok := en.Cases[name]; ok {
+		c.ref(m.Name, en.CaseSym[name])
 		return en
 	}
 	switch {
@@ -367,18 +374,22 @@ func (c *checker) call(e *ast.Call) Type {
 
 func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 	if v := c.scope.lookup(id.Name); v != nil {
+		c.ref(id, v.sym)
 		c.args(e)
 		c.errorf(id.Sp, "`%s` is a variable, not a function", id.Name)
 		return Invalid
 	}
 	if sig, ok := c.funcs[id.Name]; ok {
+		c.ref(id, sig.sym)
 		c.checkArgs(e, id.Name, sig, c.args(e))
 		return sig.result
 	}
 	if cls, ok := c.classes[id.Name]; ok {
+		c.ref(id, cls.Sym)
 		return c.construct(e, cls)
 	}
 	if en, ok := c.enums[id.Name]; ok {
+		c.ref(id, en.Sym)
 		c.args(e)
 		d := c.errorf(id.Sp, "`%s` is an enum, and can't be called", id.Name)
 		d.Help = []string{fmt.Sprintf("use one of its cases, like `%s.%s`", en.Name, en.someCase())}
@@ -437,6 +448,7 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 			}
 			return Invalid
 		}
+		c.ref(m.Name, sig.sym)
 		c.checkArgs(e, name, sig, types)
 		return sig.result
 	}
@@ -461,6 +473,7 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		}
 		return Invalid
 	}
+	c.ref(m.Name, sig.sym)
 	c.checkArgs(e, name, sig, types)
 	return sig.result
 }
