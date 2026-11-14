@@ -269,6 +269,7 @@ func (c *checker) listMethod(e *ast.Call, m *ast.Member, l *List) Type {
 		c.errorf(m.Name.Sp, "%s has no method `%s`", l, name)
 		return Invalid
 	}
+	c.refBuiltinMethod(m.Name, bm, l)
 	switch {
 	case name == "sort" && l.Elem != Int && l.Elem != Float && l.Elem != String && !silent(l.Elem):
 		d := c.errorf(m.Name.Sp, "`sort` works on lists of Int, Float or String, not on %s", l)

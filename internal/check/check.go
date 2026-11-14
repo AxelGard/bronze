@@ -60,6 +60,7 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 			}
 		}
 	}
+	c.setHovers()
 	return c.info, c.diags
 }
 
@@ -540,6 +541,7 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 		kind = SymParameter
 	}
 	v.sym = c.newSym(name, kind, false)
+	v.sym.Hover = varHover(n, v)
 	c.scope.vars[n] = v
 }
 

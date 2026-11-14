@@ -210,7 +210,7 @@ func TestSession(t *testing.T) {
 		t.Errorf("diagnostic at %+v, want %+v", got, want)
 	}
 
-	if m := c.request("textDocument/hover", map[string]any{}); m.Error == nil || m.Error.Code != codeMethodNotFound {
+	if m := c.request("textDocument/formatting", map[string]any{}); m.Error == nil || m.Error.Code != codeMethodNotFound {
 		t.Errorf("unknown method: %+v", m)
 	}
 
@@ -272,4 +272,82 @@ func TestUTF8Positions(t *testing.T) {
 	}
 	c.notify("exit", nil)
 	<-c.done
+}
+
+func TestHover(t *testing.T) {
+	c := newClient(t)
+	c.request("initialize", map[string]any{"capabilities": map[string]any{}})
+	src := `class Account
+{
+    mut balance = 0
+
+    func withdraw(amount: Int) -> Int ! Error
+    {
+        this.balance -= amount
+        return this.balance
+    }
+}
+
+enum Status
+{
+    Active
+    Frozen
+}
+
+func main() -> Int
+{
+    con account = Account()
+    mut names: List<String> = []
+    for n in 0..3
+    {
+        names.append("{n}")
+    }
+    con left = account.withdraw(5) else 0
+    con s = Status.Frozen
+    print(left)
+    con oops = Error("x")
+    print(oops.message)
+    return 0
+}
+`
+	open(c, src)
+	tests := []struct {
+		word  string
+		n     int
+		want  string
+		extra string
+	}{
+		{"account", 2, "con account: Account", ""},
+		{"names", 1, "mut names: List<String>", ""},
+		{"n in", 1, "n: Int", ""},
+		{"amount", 2, "amount: Int", ""},
+		{"balance", 2, "mut balance: Int", "in `Account`"},
+		{"withdraw", 2, "func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
+		{"Account", 2, "class Account", ""},
+		{"Status", 2, "enum Status", ""},
+		{"Frozen", 2, "Status.Frozen", ""},
+		{"append", 1, "func append(x: String)", "in `List<String>`"},
+		{"print", 1, "func print(x: T)", "prints `x`"},
+		{"main", 1, "func main() -> Int", ""},
+		{"message", 1, "mut message: String", "in `Error`"},
+		{"Error(", 1, "class Error", ""},
+	}
+	for _, tt := range tests {
+		m := c.request("textDocument/hover", map[string]any{
+			"textDocument": map[string]any{"uri": uri},
+			"position":     at(src, tt.word, tt.n, 1),
+		})
+		h := result[hoverResult](t, m)
+		want := "```bronze\n" + tt.want + "\n```"
+		if !strings.HasPrefix(h.Contents.Value, want) || !strings.Contains(h.Contents.Value, tt.extra) {
+			t.Errorf("hover on %q: got %q, want %q and %q", tt.word, h.Contents.Value, want, tt.extra)
+		}
+	}
+	m := c.request("textDocument/hover", map[string]any{
+		"textDocument": map[string]any{"uri": uri},
+		"position":     at(src, "return 0", 1, 0),
+	})
+	if m.Error != nil || m.Result != nil && string(*m.Result) != "null" {
+		t.Errorf("hover on a keyword: %+v", m)
+	}
 }

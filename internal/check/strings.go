@@ -61,6 +61,7 @@ func (c *checker) stringMethod(e *ast.Call, m *ast.Member) Type {
 		c.errorf(m.Name.Sp, "String has no method `%s`", m.Name.Name)
 		return Invalid
 	}
+	c.refBuiltinMethod(m.Name, bm, String)
 	c.methodArgs(e, bm)
 	return bm.result
 }

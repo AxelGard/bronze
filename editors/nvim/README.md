@@ -1,6 +1,6 @@
 # Bronze for Neovim
 
-A small plugin: `.brz` files get the `bronze` filetype, tree-sitter highlighting, and the language server (`bronze lsp`: diagnostics, go to definition, rename).
+A small plugin: `.brz` files get the `bronze` filetype, tree-sitter highlighting, and the language server (`bronze lsp`: diagnostics, go to definition, hover, rename).
 
 Needs Neovim 0.11 or later, and [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) (master branch) for highlighting.
 

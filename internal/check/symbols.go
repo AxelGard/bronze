@@ -41,6 +41,12 @@ type Symbol struct {
 	Kind    SymbolKind
 	Decl    diag.Span // the name in its declaration
 	Builtin bool      // declared by bronze itself, like Error.message
+
+	// Hover is what the symbol is, as Bronze code: `con total: Int`,
+	// `func add(a: Int, b: Int) -> Int`, `class Account`.
+	Hover string
+	In    string // the class, enum or type it belongs to, for fields and methods
+	Doc   string // a description, for built-ins
 }
 
 // Ref is one place where a symbol's name is written, including its

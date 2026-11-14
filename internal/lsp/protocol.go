@@ -78,3 +78,13 @@ type textEdit struct {
 type workspaceEdit struct {
 	Changes map[string][]textEdit `json:"changes"`
 }
+
+type hoverResult struct {
+	Contents markupContent `json:"contents"`
+	Range    *lspRange     `json:"range,omitempty"`
+}
+
+type markupContent struct {
+	Kind  string `json:"kind"`
+	Value string `json:"value"`
+}

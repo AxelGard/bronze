@@ -178,6 +178,7 @@ func (c *checker) mapMethod(e *ast.Call, m *ast.Member, t *Map) Type {
 		c.errorf(m.Name.Sp, "%s has no method `%s`", t, m.Name.Name)
 		return Invalid
 	}
+	c.refBuiltinMethod(m.Name, bm, t)
 	c.methodArgs(e, bm)
 	return bm.result
 }

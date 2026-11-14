@@ -477,6 +477,7 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 		return Invalid
 	}
 	if builtinFuncs[id.Name] {
+		c.refBuiltinFunc(id)
 		return c.builtin(e, id.Name)
 	}
 	c.args(e)

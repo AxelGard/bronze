@@ -170,6 +170,12 @@ func (s *server) dispatch(m *message) (any, *responseError) {
 			return nil, err
 		}
 		return s.definition(p), nil
+	case "textDocument/hover":
+		var p textDocumentPositionParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return s.hover(p), nil
 	case "textDocument/prepareRename":
 		var p textDocumentPositionParams
 		if err := decode(&p); err != nil {
@@ -200,6 +206,7 @@ func (s *server) initialize(p initializeParams) any {
 			"positionEncoding":   s.encoding,
 			"textDocumentSync":   map[string]any{"openClose": true, "change": 1},
 			"definitionProvider": true,
+			"hoverProvider":      true,
 			"renameProvider":     map[string]any{"prepareProvider": true},
 		},
 		"serverInfo": map[string]any{"name": "bronze", "version": s.version},
@@ -259,7 +266,7 @@ func (s *server) publish(uri string, src *diag.Source, diags diag.List) {
 }
 
 // ---------------------------------------------------------------------
-// Definition and rename
+// Definition, hover and rename
 
 // refAt returns the document and the reference at a position, if any.
 func (s *server) refAt(uri string, pos position) (*document, *check.Ref) {
@@ -276,6 +283,24 @@ func (s *server) definition(p textDocumentPositionParams) any {
 		return nil
 	}
 	return location{URI: doc.uri, Range: s.toRange(doc.src, ref.Sym.Decl)}
+}
+
+// hover shows what the name under the cursor is: its declaration, as a
+// bronze code block, and for fields and methods what they belong to.
+func (s *server) hover(p textDocumentPositionParams) any {
+	doc, ref := s.refAt(p.TextDocument.URI, p.Position)
+	if ref == nil || ref.Sym.Hover == "" {
+		return nil
+	}
+	text := "```bronze\n" + ref.Sym.Hover + "\n```"
+	if ref.Sym.In != "" {
+		text += "\n\nin `" + ref.Sym.In + "`"
+	}
+	if ref.Sym.Doc != "" {
+		text += "\n\n" + ref.Sym.Doc
+	}
+	r := s.toRange(doc.src, ref.Span)
+	return hoverResult{Contents: markupContent{Kind: "markdown", Value: text}, Range: &r}
 }
 
 func (s *server) prepareRename(p textDocumentPositionParams) (any, *responseError) {

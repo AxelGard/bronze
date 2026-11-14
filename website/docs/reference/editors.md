@@ -2,7 +2,7 @@
 
 Bronze comes with two things editors can use:
 
-- a **language server**, `bronze lsp`, for errors as you type, go to definition, and rename
+- a **language server**, `bronze lsp`, for errors as you type, go to definition, hover, and rename
 - a **tree-sitter grammar**, in [`editors/tree-sitter-bronze`](https://github.com/AxelGard/bronze/tree/master/editors/tree-sitter-bronze), for highlighting
 
 There is a ready-made plugin for Neovim. Other editors that speak LSP or tree-sitter can use the same two pieces.
@@ -15,6 +15,7 @@ There is a ready-made plugin for Neovim. Other editors that speak LSP or tree-si
 |---|---|
 | Diagnostics | every open `.brz` file is checked on each change, and its errors shown, the same ones `bronze check` reports |
 | Go to definition | from a use of a variable, parameter, function, class, enum, enum case, field or method to where it is declared |
+| Hover | shows what the name under the cursor is: `con total: Int` for a variable, the signature for a function or method, `class Account`, `Status.Frozen`. Built-ins like `print` and `List.append` show their signature too |
 | Rename | renames such a name everywhere in the file |
 
 Rename refuses names that aren't valid identifiers, keywords and reserved words, and built-in names like `print`, `Error` or `init`. It needs a file without syntax errors.
