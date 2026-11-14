@@ -1,0 +1,2 @@
+error: cannot assign to `n`: parameters can't be changed
+  --> param_assign.brz:5:9

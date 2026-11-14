@@ -1,0 +1,2 @@
+error: `add` takes 2 arguments, but 1 was given
+  --> arg_count.brz:8:11

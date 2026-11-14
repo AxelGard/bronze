@@ -1,0 +1,44 @@
+package interp
+
+import (
+	"math"
+	"strconv"
+	"strings"
+)
+
+// Format returns the text `print` and `String()` show for a value.
+func Format(v Value) string {
+	switch v := v.(type) {
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		return FormatFloat(v)
+	case bool:
+		return strconv.FormatBool(v)
+	case string:
+		return v
+	}
+	panic("interp: cannot format value")
+}
+
+// FormatFloat writes the shortest text that reads back as the same
+// Float, always with a `.` or an exponent: 6.0, 0.1, 1e+21, 1e-07.
+// Plain decimals are used for 1e-7 <= |f| < 1e21.
+func FormatFloat(f float64) string {
+	switch {
+	case math.IsInf(f, 1):
+		return "inf"
+	case math.IsInf(f, -1):
+		return "-inf"
+	case math.IsNaN(f):
+		return "NaN"
+	}
+	if a := math.Abs(f); a != 0 && (a < 1e-7 || a >= 1e21) {
+		return strconv.FormatFloat(f, 'e', -1, 64)
+	}
+	s := strconv.FormatFloat(f, 'f', -1, 64)
+	if !strings.Contains(s, ".") {
+		s += ".0"
+	}
+	return s
+}

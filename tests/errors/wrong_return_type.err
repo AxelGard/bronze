@@ -1,0 +1,2 @@
+error: `name` returns String, but this is Int
+  --> wrong_return_type.brz:3:12

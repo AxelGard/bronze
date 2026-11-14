@@ -1,0 +1,13 @@
+func count_down(n: Int)
+{
+    while n > 0
+    {
+        n = n - 1
+    }
+}
+
+func main() -> Int
+{
+    count_down(3)
+    return 0
+}

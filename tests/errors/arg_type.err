@@ -1,0 +1,2 @@
+error: argument `n` of `square` must be Int, found Float
+  --> arg_type.brz:8:18

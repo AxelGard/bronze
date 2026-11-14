@@ -1,0 +1,2 @@
+error: missing return at the end of `sign`
+  --> missing_return.brz:11:1

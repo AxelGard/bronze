@@ -1,0 +1,10 @@
+func forever(n: Int) -> Int
+{
+    return forever(n + 1)
+}
+
+func main() -> Int
+{
+    print("start")
+    return forever(0)
+}

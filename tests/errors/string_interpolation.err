@@ -1,0 +1,2 @@
+error: string interpolation is not supported yet
+  --> string_interpolation.brz:4:18

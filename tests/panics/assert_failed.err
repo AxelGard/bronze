@@ -1,0 +1,2 @@
+panic: assertion failed: total should be 5
+  at main (assert_failed.brz:5)

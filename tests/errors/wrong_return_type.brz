@@ -1,0 +1,10 @@
+func name() -> String
+{
+    return 42
+}
+
+func main() -> Int
+{
+    print(name())
+    return 0
+}

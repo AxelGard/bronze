@@ -1,0 +1,17 @@
+func sign(n: Int) -> String
+{
+    if n < 0
+    {
+        return "negative"
+    }
+    else if n > 0
+    {
+        return "positive"
+    }
+}
+
+func main() -> Int
+{
+    print(sign(1))
+    return 0
+}

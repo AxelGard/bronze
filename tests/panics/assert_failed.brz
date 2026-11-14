@@ -1,0 +1,7 @@
+func main() -> Int
+{
+    con total = 2 + 2
+    print(total)
+    assert(total == 5, "total should be 5")
+    return 0
+}

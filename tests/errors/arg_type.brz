@@ -1,0 +1,10 @@
+func square(n: Int) -> Int
+{
+    return n * n
+}
+
+func main() -> Int
+{
+    print(square(1.5))
+    return 0
+}

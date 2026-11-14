@@ -1,0 +1,2 @@
+error: comparisons can't be chained, use `and`
+  --> chained_compare.brz:4:17

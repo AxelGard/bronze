@@ -1,6 +1,6 @@
 # Tests
 
-Golden tests, run by `go test ./...` (the runner is part of milestone 0.1.0). File names in messages are compared as the base name (`bank.brz`, not a full path).
+Golden tests, run by `go test ./...` (the runner is `golden_test.go`). Tests that need features not implemented yet are listed in its `pending` map and skipped. File names in messages are compared as the base name (`bank.brz`, not a full path).
 
 | Folder | Files | The test passes when |
 |---|---|---|

@@ -1,0 +1,12 @@
+func add(a: Int, b: Int) -> Int
+{
+    con = a + b
+    con total b
+    return a +
+}
+
+func main() -> Int
+{
+    print(add(1, 2)
+    return 0
+}

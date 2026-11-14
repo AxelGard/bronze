@@ -1,0 +1,3 @@
+panic: age can't be negative
+  at check_age (panic_call.brz:5)
+  at main      (panic_call.brz:13)

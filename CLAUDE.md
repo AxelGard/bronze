@@ -14,14 +14,15 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `doc/*.md` (others) | Decided design: syntax, types, classes, errors, namespaces, projects, core values |
 | `examples/core.brz`, `examples/projects/*.brz` | **The 0.1.0 targets**: each has its expected output at the bottom |
 | `examples/*.brz` (others) | Design explorations with later features and undecided syntax, marked `[decided]` / `[proposal]` / `[exploration]` |
-| `cmd/bronze/` | CLI (`run`, `check`, `version`); currently a stub |
-| `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline; currently only package docs (`doc.go`) |
+| `cmd/bronze/` | CLI entry point; the logic is in `internal/cli` |
+| `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline |
+| `internal/cli/` | `run`, `check`, `version`; `cli.Main` is also what the golden tests call |
 | `tests/run/`, `tests/errors/`, `tests/panics/` | Golden tests; see `tests/README.md` |
 | `std/algo.bz` | Old leftover from before the redesign; ignore |
 
 ## Current state
 
-Design for the basics is done. Implementation of 0.1.0 has **not started**: the Go module, package skeleton, CLI stub, Makefile and golden tests exist. Follow the work order in `doc/milestones.md`: get `core.brz` running end to end first, then add classes, enums/match, errors and null.
+Implementation of 0.1.0 is under way. Work-order steps 1–7 of `doc/milestones.md` are done: the whole pipeline works for the `core.brz` subset, and `core.brz` runs. The parser reports "... not supported yet" for classes, enums, `match`, `.`, `null`, `this`, `is`, `?` types, `! E` and the `else` handlers. Next: step 8 (classes, `counter.brz`), then enums/match, errors and null. Golden tests that need those features are listed in `pending` in `tests/golden_test.go`; remove them as features land.
 
 ## Commands
 

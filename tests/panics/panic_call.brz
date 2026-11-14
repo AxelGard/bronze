@@ -1,0 +1,15 @@
+func check_age(age: Int) -> Int
+{
+    if age < 0
+    {
+        panic("age can't be negative")
+    }
+    return age
+}
+
+func main() -> Int
+{
+    print(check_age(30))
+    print(check_age(-1))
+    return 0
+}

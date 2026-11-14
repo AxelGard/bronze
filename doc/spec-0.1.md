@@ -326,7 +326,7 @@ As a statement, `save(x) else return` handles a `! E` call, and the value of a `
 | Type | Printed as |
 |---|---|
 | `Int` | decimal: `-12` |
-| `Float` | shortest form that round-trips, **always with a `.`**: `6.0`, `3.5`, `0.1`, `1e+21`. Infinity and NaN print as `inf`, `-inf`, `NaN`. |
+| `Float` | shortest form that round-trips, **always with a `.`**: `6.0`, `3.5`, `0.1`. (**0.1 choice:** plain decimals for `1e-7 <= |x| < 1e21`, otherwise exponent form: `1e+21`, `1.5e-08`.) Infinity and NaN print as `inf`, `-inf`, `NaN`. |
 | `Bool` | `true` / `false` |
 | `String` | the text as is |
 | enum | the case name: `Frozen` |

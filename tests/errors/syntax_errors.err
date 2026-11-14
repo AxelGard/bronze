@@ -1,0 +1,23 @@
+error: expected a name, found `=`
+  --> syntax_errors.brz:3:9
+  |
+3 |     con = a + b
+  |         ^
+
+error: expected `=` and a value for `total`, found `b`
+  --> syntax_errors.brz:4:15
+  |
+4 |     con total b
+  |               ^
+
+error: expected an expression, found `}`
+  --> syntax_errors.brz:6:1
+  |
+6 | }
+  | ^
+
+error: `(` is not closed
+  --> syntax_errors.brz:10:10
+   |
+10 |     print(add(1, 2)
+   |          ^

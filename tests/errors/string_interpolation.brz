@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    con name = "ada"
+    print("hello {name}")
+    return 0
+}
