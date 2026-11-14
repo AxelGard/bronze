@@ -19,6 +19,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `internal/cli/` | `run`, `check`, `lsp`, `version`; `cli.Main` is also what the golden tests call |
 | `internal/lsp/` | Language server: diagnostics, go to definition, rename |
 | `tests/run/`, `tests/errors/`, `tests/panics/` | Golden tests; see `tests/README.md` |
+| `website/` | User docs (MkDocs Material), published to GitHub Pages by `.github/workflows/docs.yml`. **Only what is implemented and working.** Every ```` ```bronze ```` block is run by `tests/docs_test.go`, and an ```` ```text title="Output" ```` block right after it must match exactly (stdout then stderr, file named `main.brz`). Update it when a feature lands |
 | `editors/tree-sitter-bronze/` | Tree-sitter grammar and highlight queries; see its README |
 | `editors/nvim/` | Neovim plugin: filetype, tree-sitter registration, `bronze lsp` |
 | `scripts/install.sh` | Installs `bronze` and the Neovim parser (`make install`) |
@@ -39,6 +40,7 @@ make fmt vet
 make tree-sitter  # generate and test the tree-sitter grammar (needs the tree-sitter CLI)
 make install      # bronze into ~/.local/bin, and the parser into Neovim (scripts/install.sh)
 make dist VERSION=v0.1.0   # release archives for macOS and Linux into dist/
+cd website && pip install -r requirements.txt && mkdocs serve   # the website, locally
 ```
 
 CI (`.github/workflows/ci.yml`) runs gofmt, vet, `go test` and `make tree-sitter` on every push to master and every pull request, and fails if `editors/tree-sitter-bronze/src` doesn't match `grammar.js` (regenerate with tree-sitter CLI 0.27.2). Releases: pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`, which tests, runs `make dist`, and publishes a GitHub Release. `scripts/get-bronze.sh` downloads from `releases/latest`, so only tags with a suffix (`v0.2.0-rc1`) are prereleases. Release builds set `cli.Version` from the tag.

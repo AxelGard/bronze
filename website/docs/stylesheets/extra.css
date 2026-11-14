@@ -1,0 +1,16 @@
+/* Bronze colours for the Material theme. */
+:root,
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #8c5a2b;
+  --md-primary-fg-color--light: #b07a45;
+  --md-primary-fg-color--dark: #6b4220;
+  --md-accent-fg-color: #c4823f;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #6b4220;
+  --md-primary-fg-color--light: #8c5a2b;
+  --md-primary-fg-color--dark: #4d2f17;
+  --md-accent-fg-color: #e0a060;
+  --md-typeset-a-color: #e0a060;
+}

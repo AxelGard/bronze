@@ -13,3 +13,5 @@ Only the start of a diagnostic is compared, so the rest (source excerpt, help, s
 `run/core.brz`, `run/counter.brz` and `run/bank.brz` are copies of the example programs in `examples/` that 0.1.0 must run. Keep them in sync (`TestExamplesInSync` checks it).
 
 Every program in `examples/` must also run with exit code 0, and print the output written in its `Expected output:` comment (`TestExamples`).
+
+The code on the website is tested too (`docs_test.go`): every ```` ```bronze ```` block in `website/docs` is run, as a program if it has top-level declarations (a `main` returning 0 is added if it has none), or as the body of `main` otherwise. If an ```` ```text title="Output" ```` block follows it, stdout then stderr must be exactly that, with the file named `main.brz`; otherwise the program must exit with 0. Unlike the golden tests this compares whole diagnostics, so changing a message means updating the page.

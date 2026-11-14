@@ -1,0 +1,71 @@
+# The Bronze website, published to GitHub Pages by .github/workflows/docs.yml.
+# It documents only what is implemented: every ```bronze block is run by
+# tests/docs_test.go. Design docs for later versions stay in doc/.
+#
+#   pip install -r requirements.txt
+#   mkdocs serve
+site_name: Bronze
+site_description: A statically typed, garbage-collected language for backend work
+site_url: https://axelgard.github.io/bronze/
+repo_url: https://github.com/AxelGard/bronze
+repo_name: AxelGard/bronze
+edit_uri: edit/master/website/docs/
+copyright: Bronze is MIT licensed
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+
+nav:
+  - Home: index.md
+  - Install: install.md
+  - Guide:
+      - A first program: guide/first-program.md
+      - Values and variables: guide/values.md
+      - Control flow: guide/control-flow.md
+      - Functions: guide/functions.md
+      - Classes: guide/classes.md
+      - Enums and match: guide/enums-and-match.md
+      - Errors: guide/errors.md
+      - "Null and T?": guide/null.md
+      - Panics: guide/panics.md
+  - Reference:
+      - The bronze command: reference/cli.md
+      - Language reference: reference/language.md
+      - Editors: reference/editors.md

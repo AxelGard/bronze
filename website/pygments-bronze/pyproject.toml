@@ -1,0 +1,16 @@
+# A Pygments lexer for Bronze, so the website can highlight ```bronze blocks.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pygments-bronze"
+version = "0.1.0"
+description = "Pygments lexer for the Bronze language"
+dependencies = ["pygments"]
+
+[tool.setuptools]
+py-modules = ["bronze_lexer"]
+
+[project.entry-points."pygments.lexers"]
+bronze = "bronze_lexer:BronzeLexer"
