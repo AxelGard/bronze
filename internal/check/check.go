@@ -99,6 +99,7 @@ const (
 	Con VarKind = iota
 	Mut
 	Param
+	Loop // a loop variable
 )
 
 type variable struct {
@@ -501,8 +502,11 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 	n := name.Name
 	if prev := c.scope.lookup(n); prev != nil {
 		what := "a variable"
-		if prev.kind == Param {
+		switch prev.kind {
+		case Param:
 			what = "a parameter"
+		case Loop:
+			what = "a loop variable"
 		}
 		d := c.errorf(name.Sp, "`%s` is already %s", n, what)
 		d.Notes = []string{fmt.Sprintf("it is declared at line %d", prev.decl.Start.Line)}
@@ -662,6 +666,9 @@ func (c *checker) stmt(s ast.Stmt) {
 		c.block(s.Body)
 		c.loops--
 
+	case *ast.For:
+		c.forStmt(s)
+
 	case *ast.Return:
 		c.returnStmt(s)
 
@@ -715,6 +722,10 @@ func (c *checker) varTarget(id *ast.Ident) Type {
 		d := c.errorf(id.Sp, "cannot assign to `%s`: it is declared with `con`", id.Name)
 		d.Notes = []string{fmt.Sprintf("`%s` is declared at line %d", id.Name, v.decl.Start.Line)}
 		d.Help = []string{"declare it with `mut` if it needs to change"}
+		return nil
+	case Loop:
+		d := c.errorf(id.Sp, "cannot assign to `%s`: it is a loop variable", id.Name)
+		d.Help = []string{fmt.Sprintf("copy it into a variable first: `mut %s_ = %s`", id.Name, id.Name)}
 		return nil
 	case Param:
 		d := c.errorf(id.Sp, "cannot assign to `%s`: parameters can't be changed", id.Name)
@@ -780,6 +791,53 @@ func (c *checker) compound(s *ast.Compound) {
 	}
 	label := fmt.Sprintf("%s %s= %s", want, opText(s.Op), t)
 	c.arith(s.Op, s, s.Target, s.Value, want, t, label, true)
+}
+
+// forStmt checks a for loop: what it loops over, and the types of the
+// loop variables, which are visible only in its block.
+func (c *checker) forStmt(s *ast.For) {
+	x := s.X
+	for {
+		p, ok := x.(*ast.Paren)
+		if !ok {
+			break
+		}
+		x = p.X
+	}
+	t := c.value(s.X)
+	var types []Type // the types of the variables, for one and for two
+	switch tt := t.(type) {
+	case *List:
+		types = []Type{tt.Elem, Int, tt.Elem}
+	default:
+		switch {
+		case silent(t):
+		case c.mayBeNull(s.X, t):
+		default:
+			d := c.errorf(s.X.Span(), "cannot loop over %s", t)
+			d.Notes = []string{"`for` loops over a list, a map, a String or a range"}
+		}
+		types = []Type{Invalid, Invalid, Invalid}
+	}
+	if _, isRange := x.(*ast.Range); isRange && len(s.Vars) == 2 {
+		d := c.errorf(s.Vars[1].Sp, "a range gives one value per pass, so it takes one loop variable")
+		d.Help = []string{fmt.Sprintf("write `for %s in %s`", s.Vars[0].Name, c.text(s.X))}
+	}
+
+	c.scope = &scope{parent: c.scope, vars: map[string]*variable{}}
+	vars := types[:1]
+	if len(s.Vars) == 2 {
+		vars = types[1:]
+	}
+	for i, v := range s.Vars {
+		if v.Name != "_" {
+			c.declare(v, &variable{kind: Loop, typ: vars[i], decl: v.Sp})
+		}
+	}
+	c.loops++
+	c.block(s.Body)
+	c.loops--
+	c.scope = c.scope.parent
 }
 
 // thisField returns the field of `this` with the given name, if the

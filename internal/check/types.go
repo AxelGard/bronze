@@ -48,6 +48,13 @@ type Optional struct {
 
 func (o *Optional) String() string { return o.Inner.String() + "?" }
 
+// List is `List<T>`. Lists are shared by reference.
+type List struct {
+	Elem Type
+}
+
+func (l *List) String() string { return "List<" + l.Elem.String() + ">" }
+
 // Failable is the result of calling a function that can fail: `T ! E`, or
 // `! E` when Value is NoValue. It must be handled with `else`.
 type Failable struct {
@@ -70,9 +77,13 @@ func identical(a, b Type) bool {
 	if a == b {
 		return true
 	}
-	if a, ok := a.(*Optional); ok {
+	switch a := a.(type) {
+	case *Optional:
 		b, ok := b.(*Optional)
 		return ok && identical(a.Inner, b.Inner)
+	case *List:
+		b, ok := b.(*List)
+		return ok && identical(a.Elem, b.Elem)
 	}
 	return false
 }

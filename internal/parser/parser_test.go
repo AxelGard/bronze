@@ -50,6 +50,9 @@ func TestStatements(t *testing.T) {
 		{"x += 1\nthis.n -= y * 2\nx *= 3\nx /= 4\nx %= 5",
 			"(block (+= x 1) (-= (. this n) (* y 2)) (*= x 3) (/= x 4) (%= x 5))"},
 		{"while true\n{\nbreak\ncontinue\n}", "(block (while true (block (break) (continue))))"},
+		{"for i in 0..n\n{\nf(i)\n}", "(block (for i in (.. 0 n) (block (call f i))))"},
+		{"for _, x in xs { f(x) }", "(block (for _ x in xs (block (call f x))))"},
+		{"con r = 1 + 1..=n * 2 == xs", "(block (con r (== (..= (+ 1 1) (* n 2)) xs)))"},
 	}
 	for _, tt := range tests {
 		if got := body(t, tt.src); got != tt.want {
@@ -148,6 +151,11 @@ func TestErrors(t *testing.T) {
 			"missing brace",
 			"func f()\n{\n    g()\n",
 			[]string{"4:1 expected `}`, found end of file"},
+		},
+		{
+			"chained range and for",
+			"func f()\n{\n    con r = 1..2..3\n    for i 0..3 { }\n    for x, in xs { }\n}",
+			[]string{"3:17 ranges can't be chained", "4:11 expected `in` after the loop variables, found `0`", "5:12 expected a name, found `in`"},
 		},
 		{
 			"reserved word",

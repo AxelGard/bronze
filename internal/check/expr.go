@@ -69,6 +69,8 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return c.unary(e)
 	case *ast.Binary:
 		return c.binary(e)
+	case *ast.Range:
+		return c.rangeExpr(e)
 	case *ast.Call:
 		return c.call(e)
 	case *ast.Match:
@@ -306,6 +308,19 @@ func (c *checker) binary(e *ast.Binary) Type {
 		return Invalid
 	}
 	return c.arith(e.Op, e, e.X, e.Y, x, y, label, false)
+}
+
+// rangeExpr checks `lo..hi` or `lo..=hi`, which is a List<Int> outside a
+// `for` and `[ ]`.
+func (c *checker) rangeExpr(e *ast.Range) Type {
+	for _, side := range []ast.Expr{e.Lo, e.Hi} {
+		t := c.value(side)
+		if !assignable(t, Int) && !c.nullMismatch(side, t, Int) {
+			d := c.errorf(side.Span(), "a range needs Int bounds, found %s", t)
+			d.Notes = []string{"ranges count whole numbers, from the first bound up"}
+		}
+	}
+	return &List{Elem: Int}
 }
 
 // eitherMayBeNull reports "may be null" for each side of e that is a T?,

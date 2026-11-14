@@ -1,0 +1,2 @@
+error: a range gives one value per pass, so it takes one loop variable
+  --> range_two_vars.brz:3:12

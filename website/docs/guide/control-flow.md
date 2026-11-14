@@ -55,9 +55,49 @@ print(total)
 55
 ```
 
+## for
+
+`for` loops over a range of `Int`s. `a..b` counts from `a` up to but not including `b`, and `a..=b` includes `b`:
+
+```bronze
+for i in 0..3
+{
+    print(i)
+}
+for i in 1..=2
+{
+    print(i * 10)
+}
+```
+
+```text title="Output"
+0
+1
+2
+10
+20
+```
+
+Ranges only count up: if the end is not above the start, the range is empty and the loop doesn't run. The bounds are evaluated once, before the loop starts. Write `_` when you don't need the value:
+
+```bronze
+mut line = ""
+for _ in 0..5
+{
+    line += "-"
+}
+print(line)
+```
+
+```text title="Output"
+-----
+```
+
+The loop variable is like a `con`: it can't be assigned to, and it is visible only inside the loop's block. A `for`, like a `while`, never counts as a `return` at the end of a function.
+
 ## break and continue
 
-`break` leaves the innermost loop. `continue` skips the rest of the block and goes on to the next pass:
+`break` leaves the innermost `for` or `while`. `continue` skips the rest of the block and goes on to the next pass:
 
 ```bronze
 mut n = 0

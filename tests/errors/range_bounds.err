@@ -1,0 +1,2 @@
+error: a range needs Int bounds, found Float
+  --> range_bounds.brz:3:14

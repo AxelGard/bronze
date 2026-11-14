@@ -34,3 +34,43 @@ func f()
             condition: (binary_expression left: (identifier) right: (integer))
             consequence: (block (break_statement)))
           (continue_statement))))))
+
+==================
+for and ranges
+==================
+
+func f()
+{
+    for i in 0..n + 1
+    {
+    }
+    for i, x in xs
+    {
+    }
+    for _ in 1..=3
+    {
+    }
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (for_statement
+        variable: (identifier)
+        value: (range_expression
+          start: (integer)
+          end: (binary_expression left: (identifier) right: (integer)))
+        body: (block))
+      (for_statement
+        variable: (identifier)
+        variable: (identifier)
+        value: (identifier)
+        body: (block))
+      (for_statement
+        variable: (identifier)
+        value: (range_expression start: (integer) end: (integer))
+        body: (block)))))

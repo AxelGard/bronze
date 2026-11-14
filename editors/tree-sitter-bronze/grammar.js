@@ -14,10 +14,11 @@ const PREC = {
   or: 2,
   and: 3,
   compare: 4,
-  add: 5,
-  multiply: 6,
-  unary: 7,
-  postfix: 8,
+  range: 5,
+  add: 6,
+  multiply: 7,
+  unary: 8,
+  postfix: 9,
 };
 
 const commaSep = (rule) => optional(seq(rule, repeat(seq(',', rule))));
@@ -101,6 +102,7 @@ module.exports = grammar({
         $.compound_assignment,
         $.if_statement,
         $.while_statement,
+        $.for_statement,
         $.break_statement,
         $.continue_statement,
         $.return_statement,
@@ -143,6 +145,16 @@ module.exports = grammar({
     while_statement: ($) =>
       seq('while', field('condition', $._expression), field('body', $.block)),
 
+    for_statement: ($) =>
+      seq(
+        'for',
+        field('variable', $.identifier),
+        optional(seq(',', field('variable', $.identifier))),
+        'in',
+        field('value', $._expression),
+        field('body', $.block),
+      ),
+
     break_statement: (_) => 'break',
 
     continue_statement: (_) => 'continue',
@@ -164,6 +176,7 @@ module.exports = grammar({
       choice(
         $.else_expression,
         $.binary_expression,
+        $.range_expression,
         $.unary_expression,
         $.is_expression,
         $.call_expression,
@@ -212,6 +225,12 @@ module.exports = grammar({
         ].map(([op, p]) =>
           prec.left(p, seq(field('left', $._expression), field('operator', op), field('right', $._expression))),
         ),
+      ),
+
+    range_expression: ($) =>
+      prec.left(
+        PREC.range,
+        seq(field('start', $._expression), field('operator', choice('..', '..=')), field('end', $._expression)),
       ),
 
     unary_expression: ($) =>

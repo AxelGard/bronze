@@ -112,10 +112,19 @@ func (p *parser) ident() *ast.Ident {
 	case t.Kind != lexer.IDENT:
 		p.failHere("expected a name, found %s", describe(t))
 	case t.Text == "_":
-		p.fail(t.Span, "`_` can only be used as a match pattern")
+		p.fail(t.Span, "`_` can only be used as a match pattern or a loop variable")
 	}
 	p.advance()
 	return &ast.Ident{Name: t.Text, Sp: t.Span}
+}
+
+// loopVar reads a loop variable: a name, or `_`.
+func (p *parser) loopVar() *ast.Ident {
+	if t := p.tok(); t.Kind == lexer.IDENT && t.Text == "_" {
+		p.advance()
+		return &ast.Ident{Name: t.Text, Sp: t.Span}
+	}
+	return p.ident()
 }
 
 // ---------------------------------------------------------------------
@@ -489,6 +498,8 @@ func (p *parser) simpleStmt() ast.Stmt {
 			r.Sp = t.Span.To(r.Value.Span())
 		}
 		return r
+	case lexer.FOR:
+		return p.forStmt()
 	case lexer.BREAK:
 		return &ast.Break{Sp: p.advance().Span}
 	case lexer.CONTINUE:
@@ -554,6 +565,23 @@ func (p *parser) varDecl() *ast.VarDecl {
 	d.Value = p.expr()
 	d.Sp = t.Span.To(d.Value.Span())
 	return d
+}
+
+func (p *parser) forStmt() *ast.For {
+	start := p.expect(lexer.FOR).Span
+	s := &ast.For{Vars: []*ast.Ident{p.loopVar()}}
+	if p.at(lexer.COMMA) {
+		p.advance()
+		s.Vars = append(s.Vars, p.loopVar())
+	}
+	if !p.at(lexer.IN) {
+		p.failHere("expected `in` after the loop variables, found %s", describe(p.tok()))
+	}
+	p.advance()
+	s.X = p.expr()
+	s.Body = p.block()
+	s.Sp = start.To(s.Body.Sp)
+	return s
 }
 
 func (p *parser) ifStmt() *ast.If {
@@ -676,7 +704,7 @@ func isCmp(k lexer.Kind) bool {
 }
 
 func (p *parser) cmpExpr() ast.Expr {
-	x := p.addExpr()
+	x := p.rangeExpr()
 	if p.at(lexer.IS) {
 		p.advance()
 		x = &ast.Is{X: x, Class: p.ident()}
@@ -689,13 +717,26 @@ func (p *parser) cmpExpr() ast.Expr {
 		return x
 	}
 	op := p.advance()
-	y := p.addExpr()
+	y := p.rangeExpr()
 	if isCmp(p.kind()) {
 		d := p.diags.Errorf(p.tok().Span, "comparisons can't be chained, use `and`")
 		d.Help = []string{"write `a < b and b < c` instead of `a < b < c`"}
 		panic(bailout{})
 	}
 	return &ast.Binary{Op: op.Kind, X: x, Y: y, OpSp: op.Span}
+}
+
+func (p *parser) rangeExpr() ast.Expr {
+	x := p.addExpr()
+	if !p.at(lexer.DOTDOT) && !p.at(lexer.DOTDOTE) {
+		return x
+	}
+	op := p.advance()
+	y := p.addExpr()
+	if p.at(lexer.DOTDOT) || p.at(lexer.DOTDOTE) {
+		p.fail(p.tok().Span, "ranges can't be chained")
+	}
+	return &ast.Range{Lo: x, Hi: y, Inclusive: op.Kind == lexer.DOTDOTE, OpSp: op.Span}
 }
 
 func (p *parser) addExpr() ast.Expr {

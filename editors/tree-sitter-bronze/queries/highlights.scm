@@ -35,6 +35,7 @@
 (field_declaration name: (identifier) @variable.member)
 (member_expression member: (identifier) @variable.member)
 (parameter name: (identifier) @variable.parameter)
+(for_statement variable: (identifier) @variable)
 (else_handler error: (identifier) @variable.parameter)
 (this) @variable.builtin
 
@@ -55,10 +56,10 @@
 ["func" "return"] @keyword.function
 ["con" "mut" "class" "enum" "use"] @keyword
 ["if" "else" "match"] @keyword.conditional
-["while" (break_statement) (continue_statement)] @keyword.repeat
+["while" "for" "in" (break_statement) (continue_statement)] @keyword.repeat
 ["and" "or" "not" "is"] @keyword.operator
 
 ; operators and punctuation
-["+" "-" "*" "/" "%" "==" "!=" "<" "<=" ">" ">=" "=" "+=" "-=" "*=" "/=" "%=" "->" "=>" "!" "?"] @operator
+["+" "-" "*" "/" "%" "==" "!=" "<" "<=" ">" ">=" "=" "+=" "-=" "*=" "/=" "%=" ".." "..=" "->" "=>" "!" "?"] @operator
 ["(" ")" "{" "}"] @punctuation.bracket
 ["," "." ":"] @punctuation.delimiter

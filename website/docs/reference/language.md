@@ -14,7 +14,7 @@ A program is one UTF-8 file ending in `.brz`. Its top level holds `func`, `class
 | `Int` literals | `0`, `42`, `1_000_000` (decimal only) |
 | `Float` literals | `2.0`, `3.14159`, `1.5e-3`: digits on both sides of the `.` |
 | `String` literals | `"hello"`, with the escapes `\n` `\t` `\"` `\\` `\{` |
-| Operators | `+ - * / %` `== != < <= > >=` `=` `+= -= *= /= %=` `->` `=>` `!` `?` `.` |
+| Operators | `+ - * / %` `== != < <= > >=` `..` `..=` `=` `+= -= *= /= %=` `->` `=>` `!` `?` `.` |
 | Punctuation | `( ) { } , :` |
 | Comments | `// to the end of the line`, `/* a block */` (block comments don't nest) |
 
@@ -70,12 +70,13 @@ From the lowest precedence to the highest:
 | `== !=` | two values of the same type, a `T?` and a `T`, or a `T?` and `null` | `Bool` |
 | `< <= > >=` | two `Int`s, two `Float`s or two `String`s | `Bool` |
 | `x is C` | `x` is an error, `C` is `Error` or a class that uses it | `Bool` |
+| `a..b`, `a..=b` | two `Int`s | the `Int`s from `a` up to `b`, without or with `b`; a `List<Int>` outside a `for` |
 | `+ -` | two `Int`s or two `Float`s; `+` also joins two `String`s | the same type |
 | `* / %` | two `Int`s or two `Float`s (`%` only `Int`) | the same type |
 | `not x`, `-x` | `Bool`; `Int` or `Float` | the same type |
 | `f(...)`, `x.name` | | |
 
-Comparisons can't be chained (`a < b < c` is an error). `Int` and `Float` never mix: convert with `Float(...)`. `==` on objects compares identity; on enums, the case.
+Comparisons and ranges can't be chained (`a < b < c` and `a..b..c` are errors). `Int` and `Float` never mix: convert with `Float(...)`. `==` on objects compares identity; on enums, the case.
 
 ## Built-ins
 
@@ -98,6 +99,7 @@ Comparisons can't be chained (`a < b < c` is an error). `Int` and `Float` never 
 | `x += e`, `obj.field -= e`, also `*=`, `/=`, `%=` | `x = x + e`, with the same type rules as the operator; the target is evaluated once |
 | `if c { } else if c { } else { }` | |
 | `while c { }` | |
+| `for x in e { }`, `for i, x in e { }` | `e` is a range or a list; over a list, `i` is the index. `x` can be `_`. Loop variables can't be assigned to |
 | `break`, `continue` | leave the innermost loop, or go on to its next pass; only inside a loop |
 | `return`, `return e` | |
 | `match e { ... }` | a `match` whose value is not used; its arms are calls or blocks |
@@ -168,7 +170,7 @@ enum_decl   = "enum" IDENT "{" { NEWLINE } { ( IDENT | func_decl ) { NEWLINE } }
 
 block       = "{" { NEWLINE } { stmt NEWLINE { NEWLINE } } "}"
 
-stmt        = var_decl | assign | compound | if_stmt | while_stmt
+stmt        = var_decl | assign | compound | if_stmt | while_stmt | for_stmt
             | "break" | "continue" | return_stmt
             | match_expr                            // a match statement
             | expr                                  // a call, maybe with an error else
@@ -179,6 +181,8 @@ compound    = target ( "+=" | "-=" | "*=" | "/=" | "%=" ) expr
 target      = IDENT | postfix "." IDENT
 if_stmt     = "if" expr block { "else" "if" expr block } [ "else" block ]
 while_stmt  = "while" expr block
+for_stmt    = "for" loop_var [ "," loop_var ] "in" expr block
+loop_var    = IDENT | "_"
 return_stmt = "return" [ expr ]
 
 expr        = or_expr [ "else" handler ]
@@ -189,8 +193,9 @@ handler     = "return" [ or_expr ]
 
 or_expr     = and_expr { "or" and_expr }
 and_expr    = cmp_expr { "and" cmp_expr }
-cmp_expr    = add_expr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) add_expr ]
-            | add_expr "is" IDENT
+cmp_expr    = range_expr [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) range_expr ]
+            | range_expr "is" IDENT
+range_expr  = add_expr [ ( ".." | "..=" ) add_expr ]
 add_expr    = mul_expr { ( "+" | "-" ) mul_expr }
 mul_expr    = unary { ( "*" | "/" | "%" ) unary }
 unary       = ( "not" | "-" ) unary | postfix

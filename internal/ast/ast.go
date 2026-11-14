@@ -163,6 +163,15 @@ type While struct {
 	Sp   diag.Span
 }
 
+// For is `for x in xs { body }` or `for i, x in xs { body }`. A loop
+// variable written `_` is an Ident named "_".
+type For struct {
+	Vars []*Ident // one or two
+	X    Expr
+	Body *Block
+	Sp   diag.Span
+}
+
 // Break is `break`.
 type Break struct {
 	Sp diag.Span
@@ -193,6 +202,7 @@ func (s *Block) Span() diag.Span    { return s.Sp }
 func (s *VarDecl) Span() diag.Span  { return s.Sp }
 func (s *Assign) Span() diag.Span   { return s.Sp }
 func (s *Compound) Span() diag.Span { return s.Sp }
+func (s *For) Span() diag.Span      { return s.Sp }
 func (s *Break) Span() diag.Span    { return s.Sp }
 func (s *Continue) Span() diag.Span { return s.Sp }
 func (s *If) Span() diag.Span       { return s.Sp }
@@ -205,6 +215,7 @@ func (*Block) stmtNode()    {}
 func (*VarDecl) stmtNode()  {}
 func (*Assign) stmtNode()   {}
 func (*Compound) stmtNode() {}
+func (*For) stmtNode()      {}
 func (*Break) stmtNode()    {}
 func (*Continue) stmtNode() {}
 func (*If) stmtNode()       {}
@@ -296,6 +307,13 @@ type Binary struct {
 	OpSp diag.Span
 }
 
+// Range is `lo..hi`, or `lo..=hi` when Inclusive.
+type Range struct {
+	Lo, Hi    Expr
+	Inclusive bool
+	OpSp      diag.Span
+}
+
 // Member is `x.name`: a field, or a method when it is called.
 type Member struct {
 	X    Expr
@@ -373,6 +391,7 @@ func (e *NullLit) Span() diag.Span   { return e.Sp }
 func (e *Is) Span() diag.Span        { return e.X.Span().To(e.Class.Sp) }
 func (e *Else) Span() diag.Span      { return e.Sp }
 func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
+func (e *Range) Span() diag.Span     { return e.Lo.Span().To(e.Hi.Span()) }
 func (e *Call) Span() diag.Span      { return e.Sp }
 func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
 func (e *This) Span() diag.Span      { return e.Sp }
@@ -391,6 +410,7 @@ func (*NullLit) exprNode()   {}
 func (*Is) exprNode()        {}
 func (*Else) exprNode()      {}
 func (*Binary) exprNode()    {}
+func (*Range) exprNode()     {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}
 func (*This) exprNode()      {}

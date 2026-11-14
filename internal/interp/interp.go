@@ -15,7 +15,7 @@ import (
 
 // Value is a Bronze value: int64 (Int), float64 (Float), bool (Bool),
 // string (String), *Object (an object of a class), *Case (an enum case),
-// or nil (null). A call to a function that can fail may also give a
+// *List, or nil (null). A call to a function that can fail may also give a
 // *Failure, which only an `else` sees.
 type Value any
 
@@ -66,6 +66,12 @@ type Case struct {
 type Object struct {
 	Class  *ast.ClassDecl
 	Fields map[string]Value
+}
+
+// List is a list. Lists are shared, like objects.
+type List struct {
+	Elems   []Value
+	looping int // how many `for` loops are looping over it
 }
 
 // MaxDepth is the number of nested calls after which the program panics
@@ -358,6 +364,8 @@ func (in *interp) stmt(s ast.Stmt, e *env) (ctl, Value) {
 				break
 			}
 		}
+	case *ast.For:
+		return in.forStmt(s, e)
 	case *ast.Break:
 		return ctlBreak, nil
 	case *ast.Continue:
@@ -373,6 +381,74 @@ func (in *interp) stmt(s ast.Stmt, e *env) (ctl, Value) {
 		panic(fmt.Sprintf("interp: unexpected statement %T", s))
 	}
 	return ctlNext, nil
+}
+
+// forStmt runs a for loop. A range is looped over without making a list.
+func (in *interp) forStmt(s *ast.For, e *env) (ctl, Value) {
+	// pass runs the body with the loop variables set to vals.
+	pass := func(vals ...Value) (ctl, Value) {
+		le := &env{parent: e, vars: make(map[string]Value, len(s.Vars))}
+		for i, v := range s.Vars {
+			if v.Name != "_" {
+				le.vars[v.Name] = vals[i]
+			}
+		}
+		return in.loopBody(s.Body, le)
+	}
+	if r, ok := unparen(s.X).(*ast.Range); ok {
+		lo, last, ok := in.bounds(r, e)
+		for i := lo; ok; i++ {
+			c, v := pass(i)
+			if c == ctlReturn {
+				return c, v
+			}
+			if c == ctlBreak || i == last {
+				break
+			}
+		}
+		return ctlNext, nil
+	}
+	switch x := in.expr(s.X, e).(type) {
+	case *List:
+		x.looping++
+		defer func() { x.looping-- }()
+		for i := 0; i < len(x.Elems); i++ {
+			vals := []Value{x.Elems[i]}
+			if len(s.Vars) == 2 {
+				vals = []Value{int64(i), x.Elems[i]}
+			}
+			c, v := pass(vals...)
+			if c == ctlReturn {
+				return c, v
+			}
+			if c == ctlBreak {
+				break
+			}
+		}
+	default:
+		panic(fmt.Sprintf("interp: cannot loop over %T", x))
+	}
+	return ctlNext, nil
+}
+
+// bounds evaluates the bounds of a range. It returns the first and the
+// last Int in it, and false if it is empty.
+func (in *interp) bounds(r *ast.Range, e *env) (lo, last int64, ok bool) {
+	lo, hi := in.expr(r.Lo, e).(int64), in.expr(r.Hi, e).(int64)
+	if r.Inclusive {
+		return lo, hi, hi >= lo
+	}
+	return lo, hi - 1, hi > lo
+}
+
+func unparen(x ast.Expr) ast.Expr {
+	for {
+		p, ok := x.(*ast.Paren)
+		if !ok {
+			return x
+		}
+		x = p.X
+	}
 }
 
 // loopBody runs one pass of a loop's body. A `break` or `continue` in an
@@ -456,6 +532,16 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 		}
 	case *ast.Binary:
 		return in.binary(x, e)
+	case *ast.Range:
+		l := &List{}
+		lo, last, ok := in.bounds(x, e)
+		for i := lo; ok; i++ {
+			l.Elems = append(l.Elems, i)
+			if i == last {
+				break
+			}
+		}
+		return l
 	case *ast.Call:
 		return in.callExpr(x, e)
 	}

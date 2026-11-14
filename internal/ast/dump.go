@@ -110,6 +110,16 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(' ')
 		dump(b, n.Value)
 		b.WriteByte(')')
+	case *For:
+		b.WriteString("(for")
+		for _, v := range n.Vars {
+			fmt.Fprintf(b, " %s", v.Name)
+		}
+		b.WriteString(" in ")
+		dump(b, n.X)
+		b.WriteByte(' ')
+		dump(b, n.Body)
+		b.WriteByte(')')
 	case *Break:
 		b.WriteString("(break)")
 	case *Continue:
@@ -160,6 +170,16 @@ func dump(b *strings.Builder, n Node) {
 		dump(b, n.X)
 		b.WriteByte(' ')
 		dump(b, n.Y)
+		b.WriteByte(')')
+	case *Range:
+		op := ".."
+		if n.Inclusive {
+			op = "..="
+		}
+		fmt.Fprintf(b, "(%s ", op)
+		dump(b, n.Lo)
+		b.WriteByte(' ')
+		dump(b, n.Hi)
 		b.WriteByte(')')
 	case *Call:
 		b.WriteString("(call ")
