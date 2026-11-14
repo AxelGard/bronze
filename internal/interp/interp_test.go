@@ -581,3 +581,27 @@ func TestFormatList(t *testing.T) {
 		t.Errorf("got %s, want %s", got, want)
 	}
 }
+
+func TestClamp(t *testing.T) {
+	p := func(n int64) *int64 { return &n }
+	tests := []struct {
+		lo, hi    *int64
+		inclusive bool
+		l, h      int
+	}{
+		{nil, nil, false, 0, 3},
+		{p(1), nil, false, 1, 3},
+		{nil, p(-1), false, 0, 2},
+		{nil, p(-1), true, 0, 3},
+		{p(-100), p(100), false, 0, 3},
+		{p(2), p(1), false, 1, 1},
+		{p(5), nil, false, 3, 3},
+		{p(0), p(9223372036854775807), true, 0, 3},
+		{p(-9223372036854775808), p(-9223372036854775808), true, 0, 0},
+	}
+	for _, tt := range tests {
+		if l, h := clamp(tt.lo, tt.hi, tt.inclusive, 3); l != tt.l || h != tt.h {
+			t.Errorf("clamp(%v, %v, %v) = %d, %d, want %d, %d", tt.lo, tt.hi, tt.inclusive, l, h, tt.l, tt.h)
+		}
+	}
+}

@@ -134,6 +134,10 @@ func (c *checker) index(e *ast.Index) Type {
 		c.mapKey(t, e.Index)
 		return &Optional{Inner: t.Val}
 	}
+	if t == String {
+		c.intIndex(e.Index)
+		return &Optional{Inner: String}
+	}
 	c.value(e.Index)
 	if !silent(t) {
 		d := c.errorf(e.X.Span(), "cannot index %s", t)
@@ -166,6 +170,12 @@ func (c *checker) indexTarget(e *ast.Index) Type {
 		c.mapKey(t, e.Index)
 		c.info.Types[e] = t.Val
 		return t.Val
+	}
+	if t == String {
+		c.value(e.Index)
+		d := c.errorf(e.Sp, "strings can't be changed")
+		d.Help = []string{"build a new String instead, for example with `+`, slices or `replace`"}
+		return nil
 	}
 	c.value(e.Index)
 	if !silent(t) {

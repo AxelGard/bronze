@@ -76,7 +76,7 @@ From the lowest precedence to the highest:
 | `+ -` | two `Int`s or two `Float`s; `+` also joins two `String`s | the same type |
 | `* / %` | two `Int`s or two `Float`s (`%` only `Int`) | the same type |
 | `not x`, `-x` | `Bool`; `Int` or `Float` | the same type |
-| `f(...)`, `x.name`, `xs[i]` | `xs[i]`: a `List<T>` and an `Int`, or a `Map<K, V>` and a `K` | `xs[i]` is a `T?` or a `V?` |
+| `f(...)`, `x.name`, `xs[i]`, `xs[a..b]` | `xs[i]`: a `List<T>` or `String` and an `Int`, or a `Map<K, V>` and a `K`. `xs[a..b]`: a `List<T>` or `String` and `Int`s | `xs[i]` is a `T?`, `String?` or `V?`; a slice is a new `List<T>` or a `String` |
 
 Comparisons and ranges can't be chained (`a < b < c` and `a..b..c` are errors). `Int` and `Float` never mix: convert with `Float(...)`. `==` on objects compares identity; on enums, the case.
 
@@ -91,7 +91,7 @@ Comparisons and ranges can't be chained (`a < b < c` and `a..b..c` are errors). 
 | `panic(message)` | a `String` | stops the program; usable wherever a value is expected |
 | `assert(condition, message)` | a `Bool` and a `String` | panics with `assertion failed: message` if the condition is false |
 
-Lists have the methods `length`, `append`, `insert`, `remove_at`, `pop`, `contains`, `index_of`, `reverse`, `sort` and `join`; see [Lists](../guide/lists.md#methods). Maps have `length`, `contains`, `remove`, `keys` and `values`; see [Maps](../guide/maps.md#methods).
+Lists have the methods `length`, `append`, `insert`, `remove_at`, `pop`, `contains`, `index_of`, `reverse`, `sort` and `join`; see [Lists](../guide/lists.md#methods). Maps have `length`, `contains`, `remove`, `keys` and `values`; see [Maps](../guide/maps.md#methods). Strings have `length`, `contains`, `starts_with`, `ends_with`, `index_of`, `split`, `trim`, `to_upper`, `to_lower` and `replace`; see [Strings](../guide/strings.md#methods).
 
 ## Statements
 
@@ -103,7 +103,7 @@ Lists have the methods `length`, `append`, `insert`, `remove_at`, `pop`, `contai
 | `x += e`, `obj.field -= e`, `xs[i] *= e`, also `/=`, `%=` | `x = x + e`, with the same type rules as the operator; the target is evaluated once |
 | `if c { } else if c { } else { }` | |
 | `while c { }` | |
-| `for x in e { }`, `for i, x in e { }` | `e` is a range, a list or a map; over a list, `i` is the index; over a map, one variable gives the keys and two give keys and values. `x` can be `_`. Loop variables can't be assigned to |
+| `for x in e { }`, `for i, x in e { }` | `e` is a range, a list, a map or a `String`; over a list, `i` is the index; over a map, one variable gives the keys and two give keys and values. `x` can be `_`. Loop variables can't be assigned to |
 | `break`, `continue` | leave the innermost loop, or go on to its next pass; only inside a loop |
 | `return`, `return e` | |
 | `match e { ... }` | a `match` whose value is not used; its arms are calls or blocks |
@@ -209,7 +209,9 @@ range_expr  = add_expr [ ( ".." | "..=" ) add_expr ]
 add_expr    = mul_expr { ( "+" | "-" ) mul_expr }
 mul_expr    = unary { ( "*" | "/" | "%" ) unary }
 unary       = ( "not" | "-" ) unary | postfix
-postfix     = primary { "(" [ args ] ")" | "." IDENT | "[" expr "]" }
+postfix     = primary { "(" [ args ] ")" | "." IDENT | "[" index "]" }
+index       = expr                                  // an index
+            | [ add_expr ] ( ".." | "..=" ) [ add_expr ]   // a slice; `..=` needs an end
 args        = expr { "," expr }
 primary     = INT | FLOAT | STRING | "true" | "false" | "null" | "this"
             | IDENT | "(" expr ")" | match_expr | list_lit | map_lit

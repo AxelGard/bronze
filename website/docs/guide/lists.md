@@ -105,6 +105,29 @@ panic: index 3 out of range for a list of length 3
   at main (main.brz:6)
 ```
 
+## Slicing
+
+`xs[a..b]` is a new list with the elements from `a` up to but not including `b`, and `xs[a..=b]` includes `b`. Either end can be left out: `xs[..b]`, `xs[a..]`, and `xs[..]` for a copy of the whole list (but `..=` needs an end).
+
+```bronze
+con xs = [10, 20, 30, 40, 50]
+print(xs[1..3])
+print(xs[..2])
+print(xs[3..])
+print(xs[-2..])
+print(xs[1..100])
+```
+
+```text title="Output"
+[20, 30]
+[10, 20]
+[40, 50]
+[40, 50]
+[20, 30, 40, 50]
+```
+
+Slices never fail. Negative bounds count from the end, and then both bounds are clamped to the list, so a slice past the end is just shorter, or empty. Changing the new list doesn't change the old one, but objects and lists inside are still shared.
+
 ## Lists are shared
 
 Like objects, lists are shared: assigning or passing a list never copies it. `con` fixes the variable, not the list, so a `con` list can still be changed.

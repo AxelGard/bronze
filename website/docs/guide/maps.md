@@ -118,4 +118,4 @@ Like lists and objects, maps are shared: assigning or passing a map never copies
 
 ## Next
 
-[Panics](panics.md).
+[Strings](strings.md).

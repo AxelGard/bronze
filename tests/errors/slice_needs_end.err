@@ -1,0 +1,2 @@
+error: `..=` needs an end
+  --> slice_needs_end.brz:4:23

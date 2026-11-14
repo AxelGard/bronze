@@ -1,0 +1,2 @@
+error: cannot slice Int
+  --> slice_non_list.brz:4:17

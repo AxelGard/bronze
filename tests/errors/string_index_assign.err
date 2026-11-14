@@ -1,0 +1,2 @@
+error: strings can't be changed
+  --> string_index_assign.brz:4:5

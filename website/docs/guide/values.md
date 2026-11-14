@@ -7,7 +7,7 @@
 | `Int` | 64-bit signed integers | `0`, `42`, `-7`, `1_000_000` |
 | `Float` | 64-bit floating point | `2.0`, `3.14159`, `1.5e-3` |
 | `Bool` | `true` and `false` | `true`, `false` |
-| `String` | UTF-8 text | `"hello"` |
+| `String` | UTF-8 text; see [Strings](strings.md) | `"hello"` |
 
 A `Float` literal needs digits on both sides of the `.`: write `2.0`, not `2.` or `.5`. `_` can separate digits in numbers.
 

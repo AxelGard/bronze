@@ -23,6 +23,10 @@ type parser struct {
 	diags diag.List
 
 	recovered int // how many times the parser recovered from an error
+
+	// openRange allows `a..` without an end before a `]`, in the index
+	// of a slice.
+	openRange bool
 }
 
 // bailout is panicked after a syntax error, and recovered at the statement
@@ -777,6 +781,10 @@ func (p *parser) rangeExpr() ast.Expr {
 		return x
 	}
 	op := p.advance()
+	if p.openRange && p.at(lexer.RBRACK) {
+		// `xs[a..]`: index makes it a slice.
+		return &ast.Range{Lo: x, Inclusive: op.Kind == lexer.DOTDOTE, OpSp: op.Span}
+	}
 	y := p.addExpr()
 	if p.at(lexer.DOTDOT) || p.at(lexer.DOTDOTE) {
 		p.fail(p.tok().Span, "ranges can't be chained")
@@ -838,13 +846,7 @@ func (p *parser) postfix() ast.Expr {
 			p.advance()
 			x = &ast.Member{X: x, Name: p.ident()}
 		case lexer.LBRACK:
-			open := p.advance().Span
-			ix := &ast.Index{X: x, Index: p.expr()}
-			if !p.at(lexer.RBRACK) {
-				p.closeBracket(open, "`]`")
-			}
-			ix.Sp = x.Span().To(p.advance().Span)
-			x = ix
+			x = p.index(x)
 		default:
 			return x
 		}
@@ -948,6 +950,44 @@ func (p *parser) closeParen(open diag.Span, expected string) {
 	p.failHere("expected %s, found %s", expected, describe(p.tok()))
 }
 
+// index parses `[i]` after x, or a slice: `[a..b]`, `[a..=b]`, `[..b]`,
+// `[a..]` and `[..]`.
+func (p *parser) index(x ast.Expr) ast.Expr {
+	open := p.expect(lexer.LBRACK).Span
+	var ix ast.Expr
+	if p.at(lexer.DOTDOT) || p.at(lexer.DOTDOTE) {
+		op := p.advance()
+		sl := &ast.Slice{X: x, Inclusive: op.Kind == lexer.DOTDOTE}
+		if !p.at(lexer.RBRACK) {
+			sl.Hi = p.addExpr()
+		}
+		ix = sl
+	} else {
+		save := p.openRange
+		p.openRange = true
+		i := p.expr()
+		p.openRange = save
+		ix = &ast.Index{X: x, Index: i}
+		if r, ok := i.(*ast.Range); ok {
+			ix = &ast.Slice{X: x, Lo: r.Lo, Hi: r.Hi, Inclusive: r.Inclusive}
+		}
+	}
+	if !p.at(lexer.RBRACK) {
+		p.closeBracket(open, "`]`")
+	}
+	end := p.advance().Span
+	switch ix := ix.(type) {
+	case *ast.Index:
+		ix.Sp = x.Span().To(end)
+	case *ast.Slice:
+		ix.Sp = x.Span().To(end)
+		if ix.Inclusive && ix.Hi == nil {
+			p.fail(end, "`..=` needs an end")
+		}
+	}
+	return ix
+}
+
 // closeBracket reports a missing `]`, like closeParen.
 func (p *parser) closeBracket(open diag.Span, expected string) {
 	if p.at(lexer.EOF) || p.tok().Span.Start.Line > p.prev().End.Line {
@@ -960,6 +1000,9 @@ func (p *parser) closeBracket(open diag.Span, expected string) {
 func (p *parser) listLit() *ast.ListLit {
 	open := p.expect(lexer.LBRACK).Span
 	l := &ast.ListLit{}
+	save := p.openRange
+	p.openRange = false
+	defer func() { p.openRange = save }()
 	for !p.at(lexer.RBRACK) {
 		l.Elems = append(l.Elems, p.expr())
 		if !p.at(lexer.COMMA) {

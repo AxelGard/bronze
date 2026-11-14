@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    mut name = "ada"
+    name[0] = "A"
+    return 0
+}

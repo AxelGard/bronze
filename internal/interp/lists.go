@@ -33,6 +33,8 @@ func (in *interp) index(x *ast.Index, e *env) Value {
 	case *Map:
 		val, _ := v.Get(in.expr(x.Index, e))
 		return val
+	case string:
+		return charAt(v, in.expr(x.Index, e).(int64))
 	}
 	panic("interp: cannot index")
 }

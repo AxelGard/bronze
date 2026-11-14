@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    con xs = [1, 2, 3]
+    con tail = xs[1..=]
+    return 0
+}

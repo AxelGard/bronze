@@ -192,6 +192,7 @@ module.exports = grammar({
         $.call_expression,
         $.member_expression,
         $.index_expression,
+        $.slice_expression,
         $.match_expression,
         $.list,
         $.map,
@@ -262,6 +263,22 @@ module.exports = grammar({
 
     index_expression: ($) =>
       prec(PREC.postfix, seq(field('object', $._expression), '[', field('index', $._expression), ']')),
+
+    // `xs[a..b]` parses as an index with a range; these are the slices that
+    // leave out a bound.
+    slice_expression: ($) =>
+      prec(
+        PREC.postfix,
+        seq(
+          field('object', $._expression),
+          '[',
+          choice(
+            seq(field('start', $._expression), field('operator', '..')),
+            seq(field('operator', choice('..', '..=')), optional(field('end', $._expression))),
+          ),
+          ']',
+        ),
+      ),
 
     list: ($) => seq('[', trailingCommaSep($._expression), ']'),
 

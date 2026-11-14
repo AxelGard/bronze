@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    con n = 12345
+    con first = n[..2]
+    return 0
+}

@@ -1,0 +1,25 @@
+==================
+Slices
+==================
+
+func f()
+{
+    print(xs[1..3], xs[2..], xs[..2], xs[..=2], xs[..])
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (index_expression object: (identifier) index: (range_expression start: (integer) end: (integer)))
+            (slice_expression object: (identifier) start: (integer))
+            (slice_expression object: (identifier) end: (integer))
+            (slice_expression object: (identifier) end: (integer))
+            (slice_expression object: (identifier))))))))

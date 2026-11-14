@@ -823,13 +823,17 @@ func (c *checker) forStmt(s *ast.For) {
 		types = []Type{tt.Key, tt.Key, tt.Val}
 	default:
 		switch {
+		case t == String:
+			types = []Type{String, Int, String}
 		case silent(t):
 		case c.mayBeNull(s.X, t):
 		default:
 			d := c.errorf(s.X.Span(), "cannot loop over %s", t)
 			d.Notes = []string{"`for` loops over a list, a map, a String or a range"}
 		}
-		types = []Type{Invalid, Invalid, Invalid}
+		if types == nil {
+			types = []Type{Invalid, Invalid, Invalid}
+		}
 	}
 	if _, isRange := x.(*ast.Range); isRange && len(s.Vars) == 2 {
 		d := c.errorf(s.Vars[1].Sp, "a range gives one value per pass, so it takes one loop variable")

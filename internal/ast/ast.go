@@ -308,7 +308,8 @@ type Binary struct {
 	OpSp diag.Span
 }
 
-// Range is `lo..hi`, or `lo..=hi` when Inclusive.
+// Range is `lo..hi`, or `lo..=hi` when Inclusive. Hi is nil only after a
+// syntax error the checker reports: `a..` outside `[ ]`.
 type Range struct {
 	Lo, Hi    Expr
 	Inclusive bool
@@ -388,6 +389,14 @@ type Index struct {
 	Sp    diag.Span
 }
 
+// Slice is `x[lo..hi]` or `x[lo..=hi]`. Lo and Hi are nil when left out.
+type Slice struct {
+	X         Expr
+	Lo, Hi    Expr
+	Inclusive bool
+	Sp        diag.Span
+}
+
 // Call is `fn(args)`.
 type Call struct {
 	Fn   Expr
@@ -416,17 +425,23 @@ func (e *NullLit) Span() diag.Span   { return e.Sp }
 func (e *Is) Span() diag.Span        { return e.X.Span().To(e.Class.Sp) }
 func (e *Else) Span() diag.Span      { return e.Sp }
 func (e *Binary) Span() diag.Span    { return e.X.Span().To(e.Y.Span()) }
-func (e *Range) Span() diag.Span     { return e.Lo.Span().To(e.Hi.Span()) }
-func (e *ListLit) Span() diag.Span   { return e.Sp }
-func (e *MapLit) Span() diag.Span    { return e.Sp }
-func (e *Index) Span() diag.Span     { return e.Sp }
-func (e *Call) Span() diag.Span      { return e.Sp }
-func (e *Member) Span() diag.Span    { return e.X.Span().To(e.Name.Sp) }
-func (e *This) Span() diag.Span      { return e.Sp }
-func (e *Match) Span() diag.Span     { return e.Sp }
-func (p *Pattern) Span() diag.Span   { return p.Sp }
-func (e *Paren) Span() diag.Span     { return e.Sp }
-func (e *BadExpr) Span() diag.Span   { return e.Sp }
+func (e *Range) Span() diag.Span {
+	if e.Hi == nil {
+		return e.Lo.Span().To(e.OpSp)
+	}
+	return e.Lo.Span().To(e.Hi.Span())
+}
+func (e *ListLit) Span() diag.Span { return e.Sp }
+func (e *MapLit) Span() diag.Span  { return e.Sp }
+func (e *Index) Span() diag.Span   { return e.Sp }
+func (e *Slice) Span() diag.Span   { return e.Sp }
+func (e *Call) Span() diag.Span    { return e.Sp }
+func (e *Member) Span() diag.Span  { return e.X.Span().To(e.Name.Sp) }
+func (e *This) Span() diag.Span    { return e.Sp }
+func (e *Match) Span() diag.Span   { return e.Sp }
+func (p *Pattern) Span() diag.Span { return p.Sp }
+func (e *Paren) Span() diag.Span   { return e.Sp }
+func (e *BadExpr) Span() diag.Span { return e.Sp }
 
 func (*Ident) exprNode()     {}
 func (*IntLit) exprNode()    {}
@@ -442,6 +457,7 @@ func (*Range) exprNode()     {}
 func (*ListLit) exprNode()   {}
 func (*MapLit) exprNode()    {}
 func (*Index) exprNode()     {}
+func (*Slice) exprNode()     {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}
 func (*This) exprNode()      {}

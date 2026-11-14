@@ -180,8 +180,26 @@ func dump(b *strings.Builder, n Node) {
 		}
 		fmt.Fprintf(b, "(%s ", op)
 		dump(b, n.Lo)
-		b.WriteByte(' ')
-		dump(b, n.Hi)
+		if n.Hi != nil {
+			b.WriteByte(' ')
+			dump(b, n.Hi)
+		}
+		b.WriteByte(')')
+	case *Slice:
+		op := ".."
+		if n.Inclusive {
+			op = "..="
+		}
+		fmt.Fprintf(b, "(slice%s ", op)
+		dump(b, n.X)
+		for _, x := range []Expr{n.Lo, n.Hi} {
+			if x == nil {
+				b.WriteString(" _")
+			} else {
+				b.WriteByte(' ')
+				dump(b, x)
+			}
+		}
 		b.WriteByte(')')
 	case *ListLit:
 		b.WriteString("(list")

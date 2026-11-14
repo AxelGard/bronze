@@ -444,6 +444,22 @@ func (in *interp) forStmt(s *ast.For, e *env) (ctl, Value) {
 				break
 			}
 		}
+	case string:
+		i := int64(0)
+		for _, r := range x {
+			vals := []Value{string(r)}
+			if len(s.Vars) == 2 {
+				vals = []Value{i, string(r)}
+			}
+			c, v := pass(vals...)
+			if c == ctlReturn {
+				return c, v
+			}
+			if c == ctlBreak {
+				break
+			}
+			i++
+		}
 	default:
 		panic(fmt.Sprintf("interp: cannot loop over %T", x))
 	}
@@ -580,6 +596,8 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 		return m
 	case *ast.Index:
 		return in.index(x, e)
+	case *ast.Slice:
+		return in.slice(x, e)
 	case *ast.Call:
 		return in.callExpr(x, e)
 	}
@@ -681,6 +699,8 @@ func (in *interp) callExpr(x *ast.Call, e *env) Value {
 			return in.listMethod(recv, m.Name.Name, args, x.Sp)
 		case *Map:
 			return in.mapMethod(recv, m.Name.Name, args, x.Sp)
+		case string:
+			return stringMethod(recv, m.Name.Name, args)
 		}
 		var typeName string
 		var fn *ast.FuncDecl

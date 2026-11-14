@@ -77,6 +77,8 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return c.mapLit(e, nil)
 	case *ast.Index:
 		return c.index(e)
+	case *ast.Slice:
+		return c.slice(e)
 	case *ast.Call:
 		return c.call(e)
 	case *ast.Match:
@@ -329,6 +331,12 @@ func (c *checker) binary(e *ast.Binary) Type {
 // rangeExpr checks `lo..hi` or `lo..=hi`, which is a List<Int> outside a
 // `for` and `[ ]`.
 func (c *checker) rangeExpr(e *ast.Range) Type {
+	if e.Hi == nil {
+		c.value(e.Lo)
+		d := c.errorf(e.OpSp, "this range needs an end")
+		d.Notes = []string{"only a slice, like `xs[2..]`, can leave out the end"}
+		return Invalid
+	}
 	for _, side := range []ast.Expr{e.Lo, e.Hi} {
 		t := c.value(side)
 		if !assignable(t, Int) && !c.nullMismatch(side, t, Int) {
@@ -508,6 +516,9 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		return c.listMethod(e, m, t)
 	case *Map:
 		return c.mapMethod(e, m, t)
+	}
+	if t == String {
+		return c.stringMethod(e, m)
 	}
 	if en, ok := t.(*Enum); ok {
 		sig := en.Methods[name]
