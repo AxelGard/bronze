@@ -3,11 +3,12 @@
 What we still need to decide. When something is settled, it moves into the other docs and is removed here.
 
 ## Implementation
-- Compiled or interpreted? Written in Go? (See [implementation](implementation.md).)
-- Do users need Go installed, or does `bronze` bundle or download it?
+- Later: transpile to Go for native binaries? Then: do users need Go installed, or does `bronze` bundle or download it?
+- Can block comments nest? (0.1.0 says no.)
+- Shadowing: is declaring a name that exists in an outer scope allowed? (0.1.0 says no.)
+- `Int(Float)`: how does it round?
 
 ## Syntax
-- Can block comments be nested?
 - Naming conventions, and how strictly they are enforced
 - Creating objects: `Dog("Rex")`, or `new Dog("Rex")`?
 

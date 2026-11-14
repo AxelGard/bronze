@@ -1,0 +1,2 @@
+error: `user` may be null
+  --> maybe_null.brz:14:11

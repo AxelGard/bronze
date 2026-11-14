@@ -1,0 +1,16 @@
+class User
+{
+    con name = ""
+}
+
+func find(name: String) -> User?
+{
+    return null
+}
+
+func main() -> Int
+{
+    con user = find("ada")
+    print(user.name)
+    return 0
+}

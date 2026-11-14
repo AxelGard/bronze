@@ -1,0 +1,10 @@
+func half(a: Int) -> Float
+{
+    return a / 2.0
+}
+
+func main() -> Int
+{
+    print(half(3))
+    return 0
+}

@@ -1,0 +1,2 @@
+error: match does not cover `Light.Yellow`
+  --> match_missing_case.brz:10:12

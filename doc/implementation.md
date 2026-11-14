@@ -1,38 +1,59 @@
 # Implementation
 
-**Decided:** no VM (JVM, .NET, BEAM), garbage collected, batteries-included standard library.
-**Not decided:** compiled or interpreted, and in which language. This page is the current thinking.
+## Decided
 
-## Leaning: written in Go
+- Bronze is implemented in **Go**, in this repository.
+- It starts as a **tree-walking interpreter**: the program is parsed, checked, and then the syntax tree is run directly. No bytecode, no VM.
+- Bronze uses Go's garbage collector. Bronze values are Go values.
+- Later, if wanted: **transpile to Go** for native single-file binaries. The front end (lexer, parser, checker) is shared, so this stays cheap.
 
-The compiler/interpreter would be written in Go. That gives Bronze:
+## Architecture
 
-| Need | From Go |
+```
+source.brz
+  -> lexer    tokens, each with a position
+  -> parser   ast, with error recovery
+  -> check    names and types; all errors reported before running
+  -> interp   runs the checked ast
+```
+
+| Path | Responsibility |
 |---|---|
-| Garbage collector | Go's GC |
-| Concurrency | Goroutines |
-| Standard library | Wrap Go's: HTTP, JSON, SQL, TLS, crypto, `os/exec` for `shell` |
-| Integrations | Postgres (`pgx`), Redis, AWS, ... the whole Go ecosystem |
-| LSP | Go has LSP libraries, and the LSP shares code with the compiler |
+| `cmd/bronze/` | the CLI: `run`, `check`, `version` |
+| `internal/lexer/` | text to tokens; emits `NEWLINE` tokens by the rules in [spec-0.1](spec-0.1.md) |
+| `internal/ast/` | syntax tree node types, each with a source span |
+| `internal/parser/` | recursive descent + precedence climbing; recovers from errors |
+| `internal/check/` | scopes, name resolution, types; annotates the ast |
+| `internal/interp/` | tree-walking interpreter, panics with Bronze stack traces |
+| `internal/diag/` | positions, spans, diagnostics and their terminal formatting |
+| `tests/run/`, `tests/errors/` | golden tests (see [tests/README.md](../tests/README.md)) |
+| `editors/tree-sitter-bronze/` | (to be created) tree-sitter grammar for Neovim |
 
-### Suggested path
+## Principles
 
-1. Lexer and parser with error recovery and source locations
-2. Name resolution, then a minimal LSP (go to definition, rename)
-3. **Tree-walking interpreter** (no VM: runs the syntax tree directly) until [`core.brz`](../examples/core.brz) runs
-4. Type checker
-5. Standard library by wrapping Go
-6. Later, if wanted: **transpile to Go** for native single-file binaries that can import any Go package, or emit LLVM IR
+- **Every node has a source span.** The LSP (from 0.2) and good error messages depend on it.
+- **Never stop at the first error.** The parser recovers (skips to the next statement or `}`), and the checker keeps going. Error recovery shouldn't produce follow-up noise: an expression with an error gets an "error type" that is silently accepted everywhere.
+- **The checker is the only gatekeeper.** The interpreter assumes a checked program. If the interpreter hits a type problem, that is a bug in the checker (Go `panic`, not a Bronze panic).
+- **Bronze panics are not Go panics.** A Bronze runtime failure (division by zero) is reported as a Bronze panic with a Bronze stack trace and exit code 101. Internal Go panics mean a bug in `bronze`.
+- **Standard Go only** for 0.1.0: no third-party dependencies.
+- Code is formatted with `gofmt` and checked with `go vet`.
+
+## Interpreter notes
+
+- Values: a small Go type per Bronze type (`int64`, `float64`, `bool`, `string`), wrapped in a `Value` interface or tagged struct.
+- Environments: one per block scope, linked to the parent. The checker could resolve each variable to (depth, index) so the interpreter doesn't need map lookups, but maps are fine for 0.1.
+- `return` is implemented by unwinding: statement execution returns a "control" result (normal / return-with-value) rather than using Go panics.
+- The call stack is tracked explicitly (function name + call position) so a Bronze panic can print a Bronze stack trace.
 
 ## Alternatives considered
 
 | Option | Why not (for now) |
 |---|---|
-| LLVM | Native and fast, and can use C libraries (`libpq`) through the C ABI. But it needs its own GC and concurrency runtime, and multiple inheritance with shared diamonds means C++-style virtual inheritance. Months of work before talking to Postgres. |
+| LLVM | Native and fast, and can use C libraries through the C ABI. But it needs its own GC and concurrency runtime, and multiple inheritance with shared diamonds means C++-style virtual inheritance. Months of work before talking to Postgres. |
 | Transpile to C | The same C interop as LLVM with less work, but still its own GC and standard library. |
 | JVM / .NET | Ruled out: no VM. |
 
-## How Bronze maps to Go (if transpiling)
+## How Bronze maps to Go (if transpiling later)
 
 | Bronze | Go |
 |---|---|

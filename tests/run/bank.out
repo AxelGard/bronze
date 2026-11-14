@@ -1,0 +1,18 @@
+Ada: 100 (active)
+Linus: 20 (active)
+could not open account for Grace: the bank is full
+Grace has no account
+moved 30 from Ada to Linus
+transfer failed: insufficient funds: need 450 more
+hint: deposit more first
+transfer failed: no account for Zed
+transfer failed: invalid amount: -5
+transfer failed: Linus's account is frozen
+Ada: 70 (active)
+Linus: 50 (frozen)
+fee for Linus: 25
+Ada
+0
+50
+true
+Frozen

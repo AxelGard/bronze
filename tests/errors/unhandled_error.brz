@@ -1,0 +1,11 @@
+func parse_port(text: String) -> Int ! Error
+{
+    return Error("not a number: " + text)
+}
+
+func main() -> Int
+{
+    con port = parse_port("80")
+    print(port)
+    return 0
+}

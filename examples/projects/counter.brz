@@ -1,0 +1,109 @@
+// counter.brz
+//
+// A first small program for 0.1.0: one class and a few functions.
+// Run it with:  bronze run examples/projects/counter.brz
+
+
+class Counter
+{
+    con name = ""
+    mut count = 0
+    mut step = 1
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+
+    // a second init, with a different number of parameters
+    func init(name: String, step: Int)
+    {
+        this.name = name
+        this.step = step
+    }
+
+    func increment()
+    {
+        this.count = this.count + this.step
+    }
+
+    func reset()
+    {
+        this.count = 0
+    }
+
+    func is_above(limit: Int) -> Bool
+    {
+        return this.count > limit
+    }
+
+    func describe() -> String
+    {
+        return this.name + ": " + String(this.count)
+    }
+}
+
+
+// objects are shared, so this changes the caller's counter
+func count_times(counter: Counter, times: Int)
+{
+    mut i = 0
+    while i < times
+    {
+        counter.increment()
+        i = i + 1
+    }
+}
+
+
+func percent(part: Int, total: Int) -> Float
+{
+    return Float(part) / Float(total) * 100.0
+}
+
+
+func main() -> Int
+{
+    con clicks = Counter("clicks")
+    con points = Counter("points", 10)
+
+    clicks.increment()
+    clicks.increment()
+    print(clicks.describe())
+
+    count_times(points, 3)
+    print(points.describe())
+    print(points.is_above(25))
+
+    points.reset()
+    print(points.describe())
+    print(points.is_above(25))
+
+    // two names, one object
+    con same = clicks
+    same.increment()
+    print(clicks.count)
+    print(clicks == same)
+    print(clicks == points)
+
+    print(percent(clicks.count, 4))
+
+    return 0
+}
+
+
+/*
+    Expected output:
+
+    clicks: 2
+    points: 30
+    true
+    points: 0
+    false
+    3
+    true
+    false
+    75.0
+
+    Exit code: 0
+*/

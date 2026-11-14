@@ -15,7 +15,7 @@ The goal is a language that is **enjoyable to program in**.
 | Typing | **Static** types |
 | Paradigm | **Imperative at heart**, but it should support OOP, DDD-style modelling and a functional style equally well. The language should not force one style. |
 | Memory | **Garbage collected** |
-| Execution | **No VM** like the JVM, .NET or BEAM. Compiled or interpreted is still open, see [implementation](implementation.md). |
+| Execution | **No VM** like the JVM, .NET or BEAM. Implemented in **Go** as a **tree-walking interpreter**, see [implementation](implementation.md). |
 | Performance | Not a priority right now. Exploring ideas comes first. |
 
 ## Guiding principles

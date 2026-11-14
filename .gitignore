@@ -9,3 +9,4 @@ env/
 
 ./src/bronze
 .DS_Store
+/bin/

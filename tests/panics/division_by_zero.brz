@@ -1,0 +1,11 @@
+func divide(a: Int, b: Int) -> Int
+{
+    return a / b
+}
+
+func main() -> Int
+{
+    print(divide(10, 2))
+    print(divide(1, 0))
+    return 0
+}

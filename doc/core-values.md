@@ -19,7 +19,7 @@ What this requires of the compiler:
 What this requires of the language:
 - The syntax should be **easy and unambiguous to parse**, with no constructs whose meaning depends on context.
 
-Order of work: parser, then name resolution, then a basic LSP (go to definition), *before* running code, so Bronze has tooling from the start.
+Order of work: 0.1.0 builds the foundations (source spans everywhere, error recovery, tree-sitter highlighting), and 0.2.0 adds the LSP (go to definition, rename, diagnostics). See [milestones](milestones.md).
 
 ## 2. Easy to share and reuse code
 

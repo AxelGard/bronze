@@ -1,0 +1,305 @@
+// bank.brz
+//
+// A mini project for 0.1.0: a tiny bank with two account slots.
+// Shows classes, enums with methods, match, errors with `else`, `is`,
+// null and narrowing, panic and assert.
+// Run it with:  bronze run examples/projects/bank.brz
+
+
+// ------------------------------------------------------------------
+// Enums
+// ------------------------------------------------------------------
+
+enum Status
+{
+    Active
+    Frozen
+    Closed
+
+    func label() -> String
+    {
+        return match this
+        {
+            Status.Active => "active"
+            Status.Frozen => "frozen"
+            Status.Closed => "closed"
+        }
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+
+class InsufficientFunds use Error
+{
+    con missing = 0
+
+    func init(missing: Int)
+    {
+        this.missing = missing
+        this.message = "insufficient funds: need " + String(missing) + " more"
+    }
+}
+
+
+class InvalidAmount use Error
+{
+    func init(amount: Int)
+    {
+        this.message = "invalid amount: " + String(amount)
+    }
+}
+
+
+class NotActive use Error
+{
+    func init(owner: String, status: Status)
+    {
+        this.message = owner + "'s account is " + status.label()
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Account
+// ------------------------------------------------------------------
+
+class Account
+{
+    con owner = ""
+    mut balance = 0
+    mut status = Status.Active
+
+    func init(owner: String, balance: Int)
+    {
+        this.owner = owner
+        this.balance = balance
+    }
+
+    func ensure_active() -> ! NotActive
+    {
+        if this.status != Status.Active
+        {
+            return NotActive(this.owner, this.status)
+        }
+    }
+
+    func deposit(amount: Int) -> ! Error
+    {
+        if amount <= 0
+        {
+            return InvalidAmount(amount)
+        }
+        this.ensure_active() else return
+        this.balance = this.balance + amount
+    }
+
+    // returns the new balance
+    func withdraw(amount: Int) -> Int ! Error
+    {
+        if amount <= 0
+        {
+            return InvalidAmount(amount)
+        }
+        this.ensure_active() else return
+
+        if amount > this.balance
+        {
+            return InsufficientFunds(amount - this.balance)
+        }
+
+        this.balance = this.balance - amount
+        return this.balance
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Bank
+// ------------------------------------------------------------------
+
+class Bank
+{
+    mut first: Account? = null
+    mut second: Account? = null
+
+    func open(owner: String, balance: Int) -> Account ! Error
+    {
+        con account = Account(owner, balance)
+
+        if this.first == null
+        {
+            this.first = account
+            return account
+        }
+        if this.second == null
+        {
+            this.second = account
+            return account
+        }
+
+        return Error("the bank is full")
+    }
+
+    func find(owner: String) -> Account?
+    {
+        con a = this.first
+        if a != null
+        {
+            if a.owner == owner
+            {
+                return a
+            }
+        }
+
+        con b = this.second
+        if b != null
+        {
+            if b.owner == owner
+            {
+                return b
+            }
+        }
+
+        return null
+    }
+
+    func transfer(from: String, to: String, amount: Int) -> ! Error
+    {
+        con source = this.find(from) else return Error("no account for " + from)
+        con target = this.find(to) else return Error("no account for " + to)
+
+        // check the target first, so money is never taken without arriving
+        target.ensure_active() else return
+        source.withdraw(amount) else return
+        target.deposit(amount) else return
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------------
+
+func show(account: Account)
+{
+    print(account.owner + ": " + String(account.balance) + " (" + account.status.label() + ")")
+}
+
+
+func open_or_report(bank: Bank, owner: String, balance: Int) -> Account?
+{
+    con account = bank.open(owner, balance) else (e)
+    {
+        print("could not open account for " + owner + ": " + e.message)
+        return null
+    }
+    return account
+}
+
+
+func try_transfer(bank: Bank, from: String, to: String, amount: Int)
+{
+    bank.transfer(from, to, amount) else (e)
+    {
+        print("transfer failed: " + e.message)
+        if e is InsufficientFunds
+        {
+            print("hint: deposit more first")
+        }
+        return
+    }
+
+    print("moved " + String(amount) + " from " + from + " to " + to)
+}
+
+
+func fee_for(status: Status) -> Int
+{
+    return match status
+    {
+        Status.Active => 0
+        Status.Frozen => 25
+        Status.Closed => 100
+    }
+}
+
+
+// ------------------------------------------------------------------
+// main
+// ------------------------------------------------------------------
+
+func main() -> Int
+{
+    con bank = Bank()
+
+    con ada = bank.open("Ada", 100) else panic("could not open an account for Ada")
+    con linus = bank.open("Linus", 20) else panic("could not open an account for Linus")
+    show(ada)
+    show(linus)
+
+    // the bank only has two slots
+    con grace = open_or_report(bank, "Grace", 50)
+    if grace == null
+    {
+        print("Grace has no account")
+    }
+
+    try_transfer(bank, "Ada", "Linus", 30)
+    try_transfer(bank, "Linus", "Ada", 500)
+    try_transfer(bank, "Ada", "Zed", 10)
+    try_transfer(bank, "Ada", "Linus", -5)
+
+    linus.status = Status.Frozen
+    try_transfer(bank, "Ada", "Linus", 10)
+
+    show(ada)
+    show(linus)
+    print("fee for Linus: " + String(fee_for(linus.status)))
+
+    // null fallback: Zed doesn't exist, so use Ada
+    con someone = bank.find("Zed") else ada
+    print(someone.owner)
+
+    // error fallbacks
+    con too_much = ada.withdraw(1000) else 0
+    print(too_much)
+
+    con left = ada.withdraw(20) else 0
+    print(left)
+
+    assert(ada.balance == 50, "Ada should have 50 left")
+
+    print(ada.status == Status.Active)
+    print(linus.status)
+
+    return 0
+}
+
+
+/*
+    Expected output:
+
+    Ada: 100 (active)
+    Linus: 20 (active)
+    could not open account for Grace: the bank is full
+    Grace has no account
+    moved 30 from Ada to Linus
+    transfer failed: insufficient funds: need 450 more
+    hint: deposit more first
+    transfer failed: no account for Zed
+    transfer failed: invalid amount: -5
+    transfer failed: Linus's account is frozen
+    Ada: 70 (active)
+    Linus: 50 (frozen)
+    fee for Linus: 25
+    Ada
+    0
+    50
+    true
+    Frozen
+
+    Exit code: 0
+*/

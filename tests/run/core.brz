@@ -1,0 +1,219 @@
+/*
+    core.brz
+
+    The goal for the FIRST Bronze compiler: it should be able to run this file
+    and print exactly the output listed at the bottom.
+
+    Included:
+      - functions, parameters, return types, recursion
+      - con / mut variables
+      - Int, Float, Bool, String
+      - + - * / %   == != < <= > >=   and or not
+      - if / else if / else, while
+      - explicit conversion Float(x)
+      - String + String
+      - print(...) as a built-in
+      - // line comments and block comments
+      - main() -> Int as entry point
+
+    NOT included (later milestones):
+      classes, data classes, namespaces, errors, null, lists,
+      for loops, string interpolation, default parameters, imports, shell
+
+    Everything in this file uses decided syntax (see doc/syntax.md).
+*/
+
+
+/* ------------------------------------------------------------------
+    Functions and arithmetic
+------------------------------------------------------------------ */
+
+func add(a: Int, b: Int) -> Int
+{
+    return a + b
+}
+
+
+func average(a: Int, b: Int) -> Float
+{
+    return Float(a + b) / 2.0
+}
+
+
+func is_even(n: Int) -> Bool
+{
+    return n % 2 == 0
+}
+
+
+/* ------------------------------------------------------------------
+    Control flow
+------------------------------------------------------------------ */
+
+func sign(n: Int) -> String
+{
+    if n < 0
+    {
+        return "negative"
+    }
+    else if n == 0
+    {
+        return "zero"
+    }
+    else
+    {
+        return "positive"
+    }
+}
+
+
+func sum_to(n: Int) -> Int
+{
+    mut total = 0
+    mut i = 1
+
+    while i <= n
+    {
+        total = total + i
+        i = i + 1
+    }
+
+    return total
+}
+
+
+/* ------------------------------------------------------------------
+    Recursion
+------------------------------------------------------------------ */
+
+func factorial(n: Int) -> Int
+{
+    if n <= 1
+    {
+        return 1
+    }
+
+    return n * factorial(n - 1)
+}
+
+
+func fib(n: Int) -> Int
+{
+    if n < 2
+    {
+        return n
+    }
+
+    return fib(n - 1) + fib(n - 2)
+}
+
+
+/* ------------------------------------------------------------------
+    Booleans
+------------------------------------------------------------------ */
+
+func in_range(n: Int, low: Int, high: Int) -> Bool
+{
+    return n >= low and n <= high
+}
+
+
+/* ------------------------------------------------------------------
+    FizzBuzz: loops, if, %, and, strings together
+------------------------------------------------------------------ */
+
+func fizzbuzz(n: Int)
+{
+    mut i = 1
+
+    while i <= n
+    {
+        if i % 3 == 0 and i % 5 == 0
+        {
+            print("FizzBuzz")
+        }
+        else if i % 3 == 0
+        {
+            print("Fizz")
+        }
+        else if i % 5 == 0
+        {
+            print("Buzz")
+        }
+        else
+        {
+            print(i)
+        }
+
+        i = i + 1
+    }
+}
+
+
+/* ------------------------------------------------------------------
+    Entry point
+------------------------------------------------------------------ */
+
+func main() -> Int
+{
+    print("hello, " + "bronze")
+
+    // a few basic values
+    con x = 7
+    con y = 5
+    print(add(x, y))
+    print(average(x, y))
+    print(is_even(x))
+    print(not is_even(x))
+
+    print(sign(-3))
+    print(sign(0))
+    print(sign(4))
+
+    print(sum_to(10))
+    print(factorial(5))
+    print(fib(10))
+
+    print(in_range(5, 1, 10))
+    print(in_range(11, 1, 10) or false)
+
+    fizzbuzz(15)
+
+    return 0
+}
+
+
+/*
+    Expected output:
+
+    hello, bronze
+    12
+    6.0
+    false
+    true
+    negative
+    zero
+    positive
+    55
+    120
+    55
+    true
+    false
+    1
+    2
+    Fizz
+    4
+    Buzz
+    Fizz
+    7
+    8
+    Fizz
+    Buzz
+    11
+    Fizz
+    13
+    14
+    FizzBuzz
+
+    Exit code: 0
+*/

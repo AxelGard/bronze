@@ -1,0 +1,2 @@
+error: `parse_port` can fail, and the error is not handled
+  --> unhandled_error.brz:8:16
