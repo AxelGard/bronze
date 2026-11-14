@@ -1,0 +1,11 @@
+class Account
+{
+    mut balance = 0
+}
+
+func main() -> Int
+{
+    con account = Account()
+    print("account: {account}")
+    return 0
+}

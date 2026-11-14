@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"strings"
 
 	"github.com/AxelGard/bronze/internal/ast"
 	"github.com/AxelGard/bronze/internal/diag"
@@ -532,6 +533,15 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 		return x.Value
 	case *ast.StringLit:
 		return x.Value
+	case *ast.Interp:
+		var b strings.Builder
+		for i, str := range x.Strs {
+			b.WriteString(str)
+			if i < len(x.Exprs) {
+				b.WriteString(Format(in.expr(x.Exprs[i], e)))
+			}
+		}
+		return b.String()
 	case *ast.BoolLit:
 		return x.Value
 	case *ast.NullLit:

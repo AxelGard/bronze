@@ -1,0 +1,27 @@
+==================
+String interpolation
+==================
+
+func f()
+{
+    print("{name} is {ages["Ada"] else 0} \{ }")
+}
+
+---
+
+(source_file
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list)
+    body: (block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (argument_list
+            (string
+              (interpolation (identifier))
+              (interpolation
+                (else_expression
+                  value: (index_expression object: (identifier) index: (string))
+                  (else_handler fallback: (integer))))
+              (escape_sequence))))))))

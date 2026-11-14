@@ -252,6 +252,14 @@ type StringLit struct {
 	Sp    diag.Span
 }
 
+// Interp is a string with interpolations: `"a {x} b"` has Strs "a " and
+// " b", and Exprs x. There is always one more string than expressions.
+type Interp struct {
+	Strs  []string
+	Exprs []Expr
+	Sp    diag.Span
+}
+
 // BoolLit is `true` or `false`.
 type BoolLit struct {
 	Value bool
@@ -420,6 +428,7 @@ func (e *IntLit) Span() diag.Span    { return e.Sp }
 func (e *FloatLit) Span() diag.Span  { return e.Sp }
 func (e *StringLit) Span() diag.Span { return e.Sp }
 func (e *BoolLit) Span() diag.Span   { return e.Sp }
+func (e *Interp) Span() diag.Span    { return e.Sp }
 func (e *Unary) Span() diag.Span     { return e.Sp }
 func (e *NullLit) Span() diag.Span   { return e.Sp }
 func (e *Is) Span() diag.Span        { return e.X.Span().To(e.Class.Sp) }
@@ -448,6 +457,7 @@ func (*IntLit) exprNode()    {}
 func (*FloatLit) exprNode()  {}
 func (*StringLit) exprNode() {}
 func (*BoolLit) exprNode()   {}
+func (*Interp) exprNode()    {}
 func (*Unary) exprNode()     {}
 func (*NullLit) exprNode()   {}
 func (*Is) exprNode()        {}

@@ -14,6 +14,9 @@ const (
 	INT
 	FLOAT
 	STRING
+	STRHEAD  // `"text{`: a string up to its first interpolation
+	STRMID   // `}text{`: between two interpolations
+	STREND   // `}text"`: after the last interpolation
 	RESERVED // a word reserved for a later version, such as `data`
 
 	// operators
@@ -86,6 +89,9 @@ var kindNames = [...]string{
 	INT:      "integer",
 	FLOAT:    "float",
 	STRING:   "string",
+	STRHEAD:  "string",
+	STRMID:   "`}`",
+	STREND:   "`}`",
 	RESERVED: "reserved word",
 	PLUS:     "`+`",
 	MINUS:    "`-`",

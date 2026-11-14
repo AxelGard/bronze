@@ -1,0 +1,2 @@
+error: `ages["Ada"]` may be null
+  --> interpolation_maybe_null.brz:4:20

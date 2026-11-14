@@ -315,7 +315,10 @@ module.exports = grammar({
 
     float: (_) => /\d+(_\d+)*(\.\d+(_\d+)*([eE][+-]?\d+)?|[eE][+-]?\d+)/,
 
-    string: ($) => seq('"', repeat(choice($.escape_sequence, /[^"\\\n]+/)), '"'),
+    string: ($) =>
+      seq('"', repeat(choice($.escape_sequence, $.interpolation, token.immediate(/[^"\\\n{]+/))), '"'),
+
+    interpolation: ($) => seq('{', $._expression, '}'),
 
     escape_sequence: (_) => token.immediate(/\\[nt"\\{]/),
 

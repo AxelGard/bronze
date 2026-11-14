@@ -11,7 +11,7 @@
 
 A `Float` literal needs digits on both sides of the `.`: write `2.0`, not `2.` or `.5`. `_` can separate digits in numbers.
 
-Strings can hold the escapes `\n` (newline), `\t` (tab), `\"`, `\\` and `\{`. A plain `{` in a string is an error for now, since `{` will be used for string interpolation; write `\{` for a literal brace.
+Strings can hold the escapes `\n` (newline), `\t` (tab), `\"`, `\\` and `\{`. A `{` in a string starts an [interpolation](strings.md#interpolation); write `\{` for a literal brace.
 
 ```bronze
 print("one\ttwo")
@@ -149,7 +149,7 @@ Comparisons can't be chained: write `0 < x and x < 10`, not `0 < x < 10`.
 
 ## Printing and converting to text
 
-`print` takes exactly one `Int`, `Float`, `Bool`, `String` or enum value, and prints it on its own line. `String(...)` converts the same values to the text `print` would show:
+`print` takes exactly one `Int`, `Float`, `Bool`, `String` or enum value (or a [list](lists.md) or [map](maps.md) of them), and prints it on its own line. `String(...)` converts the same values to the text `print` would show:
 
 ```bronze
 print(6.0)
@@ -166,6 +166,8 @@ inf
 total: 42
 ok: true
 ```
+
+`{...}` in a string does the same conversion: `"total: {42}"` is `"total: 42"` (see [interpolation](strings.md#interpolation)).
 
 A `Float` always prints with a `.`, in the shortest form that reads back as the same number. Very large and very small numbers use an exponent: `1e+21`, `1.5e-08`. Infinity and NaN print as `inf`, `-inf` and `NaN`.
 

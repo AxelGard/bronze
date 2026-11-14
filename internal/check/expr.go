@@ -49,6 +49,15 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return Float
 	case *ast.StringLit:
 		return String
+	case *ast.Interp:
+		for _, x := range e.Exprs {
+			t := c.value(x)
+			if !silent(t) && !c.mayBeNull(x, t) && !printable(t) {
+				d := c.errorf(x.Span(), "cannot convert %s to String", t)
+				d.Notes = []string{"a value in `{...}` in a string is converted with `String(...)`, which takes Int, Float, Bool, String, enums, and lists and maps of those"}
+			}
+		}
+		return String
 	case *ast.BoolLit:
 		return Bool
 	case *ast.NullLit:

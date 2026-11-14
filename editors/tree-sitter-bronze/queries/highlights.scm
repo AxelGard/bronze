@@ -44,6 +44,7 @@
 (float) @number.float
 (string) @string
 (escape_sequence) @string.escape
+(interpolation ["{" "}"] @punctuation.special)
 (true) @boolean
 (false) @boolean
 (null) @constant.builtin

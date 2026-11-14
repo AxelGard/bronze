@@ -717,7 +717,7 @@ func (p *parser) peekKind(n int) lexer.Kind {
 // canStartExpr reports whether a token can start an expression.
 func canStartExpr(k lexer.Kind) bool {
 	switch k {
-	case lexer.INT, lexer.FLOAT, lexer.STRING, lexer.TRUE, lexer.FALSE, lexer.NULL,
+	case lexer.INT, lexer.FLOAT, lexer.STRING, lexer.STRHEAD, lexer.TRUE, lexer.FALSE, lexer.NULL,
 		lexer.THIS, lexer.IDENT, lexer.LPAREN, lexer.MINUS, lexer.NOT, lexer.MATCH, lexer.LBRACK, lexer.LBRACE:
 		return true
 	}
@@ -1047,6 +1047,41 @@ func (p *parser) mapLit() *ast.MapLit {
 	return m
 }
 
+// interp parses a string with interpolations: STRHEAD expr { STRMID expr }
+// STREND.
+func (p *parser) interp() *ast.Interp {
+	head := p.advance()
+	x := &ast.Interp{Strs: []string{head.Str}}
+	for {
+		if p.at(lexer.STRMID) || p.at(lexer.STREND) {
+			span := p.prev()
+			span.Start = span.End
+			span.Start.Offset--
+			span.Start.Col--
+			span.End = p.tok().Span.Start
+			span.End.Offset++
+			span.End.Col++
+			d := p.diags.Errorf(span, "`{}` in a string needs a value inside")
+			d.Help = []string{"write `\\{}` for a literal `{}`"}
+			panic(bailout{})
+		}
+		x.Exprs = append(x.Exprs, p.expr())
+		t := p.tok()
+		switch t.Kind {
+		case lexer.STRMID:
+			p.advance()
+			x.Strs = append(x.Strs, t.Str)
+		case lexer.STREND:
+			p.advance()
+			x.Strs = append(x.Strs, t.Str)
+			x.Sp = head.Span.To(t.Span)
+			return x
+		default:
+			p.failHere("expected `}` to end the value in the string, found %s", describe(t))
+		}
+	}
+}
+
 func (p *parser) primary() ast.Expr {
 	t := p.tok()
 	switch t.Kind {
@@ -1059,6 +1094,8 @@ func (p *parser) primary() ast.Expr {
 	case lexer.STRING:
 		p.advance()
 		return &ast.StringLit{Value: t.Str, Sp: t.Span}
+	case lexer.STRHEAD:
+		return p.interp()
 	case lexer.TRUE, lexer.FALSE:
 		p.advance()
 		return &ast.BoolLit{Value: t.Kind == lexer.TRUE, Sp: t.Span}

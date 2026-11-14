@@ -99,7 +99,7 @@ func TestErrors(t *testing.T) {
 		col      int
 	}{
 		{`"abc`, "string is not closed", 1},
-		{`x = "a{b}"`, "string interpolation is not supported yet", 7},
+		{"x = \"a{b\n", "this `{` in a string is not closed", 7},
 		{`"\q"`, "unknown escape `\\q` in string", 2},
 		{"a /* b", "block comment is not closed", 3},
 		{"99999999999999999999", "integer literal `99999999999999999999` is too large", 1},
@@ -145,6 +145,32 @@ func TestNoNewlineInBrackets(t *testing.T) {
 	for _, tok := range toks[:len(toks)-2] {
 		if tok.Kind == NEWLINE {
 			t.Fatalf("NEWLINE inside [ ]")
+		}
+	}
+}
+
+func TestInterpolation(t *testing.T) {
+	toks, diags := lex(t, `"a{x}b{ "c{y}" }\{}"`)
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := []struct {
+		kind Kind
+		str  string
+	}{
+		{STRHEAD, "a"}, {IDENT, ""}, {STRMID, "b"}, {STRHEAD, "c"}, {IDENT, ""}, {STREND, ""}, {STREND, "{}"},
+	}
+	for i, w := range want {
+		if toks[i].Kind != w.kind || w.str != "" && toks[i].Str != w.str {
+			t.Errorf("token %d: got %v %q, want %v %q", i, toks[i].Kind, toks[i].Str, w.kind, w.str)
+		}
+	}
+	// A { } inside an interpolation is a map, and doesn't end it.
+	toks, _ = lex(t, `"{ {1: 2} }"`)
+	kinds := []Kind{STRHEAD, LBRACE, INT, COLON, INT, RBRACE, STREND}
+	for i, k := range kinds {
+		if toks[i].Kind != k {
+			t.Errorf("map in interpolation, token %d: got %v, want %v", i, toks[i].Kind, k)
 		}
 	}
 }

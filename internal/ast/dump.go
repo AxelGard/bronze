@@ -161,6 +161,16 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteString(strconv.FormatFloat(n.Value, 'g', -1, 64) + "f")
 	case *StringLit:
 		b.WriteString(strconv.Quote(n.Value))
+	case *Interp:
+		b.WriteString("(interp")
+		for i, str := range n.Strs {
+			fmt.Fprintf(b, " %s", strconv.Quote(str))
+			if i < len(n.Exprs) {
+				b.WriteByte(' ')
+				dump(b, n.Exprs[i])
+			}
+		}
+		b.WriteByte(')')
 	case *BoolLit:
 		b.WriteString(strconv.FormatBool(n.Value))
 	case *Unary:

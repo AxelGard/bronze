@@ -2,6 +2,34 @@
 
 A `String` is UTF-8 text, and can't be changed. Lengths and indexes count characters (Unicode code points), not bytes.
 
+## Interpolation
+
+`{expr}` in a string is replaced by `String(expr)`:
+
+```bronze
+con name = "Ada"
+con nums = [1, 2, 3]
+print("{name} is {36 + 1}")
+print("first: {nums[0] else 0}, all: {nums}")
+print("shouting: {name.to_upper()}")
+```
+
+```text title="Output"
+Ada is 37
+first: 1, all: [1, 2, 3]
+shouting: ADA
+```
+
+Any expression works, as long as `String(...)` takes its type: `Int`, `Float`, `Bool`, `String`, enums, and lists and maps of those. A `T?` must be handled first, as in `{nums[0] else 0}`. The expression may contain strings, with their own interpolations. An interpolation can't span lines, and `{}` with nothing inside is an error. `\{` is a literal `{`, and a `}` on its own is a literal `}`:
+
+```bronze
+print("a set: \{1, 2}")
+```
+
+```text title="Output"
+a set: {1, 2}
+```
+
 ## Indexing and slicing
 
 `s[i]` is the character at `i`, as a one-character `String?`: `null` if `i` is out of range. Negative indexes count from the end. A slice, like `s[1..4]`, works as it does for [lists](lists.md#slicing), and gives a `String`:

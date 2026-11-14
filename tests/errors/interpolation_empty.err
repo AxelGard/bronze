@@ -1,0 +1,2 @@
+error: `{}` in a string needs a value inside
+  --> interpolation_empty.brz:3:19

@@ -18,7 +18,7 @@ A program is one UTF-8 file ending in `.brz`. Its top level holds `func`, `class
 | Punctuation | `( ) { } [ ] , :` |
 | Comments | `// to the end of the line`, `/* a block */` (block comments don't nest) |
 
-A `{` in a string without a `\` is an error, so that string interpolation can be added later without changing what existing programs mean.
+A `{` in a string without a `\` starts an interpolation: `"total: {a + b}"`. It ends at the matching `}` on the same line, and the value inside is converted with `String(...)`. A `}` outside an interpolation is a literal `}`.
 
 ### Keywords
 

@@ -1,0 +1,6 @@
+func main() -> Int
+{
+    con ages = {"Ada": 36}
+    print("Ada is {ages["Ada"]}")
+    return 0
+}

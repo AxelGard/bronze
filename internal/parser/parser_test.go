@@ -59,6 +59,7 @@ func TestStatements(t *testing.T) {
 		{"match x\n{\n1 => {}\n_ => ({})\n}", "(block (match x (1 => (block)) (_ => (paren (map)))))"},
 		{"con a = xs[1..n]\ncon b = xs[..=2]\ncon c = xs[i + 1..]\ncon d = xs[..]\ncon e = s[-3..][0]",
 			"(block (con a (slice.. xs 1 n)) (con b (slice..= xs _ 2)) (con c (slice.. xs (+ i 1) _)) (con d (slice.. xs _ _)) (con e (index (slice.. s (- 3) _) 0)))"},
+		{`con s = "a {x + 1} b {"c"}"`, `(block (con s (interp "a " (+ x 1) " b " "c" "")))`},
 		{"con r = 1 + 1..=n * 2 == xs", "(block (con r (== (..= (+ 1 1) (* n 2)) xs)))"},
 	}
 	for _, tt := range tests {
@@ -173,6 +174,11 @@ func TestErrors(t *testing.T) {
 			"slices",
 			"func f()\n{\n    con a = xs[2..=]\n    con b = xs[..=]\n    con c = xs[1..2\n}",
 			[]string{"3:20 `..=` needs an end", "4:19 `..=` needs an end", "5:15 `[` is not closed"},
+		},
+		{
+			"interpolation",
+			"func f()\n{\n    print(\"empty {}\")\n    print(\"bad {1 2}\")\n}",
+			[]string{"3:18 `{}` in a string needs a value inside", "4:19 expected `}` to end the value in the string, found `2`"},
 		},
 		{
 			"reserved word",

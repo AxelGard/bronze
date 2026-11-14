@@ -24,7 +24,8 @@ type lexer struct {
 	tokens []Token
 	diags  diag.List
 
-	brackets []Kind // open (, [ and {, innermost last
+	brackets []Kind // open (, [ and {, and STRHEAD for an open interpolation, innermost last
+	interps  []int  // the offsets of the `{` of the open interpolations
 	newline  bool   // a newline was seen since the last token
 	nlPos    int    // offset of that newline
 }
@@ -76,6 +77,9 @@ func (l *lexer) run() {
 		}
 		l.next()
 	}
+	if l.inInterp() {
+		l.unclosedInterp()
+	}
 	// End the last statement, then EOF.
 	if len(l.tokens) > 0 && l.tokens[len(l.tokens)-1].Kind != NEWLINE {
 		l.tokens = append(l.tokens, Token{Kind: NEWLINE, Text: "\n", Span: l.span(len(l.text), len(l.text))})
@@ -88,6 +92,9 @@ func (l *lexer) skipSpaceAndComments() {
 		c := l.text[l.pos]
 		switch {
 		case c == '\n':
+			if l.inInterp() {
+				l.unclosedInterp()
+			}
 			if !l.newline {
 				l.newline, l.nlPos = true, l.pos
 			}
@@ -144,6 +151,14 @@ func (l *lexer) next() {
 		return
 	case c == '"':
 		l.string()
+		return
+	}
+
+	if c == '}' && l.inInterp() {
+		l.brackets = l.brackets[:len(l.brackets)-1]
+		l.interps = l.interps[:len(l.interps)-1]
+		l.pos++
+		l.stringPart(start, false)
 		return
 	}
 
@@ -273,11 +288,47 @@ func (l *lexer) number() {
 	l.emit(tok)
 }
 
+// inInterp reports whether the lexer is inside the `{ }` of a string
+// interpolation.
+func (l *lexer) inInterp() bool {
+	n := len(l.brackets)
+	return n > 0 && l.brackets[n-1] == STRHEAD
+}
+
+// unclosedInterp reports an interpolation that reaches the end of the
+// line, and closes it with an ILLEGAL token so that the parser stops
+// quietly.
+func (l *lexer) unclosedInterp() {
+	open := l.interps[len(l.interps)-1]
+	d := l.errorf(open, open+1, "this `{` in a string is not closed")
+	d.Notes = []string{"an interpolation can't span lines"}
+	d.Help = []string{"end it with `}`, or write `\\{` for a literal `{`"}
+	// Drop the brackets opened inside it too.
+	for len(l.brackets) > 0 {
+		k := l.brackets[len(l.brackets)-1]
+		l.brackets = l.brackets[:len(l.brackets)-1]
+		if k == STRHEAD {
+			break
+		}
+	}
+	l.interps = l.interps[:len(l.interps)-1]
+	l.emit(Token{Kind: ILLEGAL, Span: l.span(l.pos, l.pos)})
+}
+
 func (l *lexer) string() {
 	start := l.pos
 	l.pos++ // opening quote
+	l.stringPart(start, true)
+}
+
+// stringPart lexes the text of a string from l.pos, up to its closing `"`
+// or the `{` of an interpolation, and emits it. start is where the token
+// starts: at the opening quote if first, or at the `}` that ends an
+// interpolation.
+func (l *lexer) stringPart(start int, first bool) {
 	var b strings.Builder
 	ok := true
+	interp := false
 	for {
 		if l.pos >= len(l.text) || l.text[l.pos] == '\n' {
 			l.errorf(start, start+1, "string is not closed").Help = []string{"add a `\"` at the end of the string"}
@@ -290,11 +341,9 @@ func (l *lexer) string() {
 			break
 		}
 		if c == '{' {
-			d := l.errorf(l.pos, l.pos+1, "string interpolation is not supported yet")
-			d.Help = []string{"write `\\{` for a literal `{`, or join strings with `+`"}
-			ok = false
+			interp = true
 			l.pos++
-			continue
+			break
 		}
 		if c == '\\' {
 			esc := l.peek(1)
@@ -323,9 +372,22 @@ func (l *lexer) string() {
 		b.WriteRune(r)
 		l.pos += size
 	}
-	tok := Token{Kind: STRING, Text: string(l.text[start:l.pos]), Span: l.span(start, l.pos), Str: b.String()}
+	kind := STRING
+	switch {
+	case first && interp:
+		kind = STRHEAD
+	case interp:
+		kind = STRMID
+	case !first:
+		kind = STREND
+	}
+	tok := Token{Kind: kind, Text: string(l.text[start:l.pos]), Span: l.span(start, l.pos), Str: b.String()}
 	if !ok {
 		tok.Kind = ILLEGAL
 	}
 	l.emit(tok)
+	if interp {
+		l.brackets = append(l.brackets, STRHEAD)
+		l.interps = append(l.interps, l.pos-1)
+	}
 }

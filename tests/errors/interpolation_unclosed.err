@@ -1,0 +1,2 @@
+error: this `{` in a string is not closed
+  --> interpolation_unclosed.brz:4:27
