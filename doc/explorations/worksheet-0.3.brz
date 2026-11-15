@@ -1,0 +1,584 @@
+/*
+    worksheet-0.3.brz: open choices for 0.3.0                [worksheet]
+
+    0.3.0 adds (doc/milestones.md): inheritance, `override`, `super`,
+    interfaces, data classes, `static`, `private`/`protected`, enums with
+    values, and parameter modes (`mut T`, `copy T`). The proof is "domain
+    models".
+
+    Already decided (doc/classes.md, doc/namespaces.md, doc/types.md), not
+    asked again here:
+      - `class Dog use Animal`: inheritance with `use`, like `use Error`
+      - overriding needs `override`
+      - `super(Animal).speak()` and `super(Animal).init(...)`
+      - a parent's `init()` without arguments runs by itself if the child
+        doesn't call `super(Animal).init(...)`
+      - interfaces are taken on with `use` too: `class C use A, Greeter`
+      - `data Money(amount: Int, currency: String)` and the long form
+        `data Wallet { ... }`, with a constructor, `==` by value and
+        printing for free
+      - `static func create() -> Cls`, called as `Cls.create()`
+      - public by default; `private`: only the class; `protected`: the
+        class and its children
+      - `enum Role: String { Admin = "admin" ... }`
+      - multiple inheritance and diamonds come after 1.0 (milestones)
+
+    Fill in each `// CHOICE:` line with a letter (or your own answer).
+    (R) marks the option I'd pick, with the reason.
+*/
+
+
+/* ==================================================================
+    Inheritance
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    1. How many class parents in 0.3?
+
+    The milestones put multiple inheritance after 1.0.
+
+    a) (R) One class parent, plus any number of interfaces:
+           `class Dog use Animal, Named, Printable`. Two classes in `use`
+           is an error for now: "a class can use only one class in 0.3".
+           Nothing to undo later: more parents is only an addition.
+    b)     Allow several now, with "last one wins". Diamonds would also
+           have to work, which is a lot for 0.3.
+------------------------------------------------------------------ */
+
+class Animal
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+
+    func speak() -> String
+    {
+        return "..."
+    }
+}
+
+class Dog use Animal
+{
+    func init(name: String)
+    {
+        super(Animal).init(name)
+    }
+
+    override func speak() -> String
+    {
+        return "Woof"
+    }
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    2. `super`: always name the parent?
+
+    `super(Animal).speak()` is decided, so that it still works with
+    several parents later. With only one parent it is longer than needed.
+
+    a) (R) Only `super(Animal)`. One form, which stays right when
+           multiple inheritance comes.
+    b)     Also plain `super.speak()` when there is one class parent.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    3. Where can `super(Animal).init(...)` be called?
+
+    a) (R) Only as the first statement of an `init`. The parent is then
+           always set up before the child's code runs, and "the parent's
+           `init()` runs by itself if not called" has one clear moment:
+           before the child's `init` body.
+    b)     Anywhere in `init`, at most once. More freedom (compute the
+           arguments first), but the child could use parent fields before
+           the parent's `init` has run.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    4. Order of setting up an object
+
+    For `Dog("Rex")`:
+
+    a) (R) 1. every field gets its initial value, parent's fields first
+           2. Dog's init runs; its first statement may be
+              super(Animal).init(...); if it isn't, Animal's init() runs
+              before Dog's init body
+       Same as 0.1 (field values, then init), with the parent in front.
+    b)     Run each class completely (Animal's fields and init, then
+           Dog's fields and init). Then a Dog field's initial value can't
+           depend on arguments the parent got.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    5. `override` rules
+
+    a) (R) Strict: `override` is required to replace a parent method,
+           `override` on a method that replaces nothing is an error, and
+           the parameter types and the result type must be exactly the
+           parent's. A child can't redeclare a parent's field.
+    b)     Like a), but the result may be a child class of the parent's
+           result (`override func clone() -> Dog` for `-> Animal`).
+           Nicer, but can wait.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    6. `is` and narrowing for all classes
+
+    In 0.1, `x is C` works only for errors, and doesn't narrow.
+
+    a) (R) `x is C` works for any class or interface C that x could be,
+           and narrows like `!= null` does: inside `if pet is Dog { ... }`,
+           a `con` or parameter `pet` is a `Dog`. `x is C` where x can
+           never be a C is an error.
+    b)     `is` for any class, but no narrowing (cast some other way).
+    c)     Keep `is` for errors only.
+------------------------------------------------------------------ */
+
+func describe(pet: Animal) -> String
+{
+    if pet is Dog
+    {
+        return pet.fetch()                 // a): pet is a Dog here
+    }
+    return pet.speak()
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    7. Abstract methods and `final`
+
+    a) (R) Neither in 0.3. Interfaces cover "must have this method".
+    b)     `abstract func area() -> Float` without a body, and abstract
+           classes that can't be created.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ==================================================================
+    Interfaces
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    8. Declaring an interface
+
+    a) (R) Method signatures only, no bodies and no fields:
+
+               interface Shape
+               {
+                   func area() -> Float
+                   func name() -> String
+               }
+
+           A class that uses it must have each method, with the same
+           types (its own, or inherited). It doesn't write `override`
+           for them.
+    b)     Like a), and methods may have a default body.
+    c)     Like b), and fields too.
+------------------------------------------------------------------ */
+
+interface Shape
+{
+    func area() -> Float
+    func name() -> String
+}
+
+class Square use Shape
+{
+    con side = 0.0
+
+    func init(side: Float)
+    {
+        this.side = side
+    }
+
+    func area() -> Float
+    {
+        return this.side * this.side
+    }
+
+    func name() -> String
+    {
+        return "square"
+    }
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    9. Does a class need `use Shape`, or is having the methods enough?
+
+    a) (R) It needs `use Shape` (nominal). The intent is written down,
+           and a missing method is an error at the class, not at some
+           far call site.
+    b)     Having the methods is enough (structural, like Go).
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    10. Can an interface use other interfaces?
+
+    a) (R) Yes: `interface Solid use Shape { func volume() -> Float }`.
+           A class that uses Solid must have both sets of methods, and
+           is also a Shape.
+    b)     Not in 0.3.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ==================================================================
+    Data classes
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    11. The long form: which fields go in the constructor?
+
+    a) (R) The fields without an initial value, in the order they are
+           written. Fields with a value keep it. No `init` of your own.
+
+               data Wallet
+               {
+                   mut amount: Int
+                   con currency: String
+                   mut history: List<Int> = []
+               }
+
+               Wallet(100, "EUR")
+
+    b)     Every field, in order. Initial values are defaults (but
+           default parameters aren't designed yet).
+------------------------------------------------------------------ */
+
+data Money(amount: Int, currency: String)
+
+data Wallet
+{
+    mut amount: Int
+    con currency: String
+    mut history: List<Int> = []
+
+    func is_empty() -> Bool
+    {
+        return this.amount == 0
+    }
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    12. How does a data class print?
+
+    a) (R) `Money(amount: 5, currency: "EUR")`: names and values, with
+           Strings quoted like inside a list. Clear in logs.
+    b)     `Money(5, "EUR")`: like the constructor call.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    13. What can a data class `use`?
+
+    a) (R) Interfaces and `Error`, but not other classes. So errors can be
+           short: `data NotFound(id: Int) use Error`, and its `message`
+           comes from Error.
+    b)     Only interfaces (errors stay classes).
+    c)     Anything a class can use.
+------------------------------------------------------------------ */
+
+data NotFound(id: Int) use Error
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    14. Data classes as map keys
+
+    a) (R) A data class whose fields are all `con` and themselves valid
+           keys (Int, String, Bool, enums, such data classes) can be a map
+           key. One with a `mut` field can't, since changing it would
+           lose the entry.
+    b)     Not as keys in 0.3.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    15. Copy with changes: `m.with(amount: 750)`
+
+    It needs named arguments, which aren't designed yet.
+
+    a) (R) Later.
+    b)     In 0.3, with named arguments only for `with`.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ==================================================================
+    static, private, protected
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    16. Static fields?
+
+    a) (R) Only `static func` in 0.3. Constants belong to namespaces
+           (0.5), and shared mutable state is better avoided.
+    b)     Also `static con` and `static mut` fields.
+------------------------------------------------------------------ */
+
+class Temperature
+{
+    con celsius = 0.0
+
+    func init(celsius: Float)
+    {
+        this.celsius = celsius
+    }
+
+    static func from_fahrenheit(f: Float) -> Temperature
+    {
+        return Temperature((f - 32.0) * 5.0 / 9.0)
+    }
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    17. Are static methods inherited?
+
+    a) (R) No: `Dog.create()` only exists if Dog declares it. A static
+           method has no `this`, so inheriting it mostly causes surprises
+           (it would still create an Animal).
+    b)     Yes, callable as `Dog.create()`.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    18. `private` before namespaces
+
+    Namespaces come in 0.5, and a program is one file until then.
+
+    a) (R) In 0.3, `private` and `protected` only go on fields and
+           methods. `private func` at the top level is an error until
+           namespaces exist ("private is for class members in 0.3").
+    b)     Allow it on top-level functions too, meaning "this file", which
+           does nothing until 0.5.
+------------------------------------------------------------------ */
+
+class Account
+{
+    mut balance = 0
+    private mut pin = ""
+
+    protected func fee() -> Int
+    {
+        return 1
+    }
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    19. Can a child see its parent's `private` members?
+
+    a) (R) No. `private` is only the class itself; `protected` is for
+           children. Otherwise the two would be the same.
+    b)     Yes.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    20. Can another object of the same class use private members?
+
+    a) (R) Yes: inside Account's methods, `other.pin` works for any
+           Account `other` (like Java, C#, Go). Needed for `equals`-style
+           methods.
+    b)     No, only through `this`.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ==================================================================
+    Enums with values
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    21. Which value types?
+
+    a) (R) `Int` and `String`, the useful ones for databases and JSON.
+    b)     Any type that can be a literal: Int, Float, Bool, String.
+------------------------------------------------------------------ */
+
+enum Role: String
+{
+    Admin = "admin"
+    Member = "member"
+}
+
+enum Priority: Int
+{
+    Low = 1
+    Normal = 5
+    High = 10
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    22. Must every case have a value?
+
+    a) (R) Yes, written out. No automatic numbering: values usually
+           end up stored somewhere, so they should be visible and not
+           change when a case is added in the middle. Two cases with the
+           same value is an error.
+    b)     For `Int`, missing values count up from the one before (or 0).
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    23. Getting the value, and back
+
+    a) (R) `r.value` gives the value (a String for Role). The other way,
+           `Role.from("admin")` gives a `Role?`: null if no case has that
+           value. `print(r)` still shows the case name, `Admin`.
+    b)     `String(r)` gives the value instead of the name, and
+           `Role("admin")` converts back.
+------------------------------------------------------------------ */
+
+func parse_role(s: String) -> Role
+{
+    return Role.from(s) else Role.Member
+}
+
+// CHOICE:
+
+
+/* ==================================================================
+    Parameter modes
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    24. `mut T` and `copy T` in 0.3?
+
+    doc/explorations/references.brz tries out: a plain parameter is read
+    only, `a: mut T` may change the caller's object, `a: copy T` gets
+    its own copy, and `mut func` marks methods that change `this`.
+
+    This changes the meaning of 0.2 programs: today a plain List
+    parameter can be appended to. Under a), `insertion_sort(xs:
+    List<Int>)` in examples/algorithms.brz must become `xs: mut
+    List<Int>`, and every method that sets a field must become a
+    `mut func`.
+
+    a)     As designed, now: read-only by default, with `mut T`, `copy T`
+           and `mut func`. The checker enforces it. 0.2 programs that
+           change a parameter need `mut` added (the error says where).
+    b) (R) Only `copy T` in 0.3, and decide read-only-by-default
+           separately, after trying it on domain models. `copy` is useful
+           on its own and breaks nothing. Read-only by default touches
+           every signature, so it should be a decision of its own.
+    c)     Neither in 0.3; move parameter modes to 0.4.
+------------------------------------------------------------------ */
+
+func deposit(a: mut Account, amount: Int)
+{
+    a.balance += amount
+}
+
+func preview(a: copy Account) -> Int
+{
+    a.balance += 100                       // only the copy changes
+    return a.balance
+}
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    25. If `copy T` comes in 0.3: shallow or deep?
+
+    a) (R) Deep for lists, maps and data classes (all the way down), and
+           an error for plain classes: "a class can't be copied; use a
+           data class". A plain class may hold things like connections,
+           and copying those silently would be wrong.
+    b)     Shallow: a new object, but the fields still point to the same
+           lists and objects.
+    c)     Deep for everything.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ------------------------------------------------------------------
+    26. If read-only by default (24 a): mark `mut` at the call too?
+
+    a)     Yes: `deposit(mut acc, 100)`. Changes are visible where they
+           happen.
+    b) (R) No: the signature says it, and the LSP can show it.
+------------------------------------------------------------------ */
+
+// CHOICE:
+
+
+/* ==================================================================
+    Proof
+   ================================================================== */
+
+
+/* ------------------------------------------------------------------
+    27. The proof program
+
+    The milestone says "domain models".
+
+    a) (R) `examples/projects/shop.brz`: a small shop with data classes
+           (Money, LineItem), an interface (Discount) with two classes,
+           an Order class with private fields and a static constructor,
+           a child class (VipCustomer use Customer) with override and
+           super, and an enum with values (Status: String). Plus
+           core/counter/bank/algorithms/words still run.
+    b)     Your own idea.
+------------------------------------------------------------------ */
+
+// CHOICE:

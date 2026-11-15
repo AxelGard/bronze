@@ -27,6 +27,8 @@ Programs that run with `bronze run`. Each has its expected output at the bottom.
 | [`core.brz`](../examples/core.brz) | Functions, variables, control flow |
 | [`projects/counter.brz`](../examples/projects/counter.brz) | A simple class |
 | [`projects/bank.brz`](../examples/projects/bank.brz) | Classes, enums, match, errors, null |
+| [`algorithms.brz`](../examples/algorithms.brz) | Sorting, searching, primes: lists, ranges, `for` |
+| [`projects/words.brz`](../examples/projects/words.brz) | Counting words: maps, string methods, interpolation |
 
 ## Explorations
 
@@ -34,6 +36,7 @@ Design files in [`explorations/`](explorations/): options side by side, workshee
 
 | File | Shows |
 |---|---|
+| [`worksheet-0.3.brz`](explorations/worksheet-0.3.brz) | Worksheet: the choices for 0.3.0 (open) |
 | [`worksheet-0.2.brz`](explorations/worksheet-0.2.brz) | Worksheet: the choices for 0.2.0 (answered; see spec-0.2) |
 | [`basics.brz`](explorations/basics.brz) | Worksheet: 24 basic topics to decide |
 | [`basic.brz`](explorations/basic.brz) | Classes, multiple inheritance, diamonds, `super(A)`, `static` |
