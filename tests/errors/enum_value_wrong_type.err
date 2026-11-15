@@ -1,0 +1,2 @@
+error: the values of `Role` are String, but this is Int
+  --> enum_value_wrong_type.brz:3:13

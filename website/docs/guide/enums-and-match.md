@@ -39,6 +39,54 @@ status: Frozen
 - Inside a method, `this` is the current case.
 - `==` and `!=` compare cases. `print` and `String(...)` give the case name.
 
+## Enums with values
+
+An enum can give each case a value, an `Int` or a `String`, for storing a case or sending it somewhere, as in a database or JSON:
+
+```bronze
+enum Role: String
+{
+    Admin = "admin"
+    Member = "member"
+}
+
+enum Priority: Int
+{
+    Low = 1
+    Normal = 5
+    High = 10
+}
+
+func parse_role(s: String) -> Role
+{
+    return Role.from(s) else Role.Member
+}
+
+func main() -> Int
+{
+    con r = Role.Admin
+    print(r)
+    print(r.value)
+    print(parse_role("admin"))
+    print(parse_role("nobody"))
+    print(Priority.High.value - Priority.Low.value)
+    return 0
+}
+```
+
+```text title="Output"
+Admin
+admin
+Admin
+Member
+9
+```
+
+- The value type comes after the name: `enum Role: String`. It is `Int` or `String`.
+- Every case has a value, written out as a literal. Two cases can't have the same value.
+- `r.value` gives the value. `Role.from(x)` gives the case with that value as a `Role?`, or `null` if there is none.
+- `print` and `String(...)` still give the case name, and `match` and `==` work on cases as before.
+
 ## match
 
 `match` picks a value by comparing against each pattern in turn:

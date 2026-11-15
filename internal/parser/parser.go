@@ -311,6 +311,10 @@ func (p *parser) member(c *ast.ClassDecl) {
 func (p *parser) enumDecl() *ast.EnumDecl {
 	start := p.expect(lexer.ENUM).Span
 	e := &ast.EnumDecl{Name: p.ident()}
+	if p.at(lexer.COLON) {
+		p.advance()
+		e.Type = p.typeExpr()
+	}
 	p.skipNewlines()
 	p.expect(lexer.LBRACE)
 	p.skipNewlines()
@@ -346,6 +350,12 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 	switch p.kind() {
 	case lexer.IDENT, lexer.RESERVED:
 		e.Cases = append(e.Cases, p.ident())
+		var value ast.Expr
+		if p.at(lexer.ASSIGN) {
+			p.advance()
+			value = p.expr()
+		}
+		e.Values = append(e.Values, value)
 		p.endOfLine("case")
 	case lexer.FUNC:
 		e.Methods = append(e.Methods, p.funcDecl())

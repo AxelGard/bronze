@@ -1,0 +1,9 @@
+enum Role: String
+{
+    Admin = 1
+}
+
+func main() -> Int
+{
+    return 0
+}

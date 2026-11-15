@@ -1,0 +1,40 @@
+enum Role: String
+{
+    Admin = "admin"
+    Member = "member"
+
+    func can_delete() -> Bool
+    {
+        return this == Role.Admin
+    }
+}
+
+enum Priority: Int
+{
+    Low = -1
+    Normal = 5
+    High = 10
+}
+
+func parse_role(s: String) -> Role
+{
+    return Role.from(s) else Role.Member
+}
+
+func main() -> Int
+{
+    con r = Role.Admin
+    print(r)
+    print(r.value)
+    print(r.can_delete())
+    print(parse_role("admin"))
+    print(parse_role("nobody"))
+    print(Priority.Low.value + Priority.High.value)
+    con p = Priority.from(5) else Priority.Low
+    print("{p} = {p.value}")
+    con missing = Priority.from(7)
+    print(missing == null)
+    con roles: Map<Role, Int> = {Role.Admin: 1}
+    print(roles)
+    return 0
+}

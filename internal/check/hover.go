@@ -110,8 +110,11 @@ func (c *checker) setHovers() {
 	}
 	for _, en := range c.enums {
 		en.Sym.Hover = "enum " + en.Name
+		if en.Value != nil {
+			en.Sym.Hover += ": " + en.Value.String()
+		}
 		for name, sym := range en.CaseSym {
-			sym.Hover = en.Name + "." + name
+			sym.Hover = caseHover(en, name)
 		}
 		for _, sig := range en.Methods {
 			if sig.sym != nil {
@@ -120,6 +123,18 @@ func (c *checker) setHovers() {
 			}
 		}
 	}
+}
+
+// caseHover is the hover text of an enum case: `Status.Frozen`, or
+// `Role.Admin = "admin"`.
+func caseHover(en *Enum, name string) string {
+	s := en.Name + "." + name
+	if i, ok := en.Cases[name]; ok && en.Value != nil && i < len(en.Decl.Values) && en.Decl.Values[i] != nil {
+		if text, t := literalValue(en.Decl.Values[i]); t != nil {
+			s += " = " + text
+		}
+	}
+	return s
 }
 
 // builtinFuncHovers are the signatures and descriptions of the built-in

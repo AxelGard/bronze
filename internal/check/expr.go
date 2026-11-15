@@ -156,10 +156,21 @@ func (c *checker) this(e *ast.This) Type {
 // fieldOf checks x.name and returns the field it refers to and its class,
 // or nil after reporting an error.
 func (c *checker) fieldOf(m *ast.Member) (*Field, *Class) {
-	t := c.value(m.X)
-	if c.mayBeNull(m.X, t) {
+	return c.fieldOfType(m, c.receiver(m.X))
+}
+
+// receiver checks x, which a field or method is used on, and returns its
+// type, without its `?` after reporting that it may be null.
+func (c *checker) receiver(x ast.Expr) Type {
+	t := c.value(x)
+	if c.mayBeNull(x, t) {
 		t = t.(*Optional).Inner
 	}
+	return t
+}
+
+// fieldOfType is fieldOf, with the type of m.X already checked.
+func (c *checker) fieldOfType(m *ast.Member, t Type) (*Field, *Class) {
 	cls, ok := t.(*Class)
 	if !ok {
 		if !silent(t) {
@@ -188,7 +199,11 @@ func (c *checker) member(m *ast.Member) Type {
 		c.ref(m.X.(*ast.Ident), en.Sym)
 		return c.enumCase(m, en)
 	}
-	f, _ := c.fieldOf(m)
+	t := c.receiver(m.X)
+	if en, ok := t.(*Enum); ok {
+		return c.enumValue(m, en)
+	}
+	f, _ := c.fieldOfType(m, t)
 	if f == nil {
 		return Invalid
 	}
@@ -524,11 +539,12 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		c.completeMember(m.X)
 		return Invalid
 	}
-	t := c.value(m.X)
-	name := m.Name.Name
-	if c.mayBeNull(m.X, t) {
-		t = t.(*Optional).Inner
+	if en := c.enumName(m.X); en != nil {
+		c.ref(m.X.(*ast.Ident), en.Sym)
+		return c.enumFrom(e, m, en)
 	}
+	t := c.receiver(m.X)
+	name := m.Name.Name
 	switch t := t.(type) {
 	case *List:
 		return c.listMethod(e, m, t)

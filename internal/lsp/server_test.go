@@ -299,6 +299,18 @@ func top_up(a: mut Account, by: Int)
     a.balance += by
 }
 
+enum Role: String
+{
+    Admin = "admin"
+}
+
+func role_of(s: String) -> Role
+{
+    con r = Role.from(s) else Role.Admin
+    print(r.value)
+    return r
+}
+
 func main() -> Int
 {
     con account = Account()
@@ -330,6 +342,10 @@ func main() -> Int
 		{"withdraw", 2, "mut func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
 		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
 		{"a.balance", 1, "a: mut Account", ""},
+		{"Role", 1, "enum Role: String", ""},
+		{"Admin", 1, "Role.Admin = \"admin\"", ""},
+		{"from", 1, "func from(value: String) -> Role?", "in `Role`"},
+		{"value", 1, "con value: String", "in `Role`"},
 		{"Account", 2, "class Account", ""},
 		{"Status", 2, "enum Status", ""},
 		{"Frozen", 2, "Status.Frozen", ""},

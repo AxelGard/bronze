@@ -1,0 +1,10 @@
+enum Role: String
+{
+    Admin = "admin"
+    Member
+}
+
+func main() -> Int
+{
+    return 0
+}

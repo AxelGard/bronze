@@ -78,8 +78,17 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(')')
 	case *EnumDecl:
 		fmt.Fprintf(b, "(enum %s", n.Name.Name)
-		for _, c := range n.Cases {
-			fmt.Fprintf(b, " %s", c.Name)
+		if n.Type != nil {
+			fmt.Fprintf(b, ": %s", typeString(n.Type))
+		}
+		for i, c := range n.Cases {
+			if i < len(n.Values) && n.Values[i] != nil {
+				fmt.Fprintf(b, " (%s ", c.Name)
+				dump(b, n.Values[i])
+				b.WriteByte(')')
+			} else {
+				fmt.Fprintf(b, " %s", c.Name)
+			}
 		}
 		for _, m := range n.Methods {
 			b.WriteByte(' ')

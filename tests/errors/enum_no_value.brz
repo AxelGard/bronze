@@ -1,0 +1,10 @@
+enum Status
+{
+    Active
+}
+
+func main() -> Int
+{
+    print(Status.Active.value)
+    return 0
+}

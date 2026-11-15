@@ -90,10 +90,13 @@ type Field struct {
 	Sp    diag.Span
 }
 
-// EnumDecl is `enum Name { cases and methods }`.
+// EnumDecl is `enum Name { cases and methods }`, or `enum Name: String {
+// Case = "value" ... }` for an enum with values.
 type EnumDecl struct {
 	Name    *Ident
+	Type    *TypeExpr // the value type, or nil
 	Cases   []*Ident
+	Values  []Expr // the value of each case, or nil for a case without one
 	Methods []*FuncDecl
 	Bad     bool // some member had a syntax error
 	Sp      diag.Span

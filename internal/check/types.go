@@ -184,6 +184,7 @@ type Enum struct {
 	Name    string
 	Decl    *ast.EnumDecl
 	Cases   map[string]int // case name to its position
+	Value   Type           // Int or String for an enum with values; nil otherwise
 	Methods map[string]*funcSig
 	Sym     *Symbol
 	CaseSym map[string]*Symbol

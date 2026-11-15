@@ -1,0 +1,9 @@
+enum Role
+{
+    Admin = "admin"
+}
+
+func main() -> Int
+{
+    return 0
+}

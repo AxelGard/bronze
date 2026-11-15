@@ -13,7 +13,7 @@
 (is_expression class: (identifier) @type)
 
 ; enum cases: `Status.Active` and in patterns
-(enum_case (identifier) @constant)
+(enum_case name: (identifier) @constant)
 (pattern enum: (identifier) @type case: (identifier) @constant)
 ((member_expression
   object: (identifier) @type

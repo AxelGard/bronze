@@ -373,6 +373,7 @@ func (c *checker) classMembers(cls *Class) {
 // enumMembers records the cases and methods of an enum.
 func (c *checker) enumMembers(en *Enum) {
 	d := en.Decl
+	c.enumValues(en)
 	for i, cs := range d.Cases {
 		if prev, ok := en.Cases[cs.Name]; ok {
 			c.errorf(cs.Sp, "`%s` already has a case `%s`", en.Name, cs.Name).Notes = []string{
@@ -392,6 +393,11 @@ func (c *checker) enumMembers(en *Enum) {
 		}
 		if _, ok := en.Cases[name]; ok {
 			c.errorf(m.Name.Sp, "`%s` already has a case `%s`; a method can't have the same name", en.Name, name)
+			continue
+		}
+		if en.Value != nil && (name == "value" || name == "from") {
+			d := c.errorf(m.Name.Sp, "an enum with values can't have a method `%s`", name)
+			d.Notes = []string{fmt.Sprintf("`%s` is built in: %s", name, enumBuiltinNote(en, name))}
 			continue
 		}
 		if prev, ok := en.Methods[name]; ok {

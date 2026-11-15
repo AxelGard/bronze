@@ -1,0 +1,2 @@
+error: an enum with values can't have a method `from`
+  --> enum_method_named_from.brz:5:10

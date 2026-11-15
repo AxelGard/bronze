@@ -1,0 +1,43 @@
+==================
+Enums with values
+==================
+
+enum Priority: Int
+{
+    Low = -1
+    High = 10
+}
+
+func f() -> Int
+{
+    return Priority.High.value
+}
+
+---
+
+(source_file
+  (enum_declaration
+    (identifier)
+    (type
+      (identifier))
+    (enum_body
+      (enum_case
+        (identifier)
+        (unary_expression
+          (integer)))
+      (enum_case
+        (identifier)
+        (integer))))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (return_type
+      (type
+        (identifier)))
+    (block
+      (return_statement
+        (member_expression
+          (member_expression
+            (identifier)
+            (identifier))
+          (identifier))))))

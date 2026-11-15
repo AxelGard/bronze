@@ -124,7 +124,10 @@ func (c *checker) completeMember(x ast.Expr) {
 	c.complete.Found = true
 	if en := c.enumName(x); en != nil {
 		for _, cs := range en.Decl.Cases {
-			c.complete.Items = append(c.complete.Items, Completion{Label: cs.Name, Kind: CompleteCase, Detail: en.Name + "." + cs.Name})
+			c.complete.Items = append(c.complete.Items, Completion{Label: cs.Name, Kind: CompleteCase, Detail: caseHover(en, cs.Name)})
+		}
+		if en.Value != nil {
+			c.complete.Items = append(c.complete.Items, Completion{Label: "from", Kind: CompleteMethod, Detail: fromMethod(en).Signature()})
 		}
 		return
 	}
@@ -153,6 +156,9 @@ func (c *checker) completeMember(x ast.Expr) {
 			items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
 		}
 	case *Enum:
+		if t.Value != nil {
+			items = append(items, Completion{Label: "value", Kind: CompleteField, Detail: valueSym(t).Hover})
+		}
 		for _, n := range sortedKeys(t.Methods) {
 			items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
 		}

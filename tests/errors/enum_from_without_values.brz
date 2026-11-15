@@ -1,0 +1,10 @@
+enum Status
+{
+    Active
+}
+
+func main() -> Int
+{
+    con s = Status.from("Active")
+    return 0
+}

@@ -58,8 +58,9 @@ const (
 // Case is one case of an enum. There is one *Case per case, so `==`
 // compares cases.
 type Case struct {
-	Enum *ast.EnumDecl
-	Name string
+	Enum  *ast.EnumDecl
+	Name  string
+	Value Value // an int64 or string, for an enum with values; nil otherwise
 }
 
 // Object is an object of a class. Objects are shared: a Value holding an
@@ -147,8 +148,13 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 			in.classes[d.Name.Name] = cls
 		case *ast.EnumDecl:
 			en := &enum{cases: map[string]*Case{}, methods: map[string]*ast.FuncDecl{}}
-			for _, c := range d.Cases {
-				en.cases[c.Name] = &Case{Enum: d, Name: c.Name}
+			for i, c := range d.Cases {
+				cs := &Case{Enum: d, Name: c.Name}
+				if i < len(d.Values) && d.Values[i] != nil {
+					cs.Value = literal(d.Values[i])
+				}
+				en.cases[c.Name] = cs
+				en.order = append(en.order, cs)
 			}
 			for _, m := range d.Methods {
 				en.methods[m.Name.Name] = m
@@ -185,7 +191,32 @@ type interp struct {
 
 type enum struct {
 	cases   map[string]*Case
+	order   []*Case // the cases in the order they are declared
 	methods map[string]*ast.FuncDecl
+}
+
+// from returns the case with value v, or nil.
+func (en *enum) from(v Value) Value {
+	for _, cs := range en.order {
+		if cs.Value == v {
+			return cs
+		}
+	}
+	return nil
+}
+
+// literal returns the value of an enum case's value: an Int literal, maybe
+// negative, or a String literal.
+func literal(x ast.Expr) Value {
+	switch x := x.(type) {
+	case *ast.IntLit:
+		return x.Value
+	case *ast.Unary:
+		return -x.X.(*ast.IntLit).Value
+	case *ast.StringLit:
+		return x.Value
+	}
+	panic("interp: an enum value that is not a literal")
 }
 
 type class struct {
@@ -563,7 +594,13 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 				return en.cases[x.Name.Name]
 			}
 		}
-		return in.expr(x.X, e).(*Object).Fields[x.Name.Name]
+		switch v := in.expr(x.X, e).(type) {
+		case *Case:
+			return v.Value // `.value`, the only field of an enum case
+		case *Object:
+			return v.Fields[x.Name.Name]
+		}
+		panic("interp: field of a value that has none")
 	case *ast.Match:
 		return in.match(x, e)
 	case *ast.Unary:
@@ -702,6 +739,11 @@ func (in *interp) args(x *ast.Call, e *env) []Value {
 
 func (in *interp) callExpr(x *ast.Call, e *env) Value {
 	if m, ok := x.Fn.(*ast.Member); ok {
+		if id, ok := m.X.(*ast.Ident); ok {
+			if en, ok := in.enums[id.Name]; ok {
+				return en.from(in.expr(x.Args[0], e)) // `Role.from(x)`, the only call on an enum
+			}
+		}
 		recv := in.expr(m.X, e)
 		args := in.args(x, e)
 		switch recv := recv.(type) {

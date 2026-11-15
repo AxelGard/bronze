@@ -1,0 +1,2 @@
+error: case `Member` needs a value, since `Role` is an enum of String
+  --> enum_missing_value.brz:4:5

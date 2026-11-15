@@ -350,3 +350,15 @@ func TestModes(t *testing.T) {
 		t.Errorf("param spans: %+v %+v", p.Sp, p.MutSp)
 	}
 }
+
+func TestEnumValues(t *testing.T) {
+	f, diags := parse(t, "enum Priority: Int\n{\n    Low = -1\n    High = 10\n\n    func up() -> Priority\n    {\n        return Priority.High\n    }\n}\n\nenum Role: String\n{\n    Admin = \"admin\"\n}\n")
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := "(enum Priority: Int (Low (- 1)) (High 10) (func up -> Priority (block (return (. Priority High)))))\n" +
+		"(enum Role: String (Admin \"admin\"))"
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}

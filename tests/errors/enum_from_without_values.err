@@ -1,0 +1,2 @@
+error: `Status` has no values, so it has no `from`
+  --> enum_from_without_values.brz:8:20

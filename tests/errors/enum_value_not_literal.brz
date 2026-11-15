@@ -1,0 +1,9 @@
+enum Priority: Int
+{
+    Low = 1 + 1
+}
+
+func main() -> Int
+{
+    return 0
+}

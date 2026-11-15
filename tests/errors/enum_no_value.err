@@ -1,0 +1,2 @@
+error: `Status` has no values, so its cases have no `value`
+  --> enum_no_value.brz:8:25

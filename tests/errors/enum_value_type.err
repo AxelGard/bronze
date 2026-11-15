@@ -1,0 +1,2 @@
+error: an enum's values can be Int or String, not Float
+  --> enum_value_type.brz:1:12

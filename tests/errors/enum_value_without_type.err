@@ -1,0 +1,2 @@
+error: `Role` has no value type, so its cases can't have values
+  --> enum_value_without_type.brz:3:13

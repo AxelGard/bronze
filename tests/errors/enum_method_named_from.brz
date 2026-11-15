@@ -1,0 +1,14 @@
+enum Role: String
+{
+    Admin = "admin"
+
+    func from() -> Role
+    {
+        return Role.Admin
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

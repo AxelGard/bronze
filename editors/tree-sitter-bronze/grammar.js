@@ -97,12 +97,19 @@ module.exports = grammar({
       ),
 
     enum_declaration: ($) =>
-      seq('enum', field('name', $.identifier), field('body', $.enum_body)),
+      seq(
+        'enum',
+        field('name', $.identifier),
+        optional(seq(':', field('type', $.type))),
+        field('body', $.enum_body),
+      ),
 
     enum_body: ($) =>
       seq('{', repeat(choice($.enum_case, $.function_declaration)), '}'),
 
-    enum_case: ($) => $.identifier,
+    // `Admin = "admin"` in an enum with values.
+    enum_case: ($) =>
+      seq(field('name', $.identifier), optional(seq('=', field('value', $._expression)))),
 
     // ------------------------------------------------------------------
     // Statements

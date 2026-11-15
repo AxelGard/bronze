@@ -1,0 +1,2 @@
+error: argument `value` of `from` must be String, found Int
+  --> enum_from_arg_type.brz:8:23

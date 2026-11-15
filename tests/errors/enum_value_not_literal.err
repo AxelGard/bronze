@@ -1,0 +1,2 @@
+error: an enum value must be written as a literal, like 1
+  --> enum_value_not_literal.brz:3:11

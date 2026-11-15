@@ -1,0 +1,10 @@
+enum Role: String
+{
+    Admin = "admin"
+}
+
+func main() -> Int
+{
+    con r = Role.from(1) else Role.Admin
+    return 0
+}

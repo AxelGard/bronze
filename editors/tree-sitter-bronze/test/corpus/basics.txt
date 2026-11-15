@@ -81,8 +81,8 @@ enum Status
   (enum_declaration
     name: (identifier)
     body: (enum_body
-      (enum_case (identifier))
-      (enum_case (identifier))
+      (enum_case name: (identifier))
+      (enum_case name: (identifier))
       (function_declaration
         name: (identifier)
         parameters: (parameter_list)

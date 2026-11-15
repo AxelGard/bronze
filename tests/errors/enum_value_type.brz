@@ -1,0 +1,9 @@
+enum Size: Float
+{
+    Small = 1.0
+}
+
+func main() -> Int
+{
+    return 0
+}
