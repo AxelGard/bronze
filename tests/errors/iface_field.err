@@ -1,0 +1,2 @@
+error: an interface can't have fields
+  --> iface_field.brz:3:5

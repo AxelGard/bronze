@@ -39,6 +39,29 @@ func (in *interp) isA(obj *Object, name string) bool {
 		if k.decl.Name.Name == name {
 			return true
 		}
+		for _, u := range k.decl.Uses {
+			if in.ifaceIs(u.Name, name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ifaceIs reports whether the interface called iface is the interface
+// called name, or uses it.
+func (in *interp) ifaceIs(iface, name string) bool {
+	d, ok := in.ifaces[iface]
+	if !ok {
+		return false
+	}
+	if iface == name {
+		return true
+	}
+	for _, u := range d.Uses {
+		if in.ifaceIs(u.Name, name) {
+			return true
+		}
 	}
 	return false
 }
@@ -142,11 +165,14 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 		funcs:   map[string]*ast.FuncDecl{},
 		classes: map[string]*class{},
 		enums:   map[string]*enum{},
+		ifaces:  map[string]*ast.InterfaceDecl{},
 	}
 	for _, d := range append(append([]ast.Decl{}, parser.Prelude()...), file.Decls...) {
 		switch d := d.(type) {
 		case *ast.FuncDecl:
 			in.funcs[d.Name.Name] = d
+		case *ast.InterfaceDecl:
+			in.ifaces[d.Name.Name] = d
 		case *ast.ClassDecl:
 			cls := &class{decl: d, inits: map[int]*ast.FuncDecl{}, methods: map[string]*ast.FuncDecl{}}
 			for _, m := range d.Methods {
@@ -200,6 +226,7 @@ type interp struct {
 	funcs   map[string]*ast.FuncDecl
 	classes map[string]*class
 	enums   map[string]*enum
+	ifaces  map[string]*ast.InterfaceDecl
 	stack   []*frame
 	panic   *Panic // set when the program panics
 }

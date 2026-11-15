@@ -1,0 +1,2 @@
+error: `Shape` is an interface, and can't be created
+  --> iface_create.brz:8:13

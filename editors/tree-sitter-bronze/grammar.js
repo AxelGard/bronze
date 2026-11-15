@@ -44,7 +44,12 @@ module.exports = grammar({
     source_file: ($) => repeat($._declaration),
 
     _declaration: ($) =>
-      choice($.function_declaration, $.class_declaration, $.enum_declaration),
+      choice(
+        $.function_declaration,
+        $.class_declaration,
+        $.enum_declaration,
+        $.interface_declaration,
+      ),
 
     // ------------------------------------------------------------------
     // Declarations
@@ -101,6 +106,26 @@ module.exports = grammar({
         optional(seq(':', field('type', $.type))),
         '=',
         field('value', $._expression),
+      ),
+
+    // An interface has method signatures only, without bodies.
+    interface_declaration: ($) =>
+      seq(
+        'interface',
+        field('name', $.identifier),
+        optional(seq('use', commaSep1(field('use', $.identifier)))),
+        field('body', $.interface_body),
+      ),
+
+    interface_body: ($) => seq('{', repeat($.method_signature), '}'),
+
+    method_signature: ($) =>
+      seq(
+        optional('mut'),
+        'func',
+        field('name', $.identifier),
+        field('parameters', $.parameter_list),
+        optional(seq('->', field('result', $.return_type))),
       ),
 
     enum_declaration: ($) =>

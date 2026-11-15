@@ -22,6 +22,7 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 		info:    &Info{Types: map[ast.Expr]Type{}},
 		funcs:   map[string]*funcSig{},
 		classes: map[string]*Class{},
+		ifaces:  map[string]*Interface{},
 		enums:   map[string]*Enum{},
 		broken:  map[string]bool{},
 	}
@@ -74,6 +75,7 @@ type checker struct {
 	info    *Info
 	funcs   map[string]*funcSig
 	classes map[string]*Class
+	ifaces  map[string]*Interface
 	enums   map[string]*Enum
 	broken  map[string]bool // names of declarations with syntax errors
 	errCls  *Class          // the built-in Error class
@@ -95,10 +97,11 @@ type funcSig struct {
 	class  *Class // for methods of a class: the class of `this`
 	enum   *Enum  // for methods of an enum: the enum of `this`
 	isInit bool
-	mut    bool    // a `mut func`, which may change `this`
-	static bool    // a `static func`, which has no `this`
-	line   int     // where it is declared
-	sym    *Symbol // nil for init
+	mut    bool       // a `mut func`, which may change `this`
+	static bool       // a `static func`, which has no `this`
+	line   int        // where it is declared
+	sym    *Symbol    // nil for init
+	iface  *Interface // for a method of an interface
 }
 
 // VarKind is how a variable was declared.
@@ -161,9 +164,12 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 	var funcs []*ast.FuncDecl
 	var classes []*ast.ClassDecl
 	var enums []*ast.EnumDecl
+	var ifaces []*ast.InterfaceDecl
 	for _, d := range decls {
 		var name *ast.Ident
 		switch d := d.(type) {
+		case *ast.InterfaceDecl:
+			name = d.Name
 		case *ast.FuncDecl:
 			name = d.Name
 		case *ast.ClassDecl:
@@ -190,6 +196,14 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 		}
 		declared[name.Name] = name
 		switch d := d.(type) {
+		case *ast.InterfaceDecl:
+			ifaces = append(ifaces, d)
+			c.ifaces[name.Name] = &Interface{
+				Name:    name.Name,
+				Decl:    d,
+				Methods: map[string]*funcSig{},
+				Sym:     c.newSym(name, SymInterface, false),
+			}
 		case *ast.FuncDecl:
 			funcs = append(funcs, d)
 		case *ast.ClassDecl:
@@ -227,8 +241,17 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 		sig.sym = c.newSym(fn.Name, SymFunction, false)
 		c.funcs[fn.Name.Name] = sig
 	}
+	for _, d := range ifaces {
+		c.interfaceUses(c.ifaces[d.Name.Name])
+	}
+	for _, d := range ifaces {
+		c.interfaceMembers(c.ifaces[d.Name.Name])
+	}
 	for _, d := range classes {
 		c.classMembers(c.classes[d.Name.Name])
+	}
+	for _, d := range classes {
+		c.implements(c.classes[d.Name.Name])
 	}
 	for _, d := range enums {
 		c.enumMembers(c.enums[d.Name.Name])
@@ -431,6 +454,10 @@ func (c *checker) resolveName(name *ast.Ident) Type {
 		c.ref(name, en.Sym)
 		return en
 	}
+	if i, ok := c.ifaces[name.Name]; ok {
+		c.ref(name, i.Sym)
+		return i
+	}
 	if c.broken[name.Name] {
 		return Invalid
 	}
@@ -489,6 +516,11 @@ func (c *checker) declare(name *ast.Ident, v *variable) {
 	if cls, ok := c.classes[n]; ok {
 		d := c.errorf(name.Sp, "`%s` is already the name of a class", n)
 		d.Notes = []string{fmt.Sprintf("the class is declared at line %d", cls.Decl.Name.Sp.Start.Line)}
+		return
+	}
+	if i, ok := c.ifaces[n]; ok {
+		d := c.errorf(name.Sp, "`%s` is already the name of an interface", n)
+		d.Notes = []string{fmt.Sprintf("the interface is declared at line %d", i.Decl.Name.Sp.Start.Line)}
 		return
 	}
 	if en, ok := c.enums[n]; ok {

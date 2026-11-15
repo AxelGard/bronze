@@ -123,24 +123,36 @@ type EnumDecl struct {
 	Sp      diag.Span
 }
 
+// InterfaceDecl is `interface Name use Other { method signatures }`. Its
+// methods have no body.
+type InterfaceDecl struct {
+	Name    *Ident
+	Uses    []*Ident
+	Methods []*FuncDecl // with a nil Body
+	Bad     bool        // some member had a syntax error
+	Sp      diag.Span
+}
+
 // BadDecl is a declaration with a syntax error.
 type BadDecl struct {
 	Name *Ident // the declared name, if it could be read
 	Sp   diag.Span
 }
 
-func (d *FuncDecl) Span() diag.Span  { return d.Sp }
-func (d *BadDecl) Span() diag.Span   { return d.Sp }
-func (d *ClassDecl) Span() diag.Span { return d.Sp }
-func (d *EnumDecl) Span() diag.Span  { return d.Sp }
-func (f *Field) Span() diag.Span     { return f.Sp }
-func (p *Param) Span() diag.Span     { return p.Sp }
-func (t *TypeExpr) Span() diag.Span  { return t.Sp }
+func (d *FuncDecl) Span() diag.Span      { return d.Sp }
+func (d *BadDecl) Span() diag.Span       { return d.Sp }
+func (d *ClassDecl) Span() diag.Span     { return d.Sp }
+func (d *EnumDecl) Span() diag.Span      { return d.Sp }
+func (d *InterfaceDecl) Span() diag.Span { return d.Sp }
+func (f *Field) Span() diag.Span         { return f.Sp }
+func (p *Param) Span() diag.Span         { return p.Sp }
+func (t *TypeExpr) Span() diag.Span      { return t.Sp }
 
-func (*FuncDecl) declNode()  {}
-func (*BadDecl) declNode()   {}
-func (*ClassDecl) declNode() {}
-func (*EnumDecl) declNode()  {}
+func (*FuncDecl) declNode()      {}
+func (*BadDecl) declNode()       {}
+func (*ClassDecl) declNode()     {}
+func (*EnumDecl) declNode()      {}
+func (*InterfaceDecl) declNode() {}
 
 // ---------------------------------------------------------------------
 // Statements

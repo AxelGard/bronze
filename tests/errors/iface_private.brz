@@ -1,0 +1,9 @@
+interface Shape
+{
+    private func area() -> Float
+}
+
+func main() -> Int
+{
+    return 0
+}

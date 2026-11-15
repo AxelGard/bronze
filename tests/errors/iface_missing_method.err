@@ -1,0 +1,2 @@
+error: `Square` uses `Shape`, but has no method `area`
+  --> iface_missing_method.brz:6:18

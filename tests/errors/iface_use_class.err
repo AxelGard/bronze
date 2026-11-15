@@ -1,0 +1,2 @@
+error: an interface can only use other interfaces, and `Base` is a class
+  --> iface_use_class.brz:5:21

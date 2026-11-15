@@ -15,9 +15,13 @@ import (
 
 // classUses resolves the names after `use`.
 func (c *checker) classUses(cls *Class) {
-	for _, u := range cls.Decl.Uses {
+	for idx, u := range cls.Decl.Uses {
 		parent, ok := c.classes[u.Name]
 		switch {
+		case c.ifaces[u.Name] != nil:
+			c.ref(u, c.ifaces[u.Name].Sym)
+			cls.Ifaces = append(cls.Ifaces, c.ifaces[u.Name])
+			cls.ifaceAt = append(cls.ifaceAt, idx)
 		case ok:
 			c.ref(u, parent.Sym)
 			if cls.Super != nil {
@@ -33,7 +37,7 @@ func (c *checker) classUses(cls *Class) {
 			c.errorf(u.Sp, "`%s` is a built-in type, and can't be used", u.Name)
 		case c.broken[u.Name]:
 		default:
-			c.errorf(u.Sp, "unknown class `%s`", u.Name)
+			c.errorf(u.Sp, "unknown class or interface `%s`", u.Name)
 		}
 	}
 }
@@ -185,6 +189,13 @@ func (c *checker) override(cls *Class, sig, prev *funcSig) {
 	switch {
 	case prev == nil && m.Override:
 		d := c.errorf(m.Name.Sp, "`%s` doesn't override anything", m.Name.Name)
+		for _, i := range cls.Ifaces {
+			if i.Methods[m.Name.Name] != nil {
+				d.Notes = []string{fmt.Sprintf("`%s` is for the interface `%s`, and a method for an interface is written without `override`", m.Name.Name, i.Name)}
+				d.Help = []string{"remove `override`"}
+				return
+			}
+		}
 		if cls.Super == nil {
 			d.Notes = []string{fmt.Sprintf("`%s` has no class parent", cls.Name)}
 		} else {

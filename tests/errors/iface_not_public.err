@@ -1,0 +1,2 @@
+error: `area` is private, but `Shape` needs it public
+  --> iface_not_public.brz:8:18

@@ -19,6 +19,7 @@ const (
 	SymCase
 	SymField
 	SymMethod
+	SymInterface
 )
 
 var symbolKindNames = [...]string{
@@ -30,6 +31,7 @@ var symbolKindNames = [...]string{
 	SymCase:      "case",
 	SymField:     "field",
 	SymMethod:    "method",
+	SymInterface: "interface",
 }
 
 func (k SymbolKind) String() string { return symbolKindNames[k] }

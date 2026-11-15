@@ -111,6 +111,23 @@ func (c *checker) setHovers() {
 			}
 		}
 	}
+	for _, i := range c.ifaces {
+		i.Sym.Hover = "interface " + i.Name
+		for j, p := range i.Parents {
+			if j == 0 {
+				i.Sym.Hover += " use "
+			} else {
+				i.Sym.Hover += ", "
+			}
+			i.Sym.Hover += p.Name
+		}
+		for _, sig := range i.Methods {
+			if sig.sym != nil {
+				sig.sym.Hover = sigHover(sig)
+				sig.sym.In = sig.iface.Name
+			}
+		}
+	}
 	for _, en := range c.enums {
 		en.Sym.Hover = "enum " + en.Name
 		if en.Value != nil {

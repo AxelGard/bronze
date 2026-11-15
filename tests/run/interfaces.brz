@@ -1,0 +1,109 @@
+interface Shape
+{
+    func area() -> Float
+    func name() -> String
+}
+
+interface Solid use Shape
+{
+    func volume() -> Float
+}
+
+interface Resizable
+{
+    mut func scale(by: Float)
+}
+
+class Square use Shape, Resizable
+{
+    mut side = 0.0
+
+    func init(side: Float)
+    {
+        this.side = side
+    }
+
+    func area() -> Float
+    {
+        return this.side * this.side
+    }
+
+    func name() -> String
+    {
+        return "square"
+    }
+
+    mut func scale(by: Float)
+    {
+        this.side *= by
+    }
+}
+
+class Cube use Solid
+{
+    con side = 0.0
+
+    func init(side: Float)
+    {
+        this.side = side
+    }
+
+    func area() -> Float
+    {
+        return 6.0 * this.side * this.side
+    }
+
+    func name() -> String
+    {
+        return "cube"
+    }
+
+    func volume() -> Float
+    {
+        return this.side * this.side * this.side
+    }
+}
+
+class BigSquare use Square
+{
+    func init()
+    {
+        super(Square).init(10.0)
+    }
+
+    override func name() -> String
+    {
+        return "big square"
+    }
+}
+
+func describe(s: Shape) -> String
+{
+    if s is Solid
+    {
+        return s.name() + " with volume " + String(s.volume())
+    }
+    return s.name() + " with area " + String(s.area())
+}
+
+func grow(r: mut Resizable)
+{
+    r.scale(2.0)
+}
+
+func main() -> Int
+{
+    con sq = Square(2.0)
+    con shapes: List<Shape> = [sq, Cube(3.0), BigSquare()]
+    for s in shapes
+    {
+        print(describe(s))
+    }
+    grow(sq)
+    print(sq.area())
+    con first = shapes[0] else sq
+    print(first == sq)
+    print(first is Resizable)
+    print((shapes[1] else sq) is Resizable)
+    return 0
+}

@@ -1,0 +1,14 @@
+interface Counter
+{
+    mut func add()
+}
+
+func bump(c: Counter)
+{
+    c.add()
+}
+
+func main() -> Int
+{
+    return 0
+}

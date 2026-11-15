@@ -305,8 +305,22 @@ enum Status
     Frozen
 }
 
-class Savings use Account
+interface Named
 {
+    func label() -> String
+}
+
+class Savings use Account, Named
+{
+    func label() -> String
+    {
+        return "savings"
+    }
+}
+
+func tag(n: Named) -> String
+{
+    return n.label()
 }
 
 func rate(s: Savings) -> Int
@@ -363,6 +377,8 @@ func main() -> Int
 		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
 		{"a.balance", 1, "a: mut Account", ""},
 		{"Savings", 1, "class Savings use Account", ""},
+		{"Named", 1, "interface Named", ""},
+		{"label()", 3, "func label() -> String", "in `Named`"},
 		{"memo", 1, "private mut memo: String", "in `Account`"},
 		{"fee", 1, "protected func fee() -> Int", "in `Account`"},
 		{"balance\n}", 1, "mut balance: Int", "in `Account`"},

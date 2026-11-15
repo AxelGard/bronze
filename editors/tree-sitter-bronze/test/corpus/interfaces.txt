@@ -1,0 +1,30 @@
+==================
+Interfaces
+==================
+
+interface Solid use Shape
+{
+    func volume() -> Float
+    mut func scale(by: Float)
+}
+
+---
+
+(source_file
+  (interface_declaration
+    (identifier)
+    (identifier)
+    (interface_body
+      (method_signature
+        (identifier)
+        (parameter_list)
+        (return_type
+          (type
+            (identifier))))
+      (method_signature
+        (identifier)
+        (parameter_list
+          (parameter
+            (identifier)
+            (type
+              (identifier))))))))

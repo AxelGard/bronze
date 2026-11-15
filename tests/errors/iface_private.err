@@ -1,0 +1,2 @@
+error: an interface's methods are always public
+  --> iface_private.brz:3:5

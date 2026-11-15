@@ -374,9 +374,78 @@ error: `pin` is private to `Account`
 - A `private init` means only the class itself can create objects that way, for example in a static method. A child can call a `protected init` with `super(...).init(...)`.
 - `private` and `protected` are only for fields and methods, until namespaces come.
 
-## Not yet
+## Interfaces
 
-Interfaces are planned for a later version.
+An **interface** lists methods, without bodies. A class that says `use` with it must have each of them, with the same types, and can then be used wherever the interface is expected:
+
+```bronze
+interface Shape
+{
+    func area() -> Float
+    func name() -> String
+}
+
+class Square use Shape
+{
+    con side = 0.0
+
+    func init(side: Float)
+    {
+        this.side = side
+    }
+
+    func area() -> Float
+    {
+        return this.side * this.side
+    }
+
+    func name() -> String
+    {
+        return "square"
+    }
+}
+
+class Circle use Shape
+{
+    con radius = 0.0
+
+    func init(radius: Float)
+    {
+        this.radius = radius
+    }
+
+    func area() -> Float
+    {
+        return 3.0 * this.radius * this.radius
+    }
+
+    func name() -> String
+    {
+        return "circle"
+    }
+}
+
+func main() -> Int
+{
+    con shapes: List<Shape> = [Square(2.0), Circle(1.0)]
+    for s in shapes
+    {
+        print(s.name() + ": " + String(s.area()))
+    }
+    return 0
+}
+```
+
+```text title="Output"
+square: 4.0
+circle: 3.0
+```
+
+- A class takes on an interface only by saying so: `class Square use Shape`. Having the methods isn't enough.
+- A class can use one class and any number of interfaces: `class Dog use Animal, Named, Printable`. Its children are those interfaces too.
+- The methods for an interface are public, and written without `override`. A method may be a `mut func` in the interface; then it must be one in the class too.
+- An interface can use other interfaces: `interface Solid use Shape { func volume() -> Float }`. A class that uses `Solid` needs both sets of methods.
+- An interface can't be created, has no fields, and can't be printed. `==` asks whether two values are the same object, and `is` works with interfaces too.
 
 ## Next
 

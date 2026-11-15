@@ -1,0 +1,10 @@
+interface Shape
+{
+    func area() -> Float
+}
+
+func main() -> Int
+{
+    con s = Shape()
+    return 0
+}

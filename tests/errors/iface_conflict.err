@@ -1,0 +1,2 @@
+error: `C` gets `size` from both `A` and `B`, with different types
+  --> iface_conflict.brz:11:11

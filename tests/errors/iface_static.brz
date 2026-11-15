@@ -1,0 +1,9 @@
+interface Shape
+{
+    static func make() -> Shape
+}
+
+func main() -> Int
+{
+    return 0
+}

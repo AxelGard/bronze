@@ -1,0 +1,2 @@
+error: an interface's methods have no body
+  --> iface_body.brz:4:5

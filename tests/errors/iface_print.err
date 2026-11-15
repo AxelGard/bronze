@@ -1,0 +1,2 @@
+error: cannot print an object of interface Shape
+  --> iface_print.brz:8:11

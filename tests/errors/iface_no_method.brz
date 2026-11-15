@@ -1,0 +1,14 @@
+interface Shape
+{
+    func area() -> Float
+}
+
+func f(s: Shape) -> Float
+{
+    return s.perimeter()
+}
+
+func main() -> Int
+{
+    return 0
+}

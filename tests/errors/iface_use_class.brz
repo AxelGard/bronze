@@ -1,0 +1,12 @@
+class Base
+{
+}
+
+interface Shape use Base
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

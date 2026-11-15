@@ -19,7 +19,7 @@ import (
 // read only means nothing.
 func changeable(t Type) bool {
 	switch t := t.(type) {
-	case *Class, *List, *Map:
+	case *Class, *Interface, *List, *Map:
 		return true
 	case *Optional:
 		return changeable(t.Inner)
@@ -120,6 +120,10 @@ func (c *checker) roCall(e *ast.Call) int {
 			return c.roSource(m.X)
 		}
 	case *Class:
+		if sig := t.Methods[m.Name.Name]; sig != nil && !sig.mut {
+			return c.roSource(m.X)
+		}
+	case *Interface:
 		if sig := t.Methods[m.Name.Name]; sig != nil && !sig.mut {
 			return c.roSource(m.X)
 		}

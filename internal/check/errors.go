@@ -145,10 +145,17 @@ func resultValue(t Type) Type {
 func (c *checker) isExpr(e *ast.Is) Type {
 	t := c.value(e.X)
 	name := e.Class.Name
-	target := c.classes[name]
+	var target Type
+	if k := c.classes[name]; k != nil {
+		target = k
+	} else if i := c.ifaces[name]; i != nil {
+		target = i
+	}
 	switch {
-	case target != nil:
-		c.ref(e.Class, target.Sym)
+	case c.classes[name] != nil:
+		c.ref(e.Class, c.classes[name].Sym)
+	case c.ifaces[name] != nil:
+		c.ref(e.Class, c.ifaces[name].Sym)
 	case c.enums[name] != nil:
 		c.errorf(e.Class.Sp, "`%s` is an enum; `is` checks the class of an object", name)
 	case builtinTypes[name] != nil || genericTypes[name]:
@@ -161,12 +168,15 @@ func (c *checker) isExpr(e *ast.Is) Type {
 	if silent(t) {
 		return Bool
 	}
-	cls, ok := nonNull(t).(*Class)
-	if !ok {
+	x := nonNull(t)
+	cls, isClass := x.(*Class)
+	if _, isIface := x.(*Interface); !isClass && !isIface {
 		c.errorf(e.X.Span(), "`is` checks the class of an object, but `%s` is %s", c.text(e.X), t)
 		return Bool
 	}
-	if target != nil && !assignable(target, cls) && !assignable(cls, target) {
+	// With an interface on either side it can be true: a child class could
+	// use the interface.
+	if tc, ok := target.(*Class); ok && isClass && !assignable(tc, cls) && !assignable(cls, tc) {
 		d := c.errorf(e.Span(), "`%s` is %s %s, and can never be %s %s", c.text(e.X), article(cls.Name), cls.Name, article(name), name)
 		d.Notes = []string{fmt.Sprintf("neither `%s` nor `%s` uses the other", cls.Name, name)}
 	}
@@ -193,12 +203,20 @@ func (c *checker) isCheck(cond ast.Expr) (string, *variable) {
 		return "", nil
 	}
 	v := c.scope.lookup(id.Name)
-	cls := c.classes[is.Class.Name]
-	if v == nil || v.kind == Mut || cls == nil || !assignable(cls, nonNull(v.typ)) {
+	var target Type
+	if k := c.classes[is.Class.Name]; k != nil {
+		target = k
+	} else if i := c.ifaces[is.Class.Name]; i != nil {
+		target = i
+	}
+	if v == nil || v.kind == Mut || target == nil {
+		return "", nil
+	}
+	if assignable(nonNull(v.typ), target) {
 		return "", nil // not a narrower type: `dog is Animal` is always true
 	}
 	narrowed := *v
-	narrowed.typ = cls
+	narrowed.typ = target
 	return id.Name, &narrowed
 }
 

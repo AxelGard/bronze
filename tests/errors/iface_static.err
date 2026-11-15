@@ -1,0 +1,2 @@
+error: an interface can't have static methods
+  --> iface_static.brz:3:5

@@ -155,7 +155,7 @@ func (p *parser) decl() (d ast.Decl) {
 			p.recovered++
 			bad := &ast.BadDecl{}
 			// Keep the name, so that uses of it don't cause more errors.
-			if k := p.toks[start].Kind; (k == lexer.FUNC || k == lexer.CLASS || k == lexer.ENUM) &&
+			if k := p.toks[start].Kind; (k == lexer.FUNC || k == lexer.CLASS || k == lexer.ENUM || k == lexer.INTERFACE) &&
 				p.toks[start+1].Kind == lexer.IDENT {
 				t := p.toks[start+1]
 				bad.Name = &ast.Ident{Name: t.Text, Sp: t.Span}
@@ -171,6 +171,10 @@ func (p *parser) decl() (d ast.Decl) {
 		fn := p.funcDecl()
 		p.endOfLine("declaration")
 		return fn
+	case lexer.INTERFACE:
+		i := p.interfaceDecl()
+		p.endOfLine("declaration")
+		return i
 	case lexer.PRIVATE, lexer.PROTECTED:
 		t := p.advance()
 		d := p.diags.Errorf(t.Span, "`%s` is for class members in 0.3", t.Text)
@@ -195,7 +199,7 @@ func (p *parser) decl() (d ast.Decl) {
 		p.endOfLine("declaration")
 		return e
 	}
-	p.failHere("expected `func`, `class` or `enum`, found %s", describe(p.tok()))
+	p.failHere("expected `func`, `class`, `enum` or `interface`, found %s", describe(p.tok()))
 	return nil
 }
 
@@ -209,7 +213,7 @@ func (p *parser) syncDecl() {
 			depth++
 		case lexer.RBRACE:
 			depth = max(depth-1, 0)
-		case lexer.FUNC, lexer.CLASS, lexer.ENUM:
+		case lexer.FUNC, lexer.CLASS, lexer.ENUM, lexer.INTERFACE:
 			if depth == 0 && p.pos > 0 && p.toks[p.pos-1].Kind == lexer.NEWLINE {
 				return
 			}
@@ -245,6 +249,16 @@ func (p *parser) modFuncDecl() *ast.FuncDecl {
 }
 
 func (p *parser) funcDecl() *ast.FuncDecl {
+	fn := p.signature()
+	before := p.recovered
+	fn.Body = p.block()
+	fn.Bad = p.recovered > before
+	fn.Sp = fn.Sp.To(fn.Body.Sp)
+	return fn
+}
+
+// signature parses `func name(params) -> result ! fail`, without a body.
+func (p *parser) signature() *ast.FuncDecl {
 	start := p.expect(lexer.FUNC).Span
 	fn := &ast.FuncDecl{Name: p.ident()}
 	p.expect(lexer.LPAREN)
@@ -268,11 +282,89 @@ func (p *parser) funcDecl() *ast.FuncDecl {
 			fn.Fail = p.typeExpr()
 		}
 	}
-	before := p.recovered
-	fn.Body = p.block()
-	fn.Bad = p.recovered > before
-	fn.Sp = start.To(fn.Body.Sp)
+	fn.Sp = start.To(p.prev())
 	return fn
+}
+
+func (p *parser) interfaceDecl() *ast.InterfaceDecl {
+	start := p.expect(lexer.INTERFACE).Span
+	i := &ast.InterfaceDecl{Name: p.ident()}
+	if p.at(lexer.USE) {
+		p.advance()
+		for {
+			i.Uses = append(i.Uses, p.ident())
+			if !p.at(lexer.COMMA) {
+				break
+			}
+			p.advance()
+		}
+	}
+	p.skipNewlines()
+	p.expect(lexer.LBRACE)
+	p.skipNewlines()
+	for !p.at(lexer.RBRACE) {
+		if p.at(lexer.EOF) {
+			p.diags.Errorf(p.tok().Span, "expected `}`, found end of file").Notes = []string{
+				fmt.Sprintf("the interface starts at line %d", start.Start.Line),
+			}
+			i.Bad = true
+			i.Sp = start.To(p.tok().Span)
+			return i
+		}
+		p.interfaceMember(i)
+		p.skipNewlines()
+	}
+	i.Sp = start.To(p.advance().Span)
+	return i
+}
+
+// interfaceMember parses one method signature into i, recovering like
+// member.
+func (p *parser) interfaceMember(i *ast.InterfaceDecl) {
+	start := p.pos
+	defer func() {
+		if r := recover(); r != nil {
+			if _, ok := r.(bailout); !ok {
+				panic(r)
+			}
+			p.recovered++
+			i.Bad = true
+			p.syncStmt(start)
+		}
+	}()
+	vis, visSp := p.visibility()
+	if vis != ast.Public {
+		d := p.diags.Errorf(visSp, "an interface's methods are always public")
+		d.Help = []string{fmt.Sprintf("remove `%s`", vis)}
+	}
+	if p.at(lexer.STATIC) {
+		p.fail(p.tok().Span, "an interface can't have static methods")
+	}
+	var mut diag.Span
+	isMut := false
+	if p.at(lexer.MUT) {
+		mut, isMut = p.advance().Span, true
+	}
+	switch {
+	case p.at(lexer.FUNC):
+	case p.at(lexer.CON), p.at(lexer.MUT):
+		p.failNote("an interface only says which methods a class has", "an interface can't have fields")
+	default:
+		p.failHere("expected a method signature (`func`), found %s", describe(p.tok()))
+	}
+	fn := p.signature()
+	fn.Mut, fn.MutSp = isMut, mut
+	if isMut {
+		fn.Sp = mut.To(fn.Sp)
+	}
+	i.Methods = append(i.Methods, fn)
+	save := p.pos
+	p.skipNewlines()
+	if p.at(lexer.LBRACE) {
+		p.failNote("a class that uses the interface writes the body", "an interface's methods have no body")
+	}
+	p.pos = save
+	p.endOfLine("method")
 }
 
 func (p *parser) classDecl() *ast.ClassDecl {

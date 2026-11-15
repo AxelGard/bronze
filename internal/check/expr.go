@@ -121,6 +121,11 @@ func (c *checker) ident(e *ast.Ident) Type {
 		d.Help = []string{fmt.Sprintf("to create an object, write `%s(...)`", e.Name)}
 		return Invalid
 	}
+	if i, ok := c.ifaces[e.Name]; ok {
+		c.ref(e, i.Sym)
+		c.errorf(e.Sp, "`%s` is an interface, not a value", e.Name)
+		return Invalid
+	}
 	if en, ok := c.enums[e.Name]; ok {
 		c.ref(e, en.Sym)
 		d := c.errorf(e.Sp, "`%s` is an enum, not a value", e.Name)
@@ -369,8 +374,9 @@ func (c *checker) binary(e *ast.Binary) Type {
 
 	switch e.Op {
 	case lexer.EQ, lexer.NE:
-		// A T? can be compared with a T, and with null.
-		if identical(nonNull(x), nonNull(y)) {
+		// A T? can be compared with a T, and with null. Objects can be
+		// compared when one's type is the other's, like a Dog and an Animal.
+		if identical(nonNull(x), nonNull(y)) || related(nonNull(x), nonNull(y)) {
 			return Bool
 		}
 		_, xOpt := x.(*Optional)
@@ -441,6 +447,23 @@ func (c *checker) eitherMayBeNull(e *ast.Binary, x, y Type) bool {
 	nx := c.mayBeNull(e.X, x)
 	ny := c.mayBeNull(e.Y, y)
 	return nx || ny
+}
+
+// related reports whether x and y are object types, and one can be used
+// as the other: a class and its parent, or a class and an interface it
+// uses.
+func related(x, y Type) bool {
+	switch x.(type) {
+	case *Class, *Interface:
+	default:
+		return false
+	}
+	switch y.(type) {
+	case *Class, *Interface:
+	default:
+		return false
+	}
+	return assignable(x, y) || assignable(y, x)
 }
 
 // nonNull returns T for a T?, and t itself otherwise.
@@ -552,6 +575,13 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 		c.ref(id, cls.Sym)
 		return c.construct(e, cls)
 	}
+	if i, ok := c.ifaces[id.Name]; ok {
+		c.ref(id, i.Sym)
+		c.args(e)
+		d := c.errorf(id.Sp, "`%s` is an interface, and can't be created", id.Name)
+		d.Notes = []string{"create an object of a class that uses it instead"}
+		return Invalid
+	}
 	if en, ok := c.enums[id.Name]; ok {
 		c.ref(id, en.Sym)
 		c.args(e)
@@ -630,6 +660,8 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	t := c.receiver(m.X)
 	name := m.Name.Name
 	switch t := t.(type) {
+	case *Interface:
+		return c.ifaceMethod(e, m, t)
 	case *List:
 		return c.listMethod(e, m, t)
 	case *Map:
@@ -741,6 +773,8 @@ func (sig *funcSig) declNote() string {
 		return fmt.Sprintf("`%s.%s` is declared at line %d", sig.class.Name, sig.name, sig.line)
 	case sig.enum != nil:
 		return fmt.Sprintf("`%s.%s` is declared at line %d", sig.enum.Name, sig.name, sig.line)
+	case sig.iface != nil:
+		return fmt.Sprintf("`%s.%s` is declared at line %d", sig.iface.Name, sig.name, sig.line)
 	}
 	return fmt.Sprintf("`%s` is declared at line %d", sig.name, sig.line)
 }
@@ -775,6 +809,9 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 		case *Class:
 			d := c.errorf(e.Args[0].Span(), "cannot print an object of class %s", t)
 			d.Help = []string{"print its fields instead"}
+		case *Interface:
+			d := c.errorf(e.Args[0].Span(), "cannot print an object of interface %s", t)
+			d.Help = []string{"print what its methods give instead"}
 		default:
 			if !silent(t) && !printable(t) {
 				c.errorf(e.Args[0].Span(), "cannot print a value of type %s", t)

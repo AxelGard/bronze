@@ -1,0 +1,2 @@
+error: `A` uses itself
+  --> iface_cycle.brz:1:11

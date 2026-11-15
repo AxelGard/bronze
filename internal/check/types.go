@@ -106,6 +106,13 @@ func assignable(from, to Type) bool {
 		return true
 	}
 	switch to := to.(type) {
+	case *Interface:
+		switch from := from.(type) {
+		case *Class:
+			return from.impl[to]
+		case *Interface:
+			return from.all[to]
+		}
 	case *Class:
 		if k, ok := from.(*Class); ok {
 			for ; k != nil; k = k.Super {
@@ -151,9 +158,12 @@ type Class struct {
 	Decl    *ast.ClassDecl
 	Fields  map[string]*Field
 	Methods map[string]*funcSig
-	Inits   map[int]*funcSig // by number of parameters
-	Super   *Class           // the class parent: another class, or Error
-	state   int              // members: 0 not collected, 1 collecting, 2 done
+	Inits   map[int]*funcSig    // by number of parameters
+	Super   *Class              // the class parent: another class, or Error
+	Ifaces  []*Interface        // the interfaces after `use`
+	ifaceAt []int               // for each of Ifaces, its index in Decl.Uses
+	impl    map[*Interface]bool // every interface it is, through parents too
+	state   int                 // members: 0 not collected, 1 collecting, 2 done
 	Sym     *Symbol
 }
 

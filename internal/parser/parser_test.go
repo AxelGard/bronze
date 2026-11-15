@@ -114,7 +114,7 @@ func TestErrors(t *testing.T) {
 			"bad declaration then a good one",
 			"con x = 1\nfunc f(a Int) { }\nfunc g() { x }\nfunc h() { }\n",
 			[]string{
-				"1:1 expected `func`, `class` or `enum`, found `con`",
+				"1:1 expected `func`, `class`, `enum` or `interface`, found `con`",
 				"2:10 expected `:` and a type after parameter `a`, found `Int`",
 				"3:12 this expression is not used",
 			},
@@ -379,6 +379,17 @@ func TestVisibility(t *testing.T) {
 		t.Fatal(diags[0].Message)
 	}
 	want := `(class Account (field private mut pin "") (protected static func fee -> Int (block (return 1))))`
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestInterface(t *testing.T) {
+	f, diags := parse(t, "interface Solid use Shape\n{\n    func volume() -> Float\n    mut func scale(by: Float)\n}\n")
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := "(interface Solid use Shape (func volume -> Float) (mut func scale (by Float)))"
 	if got := ast.Dump(f); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

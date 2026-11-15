@@ -1,0 +1,9 @@
+interface Shape
+{
+    con sides = 4
+}
+
+func main() -> Int
+{
+    return 0
+}

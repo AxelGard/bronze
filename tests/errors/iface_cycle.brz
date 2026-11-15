@@ -1,0 +1,12 @@
+interface A use B
+{
+}
+
+interface B use A
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

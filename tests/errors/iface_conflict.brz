@@ -1,0 +1,18 @@
+interface A
+{
+    func size() -> Int
+}
+
+interface B
+{
+    func size() -> Float
+}
+
+interface C use A, B
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

@@ -1,0 +1,2 @@
+error: `area` must return Float, like `Shape.area`
+  --> iface_wrong_signature.brz:8:10

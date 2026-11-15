@@ -10,6 +10,9 @@
 (class_declaration name: (identifier) @type)
 (class_declaration use: (identifier) @type)
 (enum_declaration name: (identifier) @type)
+(interface_declaration name: (identifier) @type)
+(interface_declaration use: (identifier) @type)
+(method_signature name: (identifier) @function)
 (is_expression class: (identifier) @type)
 
 ; enum cases: `Status.Active` and in patterns
@@ -57,7 +60,7 @@
 
 ; keywords
 ["func" "return"] @keyword.function
-["con" "mut" "class" "enum" "use" "static" "override"] @keyword
+["con" "mut" "class" "enum" "use" "static" "override" "interface"] @keyword
 (visibility) @keyword.modifier
 ["if" "else" "match"] @keyword.conditional
 ["while" "for" "in" (break_statement) (continue_statement)] @keyword.repeat

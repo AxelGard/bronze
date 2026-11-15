@@ -1,0 +1,2 @@
+error: `Shape` has no method `perimeter`
+  --> iface_no_method.brz:8:14

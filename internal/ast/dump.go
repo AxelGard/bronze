@@ -56,8 +56,25 @@ func dump(b *strings.Builder, n Node) {
 		if n.Fail != nil {
 			fmt.Fprintf(b, " ! %s", typeString(n.Fail))
 		}
-		b.WriteByte(' ')
-		dump(b, n.Body)
+		if n.Body != nil {
+			b.WriteByte(' ')
+			dump(b, n.Body)
+		}
+		b.WriteByte(')')
+	case *InterfaceDecl:
+		fmt.Fprintf(b, "(interface %s", n.Name.Name)
+		for i, u := range n.Uses {
+			if i == 0 {
+				b.WriteString(" use ")
+			} else {
+				b.WriteString(", ")
+			}
+			b.WriteString(u.Name)
+		}
+		for _, m := range n.Methods {
+			b.WriteByte(' ')
+			dump(b, m)
+		}
 		b.WriteByte(')')
 	case *ClassDecl:
 		fmt.Fprintf(b, "(class %s", n.Name.Name)

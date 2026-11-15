@@ -1,0 +1,2 @@
+error: `area` doesn't override anything
+  --> iface_override.brz:8:19

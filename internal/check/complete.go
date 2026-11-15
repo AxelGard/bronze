@@ -168,6 +168,10 @@ func (c *checker) completeMember(x ast.Expr) {
 				items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
 			}
 		}
+	case *Interface:
+		for _, n := range sortedKeys(t.Methods) {
+			items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
+		}
 	case *Enum:
 		if t.Value != nil {
 			items = append(items, Completion{Label: "value", Kind: CompleteField, Detail: valueSym(t).Hover})
@@ -198,6 +202,9 @@ func (c *checker) typeNames() []Completion {
 	}
 	for _, n := range sortedKeys(c.enums) {
 		items = append(items, Completion{Label: n, Kind: CompleteEnum, Detail: "enum " + n})
+	}
+	for _, n := range sortedKeys(c.ifaces) {
+		items = append(items, Completion{Label: n, Kind: CompleteClass, Detail: "interface " + n})
 	}
 	return items
 }

@@ -1,2 +1,2 @@
-error: unknown class `Animal`
+error: unknown class or interface `Animal`
   --> inherit_unknown.brz:1:15

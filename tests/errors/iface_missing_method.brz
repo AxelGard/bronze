@@ -1,0 +1,13 @@
+interface Shape
+{
+    func area() -> Float
+}
+
+class Square use Shape
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

@@ -1,0 +1,14 @@
+interface Shape
+{
+    func area() -> Float
+}
+
+func show(s: Shape)
+{
+    print(s)
+}
+
+func main() -> Int
+{
+    return 0
+}

@@ -84,6 +84,7 @@ const (
 	SUPER
 	PRIVATE
 	PROTECTED
+	INTERFACE
 )
 
 var kindNames = [...]string{
@@ -158,6 +159,7 @@ var kindNames = [...]string{
 	SUPER:     "`super`",
 	PRIVATE:   "`private`",
 	PROTECTED: "`protected`",
+	INTERFACE: "`interface`",
 }
 
 // String returns a description of the kind for error messages, such as
@@ -193,10 +195,11 @@ var keywords = map[string]Kind{
 	"super":     SUPER,
 	"private":   PRIVATE,
 	"protected": PROTECTED,
+	"interface": INTERFACE,
 }
 
 var reserved = map[string]bool{
-	"data": true, "interface": true, "namespace": true, "import": true,
+	"data": true, "namespace": true, "import": true,
 	"test": true, "type": true, "copy": true,
 }
 
