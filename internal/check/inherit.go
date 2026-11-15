@@ -228,6 +228,10 @@ func (c *checker) override(cls *Class, sig, prev *funcSig) {
 			d := c.errorf(m.Name.Sp, "`%s` must %s, like `%s.%s`", m.Name.Name, why, prev.class.Name, m.Name.Name)
 			d.Notes = []string{fmt.Sprintf("`%s.%s` is `%s`", prev.class.Name, m.Name.Name, sigHover(prev))}
 		}
+		c.link(sig.sym, prev.sym)
+		if prev.sym != nil && !prev.sym.Builtin && !c.inPrelude {
+			c.info.Defs = append(c.info.Defs, Ref{Span: m.OverrideSp, Sym: prev.sym})
+		}
 	}
 }
 

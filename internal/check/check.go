@@ -12,6 +12,13 @@ import (
 type Info struct {
 	Types map[ast.Expr]Type // the type of every checked expression
 	Refs  []Ref             // every name that refers to a symbol
+	// Defs are places that lead to a symbol for go to definition, but
+	// aren't its name, so rename leaves them: `override` leads to the
+	// method it replaces.
+	Defs []Ref
+	// links joins symbols that must keep the same name: an override and
+	// the method it replaces, a method and the interface method it is for.
+	links map[*Symbol][]*Symbol
 }
 
 // Check checks a parsed file and returns all errors it finds. Bodies of

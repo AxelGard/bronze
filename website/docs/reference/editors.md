@@ -14,10 +14,10 @@ For Neovim, `bronze setup nvim` sets up both. Other editors that speak LSP or tr
 | Feature | What it does |
 |---|---|
 | Diagnostics | every open `.brz` file is checked on each change, and its errors shown, the same ones `bronze check` reports |
-| Go to definition | from a use of a variable, parameter, function, class, enum, enum case, field or method to where it is declared |
-| Hover | shows what the name under the cursor is: `con total: Int` for a variable, the signature for a function or method, `class Account`, `Status.Frozen`. Built-ins like `print` and `List.append` show their signature too |
-| Completion | after a `.`, the fields and methods of the value (or the cases of an enum, or the methods of a list, map or `String`); elsewhere, the variables, parameters, functions, classes, enums and built-ins visible at the cursor; in a written type, the type names |
-| Rename | renames such a name everywhere in the file |
+| Go to definition | from a use of a variable, parameter, function, class, interface, enum, enum case, field or method to where it is declared, also for inherited members, names after `use`, and `super(Animal)`. On `override`, to the method it replaces |
+| Hover | shows what the name under the cursor is: `con total: Int` for a variable, `a: mut Account` for a parameter, the signature for a function or method (`mut func deposit(amount: Int)`, `static func open() -> Account`), `class Dog use Animal`, `interface Shape`, `data Money(amount: Int, currency: String)`, `Role.Admin = "admin"`. Inherited members say which class they come from. Built-ins like `print` and `List.append` show their signature too |
+| Completion | after a `.`, the fields and methods of the value, inherited ones too, but not `private` or `protected` ones that can't be used there (or the cases of an enum, the static methods after a class's name, or the methods of a list, map or `String`); elsewhere, the variables, parameters, functions, classes, enums and built-ins visible at the cursor; in a written type, the type names |
+| Rename | renames such a name everywhere in the file. A method is renamed together with its overrides, the method it overrides, and the interface methods it is for |
 
 Rename refuses names that aren't valid identifiers, keywords and reserved words, and built-in names like `print`, `Error` or `init`. It needs a file without syntax errors.
 

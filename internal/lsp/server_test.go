@@ -424,3 +424,58 @@ func main() -> Int
 		t.Errorf("hover on a keyword: %+v", m)
 	}
 }
+
+func TestOverrides(t *testing.T) {
+	c := newClient(t)
+	c.request("initialize", map[string]any{"capabilities": map[string]any{}})
+	src := `interface Talker
+{
+    func speak() -> String
+}
+
+class Animal use Talker
+{
+    func speak() -> String
+    {
+        return "..."
+    }
+}
+
+class Dog use Animal
+{
+    override func speak() -> String
+    {
+        return "Woof"
+    }
+}
+
+func main() -> Int
+{
+    con d = Dog()
+    print(d.speak())
+    con t: Talker = d
+    print(t.speak())
+    return 0
+}
+`
+	if d := open(c, src); len(d.Diagnostics) != 0 {
+		t.Fatalf("diagnostics: %+v", d.Diagnostics)
+	}
+
+	// go to definition on `override` leads to the parent's method
+	loc := result[location](t, c.request("textDocument/definition", map[string]any{
+		"textDocument": map[string]any{"uri": uri}, "position": at(src, "override", 1, 2),
+	}))
+	if want := at(src, "speak", 2, 0); loc.Range.Start != want {
+		t.Errorf("definition of override: %+v, want %+v", loc.Range.Start, want)
+	}
+
+	// renaming the override renames the parent's method and the
+	// interface's, and all their uses
+	edit := result[workspaceEdit](t, c.request("textDocument/rename", map[string]any{
+		"textDocument": map[string]any{"uri": uri}, "position": at(src, "speak", 3, 0), "newName": "talk",
+	}))
+	if n := len(edit.Changes[uri]); n != strings.Count(src, "speak") {
+		t.Errorf("rename changed %d places, want %d: %+v", n, strings.Count(src, "speak"), edit.Changes[uri])
+	}
+}

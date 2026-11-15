@@ -286,6 +286,9 @@ func (s *server) refAt(uri string, pos position) (*document, *check.Ref) {
 
 func (s *server) definition(p textDocumentPositionParams) any {
 	doc, ref := s.refAt(p.TextDocument.URI, p.Position)
+	if ref == nil && doc != nil {
+		ref = doc.info.DefAt(s.toOffset(doc.src, p.Position))
+	}
 	if ref == nil || ref.Sym.Builtin {
 		return nil
 	}
@@ -333,8 +336,13 @@ func (s *server) rename(p renameParams) (any, *responseError) {
 		return nil, &responseError{Code: codeRequestFailed, Message: msg}
 	}
 	var edits []textEdit
-	for _, r := range doc.info.RefsTo(ref.Sym) {
-		edits = append(edits, textEdit{Range: s.toRange(doc.src, r.Span), NewText: p.NewName})
+	for _, sym := range doc.info.Linked(ref.Sym) {
+		if sym.Builtin {
+			return nil, &responseError{Code: codeRequestFailed, Message: fmt.Sprintf("`%s` overrides a built-in method, and can't be renamed", ref.Sym.Name)}
+		}
+		for _, r := range doc.info.RefsTo(sym) {
+			edits = append(edits, textEdit{Range: s.toRange(doc.src, r.Span), NewText: p.NewName})
+		}
 	}
 	return workspaceEdit{Changes: map[string][]textEdit{doc.uri: edits}}, nil
 }

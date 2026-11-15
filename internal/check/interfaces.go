@@ -66,6 +66,7 @@ func (c *checker) interfaceMembers(i *Interface) {
 		}
 		for name, sig := range p.Methods {
 			if prev, ok := i.Methods[name]; ok && prev != sig {
+				c.link(sig.sym, prev.sym)
 				if why := sigDiff(sig, prev); why != "" {
 					d := c.errorf(i.Decl.Name.Sp, "`%s` gets `%s` from both `%s` and `%s`, with different types", i.Name, name, prev.iface.Name, sig.iface.Name)
 					d.Notes = []string{"`" + sigHover(prev) + "` and `" + sigHover(sig) + "`"}
@@ -97,6 +98,9 @@ func (c *checker) interfaceMembers(i *Interface) {
 			}
 		}
 		sig.sym = c.newSym(m.Name, SymMethod, false)
+		if prev, ok := i.Methods[name]; ok {
+			c.link(sig.sym, prev.sym)
+		}
 		i.Methods[name] = sig
 	}
 	i.state = 2
@@ -130,6 +134,7 @@ func (c *checker) implements(cls *Class) {
 			case sigVis(sig) != ast.Public:
 				c.errorf(c.methodPos(cls, sig, at), "`%s` is %s, but `%s` needs it public", name, sigVis(sig), i.Name)
 			default:
+				c.link(sig.sym, want.sym)
 				if why := sigDiff(sig, want); why != "" {
 					d := c.errorf(c.methodPos(cls, sig, at), "`%s` must %s, like `%s.%s`", name, why, want.iface.Name, name)
 					d.Notes = []string{fmt.Sprintf("`%s.%s` is `%s`", want.iface.Name, name, sigHover(want))}

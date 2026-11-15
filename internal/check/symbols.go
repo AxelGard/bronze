@@ -100,3 +100,43 @@ func (c *checker) ref(name *ast.Ident, sym *Symbol) {
 	}
 	c.info.Refs = append(c.info.Refs, Ref{Span: name.Sp, Sym: sym})
 }
+
+// link records that a and b must keep the same name.
+func (c *checker) link(a, b *Symbol) {
+	if a == nil || b == nil || a == b || c.inPrelude {
+		return
+	}
+	if c.info.links == nil {
+		c.info.links = map[*Symbol][]*Symbol{}
+	}
+	c.info.links[a] = append(c.info.links[a], b)
+	c.info.links[b] = append(c.info.links[b], a)
+}
+
+// Linked returns sym and every symbol that must be renamed with it: the
+// methods it overrides or is overridden by, and the interface methods it
+// is for, all the way.
+func (info *Info) Linked(sym *Symbol) []*Symbol {
+	seen := map[*Symbol]bool{sym: true}
+	group := []*Symbol{sym}
+	for i := 0; i < len(group); i++ {
+		for _, s := range info.links[group[i]] {
+			if !seen[s] {
+				seen[s] = true
+				group = append(group, s)
+			}
+		}
+	}
+	return group
+}
+
+// DefAt returns the definition-only reference at a byte offset, or nil.
+func (info *Info) DefAt(offset int) *Ref {
+	for i := range info.Defs {
+		r := &info.Defs[i]
+		if r.Span.Start.Offset <= offset && offset <= r.Span.End.Offset {
+			return r
+		}
+	}
+	return nil
+}

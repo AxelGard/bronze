@@ -95,3 +95,76 @@ func TestCompletion(t *testing.T) {
 		}
 	}
 }
+
+const classesProgram = `class Account
+{
+    mut balance = 0
+    private mut pin = ""
+
+    static func open() -> Account
+    {
+        return Account()
+    }
+
+    func show() -> String
+    {
+        return ""
+    }
+
+    func peek(other: Account) -> String
+    {
+        return INSIDE
+    }
+}
+
+class Savings use Account
+{
+    func rate() -> Int
+    {
+        return 1
+    }
+}
+
+enum Role: String
+{
+    Admin = "admin"
+}
+
+func main() -> Int
+{
+    con s = Savings()
+    CURSOR
+    return 0
+}
+`
+
+func TestCompletionClasses(t *testing.T) {
+	inMain := func(line string) string {
+		return strings.Replace(strings.Replace(classesProgram, "INSIDE", `""`, 1), "CURSOR", line, 1)
+	}
+	tests := []struct {
+		name     string
+		src      string
+		want     []string
+		dontWant []string
+	}{
+		{"inherited, without private and static", inMain("s.|"), []string{"balance", "show", "rate"}, []string{"pin", "open"}},
+		{"private inside the class", strings.Replace(strings.Replace(classesProgram, "INSIDE", "other.|", 1), "CURSOR", "", 1), []string{"pin", "balance"}, []string{"open"}},
+		{"static methods", inMain("con a = Account.|"), []string{"open"}, []string{"show", "balance"}},
+		{"enum from", inMain("con r = Role.|"), []string{"Admin", "from"}, nil},
+		{"enum value", inMain("con v = Role.Admin.|"), []string{"value"}, nil},
+	}
+	for _, tt := range tests {
+		got := complete(t, tt.src)
+		for _, w := range tt.want {
+			if !slices.Contains(got, w) {
+				t.Errorf("%s: %q missing from %v", tt.name, w, got)
+			}
+		}
+		for _, w := range tt.dontWant {
+			if slices.Contains(got, w) {
+				t.Errorf("%s: %q should not be in %v", tt.name, w, got)
+			}
+		}
+	}
+}
