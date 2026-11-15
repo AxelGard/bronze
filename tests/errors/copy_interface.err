@@ -1,0 +1,2 @@
+error: Shape can't be copied, since the object behind an interface may be a class
+  --> copy_interface.brz:6:19

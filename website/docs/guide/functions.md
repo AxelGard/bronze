@@ -35,7 +35,7 @@ hello, Ada
 - `-> T` gives the return type. A function without `->` returns nothing, and its call can't be used as a value.
 - Calls must pass exactly as many arguments as there are parameters, with the right types.
 - Parameters can't be assigned to. Copy one into a `mut` variable to change it.
-- An object, list or map parameter is read only, unless it is declared `mut`: `nums: mut List<Int>`. See [parameters are read only](classes.md#parameters-are-read-only).
+- An object, list or map parameter is read only, unless it is declared `mut` (`nums: mut List<Int>`), or `copy` to get its own copy. See [parameters are read only](classes.md#parameters-are-read-only).
 - Functions can be called before they are declared, and can call themselves.
 
 ## Returning on every path

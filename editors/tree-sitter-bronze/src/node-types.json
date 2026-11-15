@@ -4426,6 +4426,10 @@
     "named": true
   },
   {
+    "type": "copy",
+    "named": false
+  },
+  {
     "type": "data",
     "named": false
   },

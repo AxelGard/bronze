@@ -62,7 +62,7 @@
 
 ; keywords
 ["func" "return"] @keyword.function
-["con" "mut" "class" "enum" "use" "static" "override" "interface" "data"] @keyword
+["con" "mut" "class" "enum" "use" "static" "override" "interface" "data" "copy"] @keyword
 (visibility) @keyword.modifier
 ["if" "else" "match"] @keyword.conditional
 ["while" "for" "in" (break_statement) (continue_statement)] @keyword.repeat

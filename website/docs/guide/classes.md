@@ -207,6 +207,33 @@ So a signature tells you what a function does to what you pass it. The call does
 - A function can't return a read-only parameter. A method that isn't a `mut func` may return what it read out of `this`, like a `find` that returns one of its objects. The result is then read only wherever the object it was called on is.
 - `mut` only goes on types that can change: objects, lists and maps. `n: mut Int` is an error.
 
+### copy
+
+A parameter declared **`copy`** gets its own copy of what is passed, made when the function is called. The function may change it freely, and the caller never sees it:
+
+```bronze
+func sorted(items: copy List<Int>) -> List<Int>
+{
+    items.sort()
+    return items
+}
+
+func main() -> Int
+{
+    con nums = [3, 1, 2]
+    print(sorted(nums))
+    print(nums)
+    return 0
+}
+```
+
+```text title="Output"
+[1, 2, 3]
+[3, 1, 2]
+```
+
+The copy is deep: lists, maps and [data classes](data-classes.md) are copied all the way down. Objects of plain classes can't be copied, since they may hold things like connections that copying would get wrong, so `copy` on a class (or a list of them, or an interface) is an error.
+
 ## Inheritance
 
 `class Dog use Animal` makes `Dog` a **child** of `Animal`: it has all of `Animal`'s fields and methods, and a `Dog` can be used wherever an `Animal` is expected.

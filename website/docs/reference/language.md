@@ -25,13 +25,13 @@ A `{` in a string without a `\` starts an interpolation: `"total: {a + b}"`. It 
 ```text
 func  return  con  mut  if  else  while  for  in  break  continue
 and  or  not  true  false  class  enum  use  this  null  match  is
-static  override  super  private  protected  interface  data
+static  override  super  private  protected  interface  data  copy
 ```
 
 These are reserved for later versions, and can't be used as names:
 
 ```text
-namespace  import  test  type  copy
+namespace  import  test  type
 ```
 
 ## Newlines
@@ -134,7 +134,7 @@ enum Name: String { Case = "value" ... }  an enum with values (Int or String)
 - **Data classes**: the constructor takes the fields without an initial value, in order; no `init`. `==` compares fields, and they print as `Money(amount: 5, currency: "EUR")`. They can use interfaces and `Error` (the message is how it prints), but not classes, and can't be used. With only `con` fields of key types they can be map keys.
 - **Visibility**: members are public by default; `private` ones only for the declaring class's methods (on any of its objects), `protected` ones also for its children. Only on fields and methods.
 - **Static methods**: `static func name(...)` belongs to the class, has no `this`, and is called as `Class.name(...)`.
-- **Parameters**: `name: T` is read only (for objects, lists and maps, all the way down), `name: mut T` may change the caller's value. A read-only value can't be changed, stored, passed as `mut`, or returned (a method that isn't `mut` may return what it read from `this`; the result is as read only as the object). `mut` on `Int`, `Float`, `Bool`, `String` or an enum is an error.
+- **Parameters**: `name: T` is read only (for objects, lists and maps, all the way down), `name: mut T` may change the caller's value, and `name: copy T` gets a deep copy (lists, maps, data classes; not classes or interfaces). A read-only value can't be changed, stored, passed as `mut`, or returned (a method that isn't `mut` may return what it read from `this`; the result is as read only as the object). `mut` on `Int`, `Float`, `Bool`, `String` or an enum is an error.
 - **Enums with values**: every case has a literal value, all different. `r.value` gives it, and `Role.from(x)` gives a `Role?`.
 - **Constructors**: methods named `init`. A class can have several, with different numbers of parameters. Without any, it gets an empty `init()`.
 - **Returns**: a function that returns a value must end in a `return`, a `panic(...)`, or an `if`/`else` or `match` whose branches all end that way.
@@ -174,7 +174,7 @@ decl        = func_decl | class_decl | enum_decl | interface_decl | data_decl
 
 func_decl   = "func" IDENT "(" [ params ] ")" [ "->" ret_type ] block
 params      = param { "," param }
-param       = IDENT ":" [ "mut" ] type
+param       = IDENT ":" [ "mut" | "copy" ] type
 ret_type    = type [ "!" type ]                     // T, or T ! E
             | "!" type                              // nothing, or E
 type        = type_name [ "?" ]

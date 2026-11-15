@@ -1,0 +1,14 @@
+class Account
+{
+    mut balance = 0
+}
+
+func total(all: copy List<Account>) -> Int
+{
+    return all.length()
+}
+
+func main() -> Int
+{
+    return 0
+}

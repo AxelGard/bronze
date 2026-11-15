@@ -1,0 +1,9 @@
+func double(n: copy Int) -> Int
+{
+    return n * 2
+}
+
+func main() -> Int
+{
+    return 0
+}

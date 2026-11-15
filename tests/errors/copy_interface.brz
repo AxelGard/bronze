@@ -1,0 +1,14 @@
+interface Shape
+{
+    func area() -> Float
+}
+
+func area(s: copy Shape) -> Float
+{
+    return s.area()
+}
+
+func main() -> Int
+{
+    return 0
+}

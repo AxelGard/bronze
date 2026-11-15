@@ -1,0 +1,11 @@
+data Money(amount: Int, currency: String)
+
+func show(m: copy Money) -> Int
+{
+    return m.amount
+}
+
+func main() -> Int
+{
+    return 0
+}

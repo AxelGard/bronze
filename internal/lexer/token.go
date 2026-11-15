@@ -86,6 +86,7 @@ const (
 	PROTECTED
 	INTERFACE
 	DATA
+	COPY
 )
 
 var kindNames = [...]string{
@@ -162,6 +163,7 @@ var kindNames = [...]string{
 	PROTECTED: "`protected`",
 	INTERFACE: "`interface`",
 	DATA:      "`data`",
+	COPY:      "`copy`",
 }
 
 // String returns a description of the kind for error messages, such as
@@ -199,11 +201,12 @@ var keywords = map[string]Kind{
 	"protected": PROTECTED,
 	"interface": INTERFACE,
 	"data":      DATA,
+	"copy":      COPY,
 }
 
 var reserved = map[string]bool{
 	"namespace": true, "import": true,
-	"test": true, "type": true, "copy": true,
+	"test": true, "type": true,
 }
 
 // Token is one token of source text.

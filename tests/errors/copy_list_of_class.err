@@ -1,0 +1,2 @@
+error: a class can't be copied, and List<Account> holds Account
+  --> copy_list_of_class.brz:6:22

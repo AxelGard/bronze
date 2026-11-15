@@ -603,8 +603,11 @@ func (p *parser) param() *ast.Param {
 	}
 	p.advance()
 	param := &ast.Param{Name: name}
-	if p.at(lexer.MUT) {
+	switch p.kind() {
+	case lexer.MUT:
 		param.Mut, param.MutSp = true, p.advance().Span
+	case lexer.COPY:
+		param.Copy, param.MutSp = true, p.advance().Span
 	}
 	param.Type = p.typeExpr()
 	param.Sp = name.Sp.To(param.Type.Sp)

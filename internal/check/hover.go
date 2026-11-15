@@ -18,8 +18,8 @@ import (
 func varHover(name string, v *variable) string {
 	s := name
 	if t := typeText(v.typ); t != "" {
-		if v.kind == Param && v.ro == 0 && changeable(v.typ) {
-			t = "mut " + t
+		if v.kind == Param {
+			t = v.mode + t
 		}
 		s += ": " + t
 	}
@@ -49,6 +49,9 @@ func sigHover(sig *funcSig) string {
 		if t := typeText(sig.params[i]); t != "" {
 			if p.Mut {
 				t = "mut " + t
+			}
+			if p.Copy {
+				t = "copy " + t
 			}
 			s += ": " + t
 		}

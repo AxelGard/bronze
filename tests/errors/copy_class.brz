@@ -1,0 +1,14 @@
+class Account
+{
+    mut balance = 0
+}
+
+func simulate(a: copy Account) -> Int
+{
+    return a.balance
+}
+
+func main() -> Int
+{
+    return 0
+}

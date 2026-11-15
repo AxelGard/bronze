@@ -333,13 +333,13 @@ func TestRecoveredTree(t *testing.T) {
 }
 
 func TestModes(t *testing.T) {
-	src := "class Counter\n{\n    mut count = 0\n\n    mut func add(n: Int)\n    {\n    }\n\n    static func zero() -> Counter\n    {\n        return Counter()\n    }\n}\n\nfunc bump(c: mut Counter, xs: mut List<Int>?)\n{\n}\n\nmut func top()\n{\n}\n"
+	src := "class Counter\n{\n    mut count = 0\n\n    mut func add(n: Int)\n    {\n    }\n\n    static func zero() -> Counter\n    {\n        return Counter()\n    }\n}\n\nfunc bump(c: mut Counter, xs: copy List<Int>?)\n{\n}\n\nmut func top()\n{\n}\n"
 	f, diags := parse(t, src)
 	if len(diags) > 0 {
 		t.Fatal(diags[0].Message)
 	}
 	want := "(class Counter (field mut count 0) (mut func add (n Int) (block)) (static func zero -> Counter (block (return (call Counter)))))\n" +
-		"(func bump (c mut Counter) (xs mut List<Int>?) (block))\n" +
+		"(func bump (c mut Counter) (xs copy List<Int>?) (block))\n" +
 		"(mut func top (block))"
 	if got := ast.Dump(f); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)

@@ -1,0 +1,2 @@
+error: `copy` does nothing on Money, which can't be changed
+  --> copy_frozen_data.brz:3:14

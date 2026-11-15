@@ -72,11 +72,12 @@ func (v Visibility) String() string {
 	return [...]string{"public", "private", "protected"}[v]
 }
 
-// Param is `name: Type`, or `name: mut Type`.
+// Param is `name: Type`, `name: mut Type` or `name: copy Type`.
 type Param struct {
 	Name  *Ident
-	Mut   bool // `mut T`: the function may change the caller's value
-	MutSp diag.Span
+	Mut   bool      // `mut T`: the function may change the caller's value
+	Copy  bool      // `copy T`: the function gets its own deep copy
+	MutSp diag.Span // the span of `mut` or `copy`
 	Type  *TypeExpr
 	Sp    diag.Span
 }

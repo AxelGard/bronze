@@ -1,0 +1,2 @@
+error: a class can't be copied, and Account is one
+  --> copy_class.brz:6:23

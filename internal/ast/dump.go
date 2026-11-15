@@ -45,6 +45,9 @@ func dump(b *strings.Builder, n Node) {
 			if p.Mut {
 				mode = "mut "
 			}
+			if p.Copy {
+				mode = "copy "
+			}
 			fmt.Fprintf(b, " (%s %s%s)", p.Name.Name, mode, typeString(p.Type))
 		}
 		if n.Result != nil || n.Fail != nil {

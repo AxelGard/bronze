@@ -118,7 +118,8 @@ const (
 
 type variable struct {
 	kind VarKind
-	ro   int // read only (roThis, roOther): its value can't be changed through it
+	ro   int    // read only (roThis, roOther): its value can't be changed through it
+	mode string // for a parameter: "mut ", "copy " or ""
 	typ  Type
 	decl diag.Span
 	sym  *Symbol
@@ -491,10 +492,17 @@ func (c *checker) funcBody(sig *funcSig) {
 	c.scope = &scope{vars: map[string]*variable{}}
 	for i, p := range sig.decl.Params {
 		ro := 0
-		if !p.Mut && changeable(sig.params[i]) {
+		if !p.Mut && !p.Copy && changeable(sig.params[i]) {
 			ro = roOther
 		}
-		c.declare(p.Name, &variable{kind: Param, ro: ro, typ: sig.params[i], decl: p.Name.Sp})
+		mode := ""
+		switch {
+		case p.Mut:
+			mode = "mut "
+		case p.Copy:
+			mode = "copy "
+		}
+		c.declare(p.Name, &variable{kind: Param, ro: ro, mode: mode, typ: sig.params[i], decl: p.Name.Sp})
 	}
 	c.blockStmts(sig.decl.Body)
 	if hasValue(sig.result) && !terminates(sig.decl.Body) {

@@ -366,7 +366,11 @@ func (in *interp) call(name string, fn *ast.FuncDecl, this Value, args []Value, 
 func (in *interp) body(fn *ast.FuncDecl, args []Value) (result Value) {
 	e := &env{vars: make(map[string]Value, len(fn.Params))}
 	for i, p := range fn.Params {
-		e.vars[p.Name.Name] = args[i]
+		if p.Copy {
+			e.vars[p.Name.Name] = deepCopy(args[i])
+		} else {
+			e.vars[p.Name.Name] = args[i]
+		}
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -379,6 +383,33 @@ func (in *interp) body(fn *ast.FuncDecl, args []Value) (result Value) {
 	}()
 	_, result = in.block(fn.Body, e)
 	return result
+}
+
+// deepCopy copies a value for a `copy T` parameter: lists, maps and data
+// objects all the way down. Other values can't change, or (for objects of
+// plain classes) can't be in a `copy T`.
+func deepCopy(v Value) Value {
+	switch v := v.(type) {
+	case *List:
+		l := &List{Elems: make([]Value, len(v.Elems))}
+		for i, x := range v.Elems {
+			l.Elems[i] = deepCopy(x)
+		}
+		return l
+	case *Map:
+		m := NewMap()
+		for i, k := range v.keys {
+			m.Set(deepCopy(k), deepCopy(v.vals[i]))
+		}
+		return m
+	case *Object:
+		obj := &Object{Class: v.Class, Fields: make(map[string]Value, len(v.Fields))}
+		for name, x := range v.Fields {
+			obj.Fields[name] = deepCopy(x)
+		}
+		return obj
+	}
+	return v
 }
 
 // construct creates an object: the field values are evaluated first, then

@@ -225,13 +225,34 @@ func (c *checker) storeError(value ast.Expr, where string) {
 	d.Help = c.readOnlyHelp(value)
 }
 
-// checkModes checks the `mut` of parameters, and of a `mut func`.
+// checkModes checks the `mut` and `copy` of parameters, and of a `mut
+// func`.
 func (c *checker) checkModes(sig *funcSig) {
 	fn := sig.decl
 	for i, p := range fn.Params {
-		if p.Mut && !changeable(sig.params[i]) && !silent(sig.params[i]) {
-			d := c.errorf(p.MutSp, "`mut` does nothing on %s, which can't be changed", sig.params[i])
+		t := sig.params[i]
+		mode := "mut"
+		if p.Copy {
+			mode = "copy"
+		}
+		switch {
+		case !p.Mut && !p.Copy, silent(t):
+		case !changeable(t):
+			d := c.errorf(p.MutSp, "`%s` does nothing on %s, which can't be changed", mode, t)
 			d.Help = []string{fmt.Sprintf("remove it: `%s: %s`", p.Name.Name, c.text(p.Type))}
+		case p.Copy:
+			if what := uncopyable(t, map[*Class]bool{}); what != nil {
+				msg := fmt.Sprintf("a class can't be copied, and %s holds %s", t, what)
+				if what == nonNull(t) {
+					msg = fmt.Sprintf("a class can't be copied, and %s is one", what)
+				}
+				if _, ok := what.(*Interface); ok {
+					msg = fmt.Sprintf("%s can't be copied, since the object behind an interface may be a class", t)
+				}
+				d := c.errorf(p.Type.Sp, "%s", msg)
+				d.Notes = []string{"a class may hold things like connections, which copying would get wrong"}
+				d.Help = []string{"use a data class, or `mut` to change the caller's object"}
+			}
 		}
 	}
 	c.checkStatic(sig)
@@ -259,7 +280,7 @@ func (c *checker) checkArgModes(e *ast.Call, name string, sig *funcSig) {
 	}
 	for i, p := range sig.decl.Params {
 		a := e.Args[i]
-		if !p.Mut || !c.readOnly(a) {
+		if !p.Mut || p.Copy || !c.readOnly(a) {
 			continue
 		}
 		d := c.errorf(a.Span(), "`%s` is read only, but `%s` may change it", c.text(a), name)
@@ -287,4 +308,37 @@ func (c *checker) checkStatic(sig *funcSig) {
 		d := c.errorf(fn.MutSp, "a static method can't be a `mut func`")
 		d.Notes = []string{"it has no `this` to change"}
 	}
+}
+
+// uncopyable returns the class or interface in t that makes it impossible
+// to copy, or nil. Lists, maps and data classes are copied all the way
+// down.
+func uncopyable(t Type, seen map[*Class]bool) Type {
+	switch t := t.(type) {
+	case *Optional:
+		return uncopyable(t.Inner, seen)
+	case *List:
+		return uncopyable(t.Elem, seen)
+	case *Map:
+		if k := uncopyable(t.Key, seen); k != nil {
+			return k
+		}
+		return uncopyable(t.Val, seen)
+	case *Interface:
+		return t
+	case *Class:
+		if !t.Data {
+			return t
+		}
+		if seen[t] {
+			return nil
+		}
+		seen[t] = true
+		for _, f := range ownFields(t) {
+			if k := uncopyable(f.typ, seen); k != nil {
+				return k
+			}
+		}
+	}
+	return nil
 }

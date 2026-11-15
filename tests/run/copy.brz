@@ -1,0 +1,62 @@
+data Wallet
+{
+    mut amount: Int
+    mut history: List<Int> = []
+}
+
+func sorted(items: copy List<Int>) -> List<Int>
+{
+    items.sort()
+    return items
+}
+
+func preview(w: copy Wallet, spend: Int) -> Int
+{
+    w.amount -= spend
+    w.history.append(spend)
+    return w.amount
+}
+
+func grid_sum(g: copy List<List<Int>>) -> Int
+{
+    mut sum = 0
+    for row in g
+    {
+        row.append(100)
+        for n in row
+        {
+            sum += n
+        }
+    }
+    return sum
+}
+
+func bumped(m: copy Map<String, Int>) -> Map<String, Int>
+{
+    m["a"] = 99
+    return m
+}
+
+// a read-only list can be passed as a copy
+func sorted_view(xs: List<Int>) -> List<Int>
+{
+    return sorted(xs)
+}
+
+func main() -> Int
+{
+    print(sorted_view([2, 1]))
+    con xs = [3, 1, 2]
+    print(sorted(xs))
+    print(xs)
+    con w = Wallet(50)
+    print(preview(w, 20))
+    print(w)
+    con g = [[1, 2], [3]]
+    print(grid_sum(g))
+    print(g)
+    con m = {"a": 1}
+    print(bumped(m))
+    print(m)
+    return 0
+}

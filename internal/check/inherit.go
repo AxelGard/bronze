@@ -272,6 +272,9 @@ func paramMode(sig *funcSig, i int) string {
 	if sig.decl != nil && sig.decl.Params[i].Mut {
 		return "mut"
 	}
+	if sig.decl != nil && sig.decl.Params[i].Copy {
+		return "copy"
+	}
 	return ""
 }
 

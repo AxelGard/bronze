@@ -72,9 +72,15 @@ module.exports = grammar({
 
     parameter_list: ($) => seq('(', commaSep($.parameter), ')'),
 
-    // `name: mut T` may change the caller's value; a plain one is read only.
+    // `name: mut T` may change the caller's value, `name: copy T` gets its
+    // own copy, and a plain one is read only.
     parameter: ($) =>
-      seq(field('name', $.identifier), ':', optional('mut'), field('type', $.type)),
+      seq(
+        field('name', $.identifier),
+        ':',
+        optional(choice('mut', 'copy')),
+        field('type', $.type),
+      ),
 
     return_type: ($) =>
       choice(seq($.type, optional(seq('!', $.type))), seq('!', $.type)),
