@@ -1,0 +1,2 @@
+error: `xs` is read only
+  --> readonly_local.brz:4:5

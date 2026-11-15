@@ -130,10 +130,10 @@ Slices never fail. Negative bounds count from the end, and then both bounds are 
 
 ## Lists are shared
 
-Like objects, lists are shared: assigning or passing a list never copies it. `con` fixes the variable, not the list, so a `con` list can still be changed.
+Like objects, lists are shared: assigning or passing a list never copies it. `con` fixes the variable, not the list, so a `con` list can still be changed. A function that changes a list it is given declares the parameter [`mut`](classes.md#parameters-are-read-only):
 
 ```bronze
-func add_one(nums: List<Int>)
+func add_one(nums: mut List<Int>)
 {
     nums.append(1)
 }

@@ -1,0 +1,15 @@
+class Box
+{
+    mut items: List<Int> = []
+}
+
+func keep(b: mut Box, nums: List<Int>)
+{
+    b.items = nums
+}
+
+func main() -> Int
+{
+    keep(Box(), [1])
+    return 0
+}

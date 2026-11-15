@@ -199,13 +199,13 @@ const node = `class Node
         this.label = label
     }
 
-    func bump() -> Int
+    mut func bump() -> Int
     {
         this.value = this.value + 1
         return this.value
     }
 
-    func twice() -> Int
+    mut func twice() -> Int
     {
         this.bump()
         return this.bump()

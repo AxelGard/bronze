@@ -1,0 +1,10 @@
+func clear(ages: Map<String, Int>)
+{
+    ages["Ada"] = 0
+}
+
+func main() -> Int
+{
+    clear({"Ada": 36})
+    return 0
+}

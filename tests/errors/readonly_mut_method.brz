@@ -1,0 +1,20 @@
+class Counter
+{
+    mut count = 0
+
+    mut func increment()
+    {
+        this.count += 1
+    }
+}
+
+func bump(c: Counter)
+{
+    c.increment()
+}
+
+func main() -> Int
+{
+    bump(Counter())
+    return 0
+}

@@ -1,0 +1,2 @@
+error: `b` is read only, and can't be returned
+  --> readonly_return.brz:8:12

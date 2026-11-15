@@ -1,0 +1,2 @@
+error: `s.top()` is read only
+  --> readonly_through_method.brz:18:5

@@ -1,0 +1,15 @@
+func add_one(nums: mut List<Int>)
+{
+    nums.append(1)
+}
+
+func wrap(nums: List<Int>)
+{
+    add_one(nums)
+}
+
+func main() -> Int
+{
+    wrap([1])
+    return 0
+}

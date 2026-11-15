@@ -1,0 +1,15 @@
+class Box
+{
+    mut items: List<Int> = []
+}
+
+func fill(b: Box)
+{
+    b.items.append(1)
+}
+
+func main() -> Int
+{
+    fill(Box())
+    return 0
+}

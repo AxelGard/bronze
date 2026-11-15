@@ -25,7 +25,7 @@ class Account use Error
         this.owner = owner
     }
 
-    func close() -> Status
+    mut func close() -> Status
     {
         this.status = Status.Closed
         return this.status
@@ -86,13 +86,13 @@ func TestSymbols(t *testing.T) {
 		kind SymbolKind
 		want string
 	}{
-		{"Status", 1, SymEnum, "1:6 9:18 17:21 19:23 35:9"},
+		{"Status", 1, SymEnum, "1:6 9:18 17:25 19:23 35:9"},
 		{"Closed", 2, SymCase, "4:5 19:30"},
 		{"Active", 2, SymCase, "3:5 9:25 35:16"},
 		{"Account", 3, SymClass, "7:7 24:29 26:12 31:30"},
 		{"owner", 1, SymField, "10:9 14:14 35:34"},
 		{"owner", 2, SymParameter, "12:15 14:22"},
-		{"close", 2, SymMethod, "17:10 32:15"},
+		{"close", 2, SymMethod, "17:14 32:15"},
 		{"status", 2, SymField, "9:9 19:14 20:21"},
 		{"find", 2, SymFunction, "24:6 31:13"},
 		{"a = find", 1, SymVariable, "31:9 32:13 35:32 35:42"},

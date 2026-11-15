@@ -1,0 +1,2 @@
+error: an enum's methods can't be `mut func`
+  --> mut_func_enum.brz:6:5

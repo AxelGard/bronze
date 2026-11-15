@@ -1,0 +1,15 @@
+class Box
+{
+    mut value = 0
+}
+
+func fill(b: Box)
+{
+    b.value = 42
+}
+
+func main() -> Int
+{
+    fill(Box())
+    return 0
+}

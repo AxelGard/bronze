@@ -2,12 +2,12 @@ class Stack
 {
     mut size = 0
 
-    func push()
+    mut func push()
     {
         this.size = this.size + 1
     }
 
-    func pop()
+    mut func pop()
     {
         if this.size == 0
         {

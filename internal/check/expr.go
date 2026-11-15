@@ -575,6 +575,9 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		return Invalid
 	}
 	c.ref(m.Name, sig.sym)
+	if sig.mut {
+		c.changes(m.X, fmt.Sprintf("`%s` is a `mut func`", name))
+	}
 	c.checkArgs(e, name, sig, c.argsFor(e, sig.params))
 	return sig.result
 }
@@ -601,6 +604,7 @@ func (c *checker) checkArgs(e *ast.Call, name string, sig *funcSig, types []Type
 			}
 		}
 	}
+	c.checkArgModes(e, name, sig)
 }
 
 // arityError reports a call with the wrong number of arguments. sig is nil

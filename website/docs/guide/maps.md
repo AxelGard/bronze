@@ -112,7 +112,7 @@ While a `for` loops over a map, adding a key or removing one panics with `map ch
 
 ## Maps are shared
 
-Like lists and objects, maps are shared: assigning or passing a map never copies it.
+Like lists and objects, maps are shared: assigning or passing a map never copies it. A function that changes a map it is given declares the parameter [`mut`](classes.md#parameters-are-read-only): `func count(words: mut Map<String, Int>)`.
 
 `==` compares maps by value: the same keys, each with an equal value, in any order. `print` and `String(...)` show a map as `{"Ada": 36}`, with `String` keys and values quoted.
 

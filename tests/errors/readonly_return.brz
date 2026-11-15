@@ -1,0 +1,16 @@
+class Box
+{
+    mut value = 0
+}
+
+func same(b: Box) -> Box
+{
+    return b
+}
+
+func main() -> Int
+{
+    con b = same(Box())
+    b.value = 1
+    return 0
+}

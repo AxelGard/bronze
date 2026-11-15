@@ -1,0 +1,25 @@
+class Box
+{
+    mut value = 0
+}
+
+class Shelf
+{
+    mut box = Box()
+
+    func top() -> Box
+    {
+        return this.box
+    }
+}
+
+func paint(s: Shelf)
+{
+    s.top().value = 5
+}
+
+func main() -> Int
+{
+    paint(Shelf())
+    return 0
+}

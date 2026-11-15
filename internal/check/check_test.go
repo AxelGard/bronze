@@ -171,7 +171,7 @@ const counterClass = `class Counter
         this.count = count
     }
 
-    func increment()
+    mut func increment()
     {
         this.count = this.count + 1
     }
@@ -225,9 +225,9 @@ func TestClassErrors(t *testing.T) {
 			[]string{"3:13 `Counter` has no `init` that takes 0 arguments"}},
 		{"init arg type", "func f()\n{\n    con c = Counter(1)\n}",
 			[]string{"3:21 argument `name` of `Counter` must be String, found Int"}},
-		{"method arg count", "func f(c: Counter)\n{\n    c.increment(1)\n}",
+		{"method arg count", "func f(c: mut Counter)\n{\n    c.increment(1)\n}",
 			[]string{"3:5 `increment` takes 0 arguments, but 1 was given"}},
-		{"field type", "func f(c: Counter)\n{\n    c.count = 1.5\n}",
+		{"field type", "func f(c: mut Counter)\n{\n    c.count = 1.5\n}",
 			[]string{"3:15 cannot assign Float to `count`, which is Int"}},
 		{"this outside method", "func f() -> Int\n{\n    return this.count\n}",
 			[]string{"3:12 `this` can only be used inside methods"}},
@@ -319,7 +319,7 @@ func TestEnums(t *testing.T) {
 	ok := []string{
 		"func f(s: Status) -> String\n{\n    print(s)\n    print(Status.Active.label())\n    return s.label()\n}",
 		"func f(s: Status) -> Int\n{\n    if s == Status.Frozen and s.is_open()\n    {\n        return 1\n    }\n    return match s\n    {\n        Status.Active => 0\n        _ => panic(\"no\")\n    }\n}",
-		"class Account\n{\n    mut status = Status.Active\n}\nfunc f(a: Account)\n{\n    a.status = Status.Closed\n}",
+		"class Account\n{\n    mut status = Status.Active\n}\nfunc f(a: mut Account)\n{\n    a.status = Status.Closed\n}",
 		"func f(n: Int) -> String\n{\n    return match n\n    {\n        0 => \"zero\"\n        -1 => \"minus one\"\n        _ => \"other\"\n    }\n}",
 		"func f(b: Bool, s: String) -> Int\n{\n    con x = match b\n    {\n        true => 1\n        false => 2\n    }\n    return x + match s\n    {\n        \"a\" => 1\n        _ => 0\n    }\n}",
 		"func f(s: Status) -> Int\n{\n    return match s\n    {\n        Status.Active => panic(\"a\")\n        Status.Frozen => 1\n        Status.Closed => panic(\"c\")\n    }\n}",
@@ -477,7 +477,7 @@ func TestErrorsAndNull(t *testing.T) {
 		"func f() -> Int ! Error\n{\n    con a = find(1) else return\n    con b = find(2) else return Error(\"x\")\n    con c = find(3) else (e) return Error(e.message)\n    con d = find(4) else Item()\n    con g = find(5) else panic(\"no\")\n    con h = find(6) else (e)\n    {\n        print(e.message + String(e.id))\n        return 0\n    }\n    save(a) else return\n    find(7) else return\n    return a.id\n}",
 		"func f()\n{\n    save(Item()) else panic(\"no\")\n    save(Item()) else (e) { return }\n}",
 		// an error that uses Error is an Error
-		"func f(e: NotFound) -> Error\n{\n    print(e.message)\n    return e\n}",
+		"func f(e: mut NotFound) -> Error\n{\n    print(e.message)\n    return e\n}",
 		"func f() -> Bool\n{\n    con e = Error(\"x\")\n    return e is NotFound or e is Error\n}",
 		// null
 		"func f(id: Int) -> Int\n{\n    con a = lookup(id)\n    if a != null\n    {\n        return a.id\n    }\n    return 0\n}",
@@ -486,7 +486,7 @@ func TestErrorsAndNull(t *testing.T) {
 		"func f() -> Int\n{\n    con a = lookup(1) else Item()\n    con b = lookup(2) else return 0\n    con c: Item? = null\n    mut d: Item? = a\n    d = null\n    return a.id + b.id\n}",
 		"func f()\n{\n    con a = lookup(1) else return\n    print(a.id)\n}",
 		"func f() -> ! Error\n{\n    con a = maybe(1) else return\n    con b = a else return Error(\"none\")\n    print(b.id)\n}",
-		"class Box\n{\n    mut item: Item? = null\n}\nfunc f(b: Box) -> Bool\n{\n    b.item = Item()\n    return b.item == null\n}",
+		"class Box\n{\n    mut item: Item? = null\n}\nfunc f(b: mut Box) -> Bool\n{\n    b.item = Item()\n    return b.item == null\n}",
 	}
 	for _, src := range ok {
 		if errs := relErrors(t, errorDecls, src); len(errs) > 0 {
@@ -595,5 +595,31 @@ func TestHelp(t *testing.T) {
 	_, diags := Check(f, src)
 	if len(diags) != 1 || len(diags[0].Help) != 1 || diags[0].Help[0] != "convert explicitly: Float(a) + 2.0" {
 		t.Errorf("got %+v", diags)
+	}
+}
+
+func TestReadOnlyAllowed(t *testing.T) {
+	ok := []string{
+		// a method that isn't mut may return what it read out of this, and
+		// the result is changeable where the object is
+		"class Shelf\n{\n    mut box = Counter(\"b\")\n    func top() -> Counter\n    {\n        return this.box\n    }\n}\nfunc f()\n{\n    con s = Shelf()\n    s.top().increment()\n}",
+		// a mut func may call another on this
+		"class Two\n{\n    mut c = Counter(\"c\")\n    mut func both()\n    {\n        this.c.increment()\n        this.again()\n    }\n    mut func again()\n    {\n    }\n}",
+		// slices and keys() of unchangeable elements are new, changeable lists
+		"func f(xs: List<Int>) -> List<Int>\n{\n    return xs[1..]\n}\nfunc g(m: Map<String, Int>) -> List<String>\n{\n    con ks = m.keys()\n    ks.append(\"x\")\n    return ks\n}",
+		// reading, looping and passing on as read only
+		"func total(xs: List<Int>) -> Int\n{\n    mut sum = 0\n    for x in xs\n    {\n        sum += x\n    }\n    return sum\n}\nfunc f(xs: List<Int>) -> Int\n{\n    return total(xs) + (xs[0] else 0)\n}",
+		"func f(c: Counter) -> Int\n{\n    con d = c\n    return d.get() + c.count\n}",
+		// a mut parameter can be changed, stored and returned
+		"func f(c: mut Counter) -> Counter\n{\n    c.increment()\n    c.count = 2\n    con all = [c]\n    all.append(c)\n    return c\n}",
+		// new values are changeable
+		"func f() -> Counter\n{\n    con c = Counter(\"a\")\n    c.increment()\n    con xs = [1]\n    xs.append(2)\n    return c\n}",
+		// unchangeable values from a read-only object are just values
+		"func f(c: Counter) -> String\n{\n    mut s = c.name\n    s += \"!\"\n    return s\n}",
+	}
+	for _, src := range ok {
+		if errs := errors(t, counterClass+src+mainFunc); len(errs) > 0 {
+			t.Errorf("%q:\n%s", src, strings.Join(errs, "\n"))
+		}
 	}
 }

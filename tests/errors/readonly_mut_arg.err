@@ -1,0 +1,2 @@
+error: `nums` is read only, but `add_one` may change it
+  --> readonly_mut_arg.brz:8:13

@@ -1,0 +1,2 @@
+error: `this` is read only
+  --> readonly_this.brz:7:9

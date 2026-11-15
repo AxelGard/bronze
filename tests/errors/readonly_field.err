@@ -1,0 +1,2 @@
+error: `b` is read only
+  --> readonly_field.brz:8:5

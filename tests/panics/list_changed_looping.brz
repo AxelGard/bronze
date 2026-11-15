@@ -1,4 +1,4 @@
-func add_twice(nums: List<Int>, n: Int)
+func add_twice(nums: mut List<Int>, n: Int)
 {
     nums.append(n)
     nums.append(n)

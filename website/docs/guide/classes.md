@@ -11,7 +11,7 @@ class Counter
         this.name = name
     }
 
-    func increment()
+    mut func increment()
     {
         this.count = this.count + 1
     }
@@ -54,6 +54,8 @@ class Player
 ## Methods and this
 
 Methods are functions declared inside the class. Inside a method, `this` is the object it was called on. Fields are always reached through `this`: `this.count`, not `count`.
+
+A method that changes the object is a **`mut func`**, like `increment` above. In any other method, `this` is read only: it can read fields and call other methods that aren't `mut func`, but not change anything. `init` may always change `this`, and is never written `mut func`.
 
 ## Constructors
 
@@ -105,7 +107,7 @@ class Box
     mut value = 0
 }
 
-func fill(b: Box)
+func fill(b: mut Box)
 {
     b.value = 42
 }
@@ -131,6 +133,45 @@ false
 `con` only fixes the variable: `a` above always refers to the same box, but the box's `mut` fields can still change. `==` on objects asks whether they are the same object.
 
 An object can't be printed directly; print its fields instead.
+
+## Parameters are read only
+
+A function can only change an object it is given if the parameter says so, with **`mut`**: `fill(b: mut Box)` above. A plain parameter is read only. The function can read fields and call methods that aren't `mut func`, but changing anything is an error:
+
+```bronze
+class Box
+{
+    mut value = 0
+}
+
+func fill(b: Box)
+{
+    b.value = 42
+}
+
+func main() -> Int
+{
+    fill(Box())
+    return 0
+}
+```
+
+```text title="Output"
+error: `b` is read only
+  --> main.brz:8:5
+  |
+8 |     b.value = 42
+  |     ^ b is a read-only Box
+  |
+  = help: declare the parameter as `b: mut Box`
+```
+
+So a signature tells you what a function does to what you pass it. The call doesn't change: `fill(b)`.
+
+- Read only goes all the way down: through a read-only object, its fields' objects and lists are read only too.
+- A read-only value can't be stored in a field or a list, or passed as a `mut` parameter, since it could then be changed later.
+- A function can't return a read-only parameter. A method that isn't a `mut func` may return what it read out of `this`, like a `find` that returns one of its objects. The result is then read only wherever the object it was called on is.
+- `mut` only goes on types that can change: objects, lists and maps. `n: mut Int` is an error.
 
 ## Not yet
 

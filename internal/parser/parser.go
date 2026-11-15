@@ -171,6 +171,12 @@ func (p *parser) decl() (d ast.Decl) {
 		fn := p.funcDecl()
 		p.endOfLine("declaration")
 		return fn
+	case lexer.MUT:
+		if p.peekKind(1) == lexer.FUNC {
+			fn := p.mutFuncDecl()
+			p.endOfLine("declaration")
+			return fn
+		}
 	case lexer.CLASS:
 		c := p.classDecl()
 		p.endOfLine("declaration")
@@ -201,6 +207,15 @@ func (p *parser) syncDecl() {
 		}
 		p.advance()
 	}
+}
+
+// mutFuncDecl parses `mut func ...`.
+func (p *parser) mutFuncDecl() *ast.FuncDecl {
+	mut := p.expect(lexer.MUT).Span
+	fn := p.funcDecl()
+	fn.Mut, fn.MutSp = true, mut
+	fn.Sp = mut.To(fn.Sp)
+	return fn
 }
 
 func (p *parser) funcDecl() *ast.FuncDecl {
@@ -280,10 +295,12 @@ func (p *parser) member(c *ast.ClassDecl) {
 			p.syncStmt(start)
 		}
 	}()
-	switch p.kind() {
-	case lexer.CON, lexer.MUT:
+	switch {
+	case p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC:
+		c.Methods = append(c.Methods, p.mutFuncDecl())
+	case p.at(lexer.CON), p.at(lexer.MUT):
 		c.Fields = append(c.Fields, p.field())
-	case lexer.FUNC:
+	case p.at(lexer.FUNC):
 		c.Methods = append(c.Methods, p.funcDecl())
 	default:
 		p.failHere("expected a field (`con` or `mut`) or a method (`func`), found %s", describe(p.tok()))
@@ -333,6 +350,9 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 	case lexer.FUNC:
 		e.Methods = append(e.Methods, p.funcDecl())
 		p.endOfLine("method")
+	case lexer.MUT:
+		e.Methods = append(e.Methods, p.mutFuncDecl())
+		p.endOfLine("method")
 	default:
 		p.failNote("cases are written one per line, as plain names",
 			"expected a case or a method (`func`), found %s", describe(p.tok()))
@@ -363,8 +383,13 @@ func (p *parser) param() *ast.Param {
 		p.failHere("expected `:` and a type after parameter `%s`, found %s", name.Name, describe(p.tok()))
 	}
 	p.advance()
-	t := p.typeExpr()
-	return &ast.Param{Name: name, Type: t, Sp: name.Sp.To(t.Sp)}
+	param := &ast.Param{Name: name}
+	if p.at(lexer.MUT) {
+		param.Mut, param.MutSp = true, p.advance().Span
+	}
+	param.Type = p.typeExpr()
+	param.Sp = name.Sp.To(param.Type.Sp)
+	return param
 }
 
 func (p *parser) typeExpr() *ast.TypeExpr {

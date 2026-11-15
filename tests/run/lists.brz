@@ -23,7 +23,7 @@ func total(nums: List<Int>) -> Int
 }
 
 // lists are shared: this changes the caller's list
-func double_all(nums: List<Int>)
+func double_all(nums: mut List<Int>)
 {
     for i, n in nums
     {

@@ -62,6 +62,6 @@ func (c *checker) stringMethod(e *ast.Call, m *ast.Member) Type {
 		return Invalid
 	}
 	c.refBuiltinMethod(m.Name, bm, String)
-	c.methodArgs(e, bm)
+	c.methodArgs(e, m, bm)
 	return bm.result
 }

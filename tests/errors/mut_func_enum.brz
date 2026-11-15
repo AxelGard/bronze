@@ -1,0 +1,16 @@
+enum Light
+{
+    Red
+    Green
+
+    mut func next() -> Light
+    {
+        return Light.Green
+    }
+}
+
+func main() -> Int
+{
+    print(Light.Red.next())
+    return 0
+}

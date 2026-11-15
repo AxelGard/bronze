@@ -1,0 +1,15 @@
+class Box
+{
+    mut value = 0
+}
+
+func collect(all: mut List<Box>, b: Box)
+{
+    all.append(b)
+}
+
+func main() -> Int
+{
+    collect([], Box())
+    return 0
+}

@@ -20,7 +20,7 @@ class Account
         this.owner = owner
     }
 
-    func withdraw(amount: Int) -> Int ! Error
+    mut func withdraw(amount: Int) -> Int ! Error
     {
         if this.status == Status.Frozen
         {

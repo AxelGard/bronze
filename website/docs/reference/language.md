@@ -125,6 +125,8 @@ enum Name { cases, one per line, then methods }
 ```
 
 - **Fields**: `con name = value` or `mut name: T = value`. An initial value is required. A `con` field can be assigned only in `init`.
+- **Methods**: `mut func name(...)` for a method that changes `this`. In other methods `this` is read only.
+- **Parameters**: `name: T` is read only (for objects, lists and maps, all the way down), `name: mut T` may change the caller's value. A read-only value can't be changed, stored, passed as `mut`, or returned (a method that isn't `mut` may return what it read from `this`; the result is as read only as the object). `mut` on `Int`, `Float`, `Bool`, `String` or an enum is an error.
 - **Constructors**: methods named `init`. A class can have several, with different numbers of parameters. Without any, it gets an empty `init()`.
 - **Returns**: a function that returns a value must end in a `return`, a `panic(...)`, or an `if`/`else` or `match` whose branches all end that way.
 
@@ -163,7 +165,7 @@ decl        = func_decl | class_decl | enum_decl
 
 func_decl   = "func" IDENT "(" [ params ] ")" [ "->" ret_type ] block
 params      = param { "," param }
-param       = IDENT ":" type
+param       = IDENT ":" [ "mut" ] type
 ret_type    = type [ "!" type ]                     // T, or T ! E
             | "!" type                              // nothing, or E
 type        = type_name [ "?" ]
@@ -173,7 +175,7 @@ type_name   = "Int" | "Float" | "Bool" | "String"
             | IDENT
 
 class_decl  = "class" IDENT [ "use" "Error" ] "{" { NEWLINE } { member { NEWLINE } } "}"
-member      = field | func_decl
+member      = field | [ "mut" ] func_decl
 field       = ( "con" | "mut" ) IDENT [ ":" type ] "=" expr
 
 enum_decl   = "enum" IDENT "{" { NEWLINE } { ( IDENT | func_decl ) { NEWLINE } } "}"

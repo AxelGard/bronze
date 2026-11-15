@@ -1,0 +1,2 @@
+error: `nums` is read only
+  --> readonly_list_method.brz:3:5

@@ -158,7 +158,7 @@ func mapMethods(m *Map) map[string]*method {
 	ms := []*method{
 		{name: "length", result: Int},
 		{name: "contains", params: []string{"key"}, types: []Type{m.Key}, result: Bool},
-		{name: "remove", params: []string{"key"}, types: []Type{m.Key}, result: &Optional{Inner: m.Val}},
+		{name: "remove", change: true, params: []string{"key"}, types: []Type{m.Key}, result: &Optional{Inner: m.Val}},
 		{name: "keys", result: &List{Elem: m.Key}},
 		{name: "values", result: &List{Elem: m.Val}},
 	}
@@ -179,6 +179,6 @@ func (c *checker) mapMethod(e *ast.Call, m *ast.Member, t *Map) Type {
 		return Invalid
 	}
 	c.refBuiltinMethod(m.Name, bm, t)
-	c.methodArgs(e, bm)
+	c.methodArgs(e, m, bm)
 	return bm.result
 }

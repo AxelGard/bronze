@@ -18,6 +18,9 @@ import (
 func varHover(name string, v *variable) string {
 	s := name
 	if t := typeText(v.typ); t != "" {
+		if v.kind == Param && v.ro == 0 && changeable(v.typ) {
+			t = "mut " + t
+		}
 		s += ": " + t
 	}
 	switch v.kind {
@@ -44,11 +47,17 @@ func sigHover(sig *funcSig) string {
 	for i, p := range sig.decl.Params {
 		s := p.Name.Name
 		if t := typeText(sig.params[i]); t != "" {
+			if p.Mut {
+				t = "mut " + t
+			}
 			s += ": " + t
 		}
 		ps = append(ps, s)
 	}
 	s := "func " + sig.name + "(" + strings.Join(ps, ", ") + ")"
+	if sig.mut {
+		s = "mut " + s
+	}
 	switch r := sig.result.(type) {
 	case *Failable:
 		if r.Value == NoValue {

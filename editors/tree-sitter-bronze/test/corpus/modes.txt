@@ -1,0 +1,56 @@
+==================
+mut parameters and mut func
+==================
+
+class Counter
+{
+    mut count = 0
+
+    mut func add(n: Int)
+    {
+        this.count += n
+    }
+}
+
+func bump(c: mut Counter)
+{
+    c.add(1)
+}
+
+---
+
+(source_file
+  (class_declaration
+    name: (identifier)
+    body: (class_body
+      (field_declaration
+        name: (identifier)
+        value: (integer))
+      (function_declaration
+        name: (identifier)
+        parameters: (parameter_list
+          (parameter
+            name: (identifier)
+            type: (type
+              name: (identifier))))
+        body: (block
+          (compound_assignment
+            left: (member_expression
+              object: (this)
+              member: (identifier))
+            right: (identifier))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (parameter_list
+      (parameter
+        name: (identifier)
+        type: (type
+          name: (identifier))))
+    body: (block
+      (expression_statement
+        (call_expression
+          function: (member_expression
+            object: (identifier)
+            member: (identifier))
+          arguments: (argument_list
+            (integer)))))))

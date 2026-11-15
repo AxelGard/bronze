@@ -1,0 +1,10 @@
+mut func hello()
+{
+    print("hello")
+}
+
+func main() -> Int
+{
+    hello()
+    return 0
+}

@@ -11,7 +11,7 @@
 // ------------------------------------------------------------------
 
 // Insertion sort, in place.
-func insertion_sort(xs: List<Int>)
+func insertion_sort(xs: mut List<Int>)
 {
     for i in 1..xs.length()
     {

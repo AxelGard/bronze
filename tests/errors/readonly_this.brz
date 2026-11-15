@@ -1,0 +1,15 @@
+class Counter
+{
+    mut count = 0
+
+    func increment()
+    {
+        this.count += 1
+    }
+}
+
+func main() -> Int
+{
+    Counter().increment()
+    return 0
+}

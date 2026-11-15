@@ -86,7 +86,7 @@ class Account
         }
     }
 
-    func deposit(amount: Int) -> ! Error
+    mut func deposit(amount: Int) -> ! Error
     {
         if amount <= 0
         {
@@ -97,7 +97,7 @@ class Account
     }
 
     // returns the new balance
-    func withdraw(amount: Int) -> Int ! Error
+    mut func withdraw(amount: Int) -> Int ! Error
     {
         if amount <= 0
         {
@@ -125,7 +125,7 @@ class Bank
     mut first: Account? = null
     mut second: Account? = null
 
-    func open(owner: String, balance: Int) -> Account ! Error
+    mut func open(owner: String, balance: Int) -> Account ! Error
     {
         con account = Account(owner, balance)
 
@@ -166,7 +166,7 @@ class Bank
         return null
     }
 
-    func transfer(from: String, to: String, amount: Int) -> ! Error
+    mut func transfer(from: String, to: String, amount: Int) -> ! Error
     {
         con source = this.find(from) else return Error("no account for " + from)
         con target = this.find(to) else return Error("no account for " + to)
@@ -189,7 +189,7 @@ func show(account: Account)
 }
 
 
-func open_or_report(bank: Bank, owner: String, balance: Int) -> Account?
+func open_or_report(bank: mut Bank, owner: String, balance: Int) -> Account?
 {
     con account = bank.open(owner, balance) else (e)
     {
@@ -200,7 +200,7 @@ func open_or_report(bank: Bank, owner: String, balance: Int) -> Account?
 }
 
 
-func try_transfer(bank: Bank, from: String, to: String, amount: Int)
+func try_transfer(bank: mut Bank, from: String, to: String, amount: Int)
 {
     bank.transfer(from, to, amount) else (e)
     {

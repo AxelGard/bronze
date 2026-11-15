@@ -1,0 +1,2 @@
+error: only methods can be `mut func`
+  --> mut_func_top_level.brz:1:1

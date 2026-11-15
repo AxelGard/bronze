@@ -1,0 +1,14 @@
+class Box
+{
+    mut value = 0
+
+    mut func init()
+    {
+    }
+}
+
+func main() -> Int
+{
+    con b = Box()
+    return 0
+}

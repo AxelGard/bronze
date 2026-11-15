@@ -1,0 +1,2 @@
+error: `b` is read only, and can't be stored in `all`
+  --> readonly_store_list.brz:8:16

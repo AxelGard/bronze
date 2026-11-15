@@ -49,8 +49,10 @@ module.exports = grammar({
     // ------------------------------------------------------------------
     // Declarations
 
+    // `mut func` marks a method that changes `this`.
     function_declaration: ($) =>
       seq(
+        optional('mut'),
         'func',
         field('name', $.identifier),
         field('parameters', $.parameter_list),
@@ -60,7 +62,9 @@ module.exports = grammar({
 
     parameter_list: ($) => seq('(', commaSep($.parameter), ')'),
 
-    parameter: ($) => seq(field('name', $.identifier), ':', field('type', $.type)),
+    // `name: mut T` may change the caller's value; a plain one is read only.
+    parameter: ($) =>
+      seq(field('name', $.identifier), ':', optional('mut'), field('type', $.type)),
 
     return_type: ($) =>
       choice(seq($.type, optional(seq('!', $.type))), seq('!', $.type)),

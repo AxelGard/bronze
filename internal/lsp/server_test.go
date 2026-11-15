@@ -107,7 +107,7 @@ const program = `class Counter
 {
     mut count = 0
 
-    func add(n: Int)
+    mut func add(n: Int)
     {
         this.count = this.count + n
     }
@@ -281,7 +281,7 @@ func TestHover(t *testing.T) {
 {
     mut balance = 0
 
-    func withdraw(amount: Int) -> Int ! Error
+    mut func withdraw(amount: Int) -> Int ! Error
     {
         this.balance -= amount
         return this.balance
@@ -292,6 +292,11 @@ enum Status
 {
     Active
     Frozen
+}
+
+func top_up(a: mut Account, by: Int)
+{
+    a.balance += by
 }
 
 func main() -> Int
@@ -322,7 +327,9 @@ func main() -> Int
 		{"n in", 1, "n: Int", ""},
 		{"amount", 2, "amount: Int", ""},
 		{"balance", 2, "mut balance: Int", "in `Account`"},
-		{"withdraw", 2, "func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
+		{"withdraw", 2, "mut func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
+		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
+		{"a.balance", 1, "a: mut Account", ""},
 		{"Account", 2, "class Account", ""},
 		{"Status", 2, "enum Status", ""},
 		{"Frozen", 2, "Status.Frozen", ""},

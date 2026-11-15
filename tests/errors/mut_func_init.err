@@ -1,0 +1,2 @@
+error: `init` can't be a `mut func`
+  --> mut_func_init.brz:5:5

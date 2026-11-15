@@ -142,7 +142,7 @@ Everything is shared. What a function may do with what it is given is part of th
 | `a: mut Account` | may change the caller's object |
 | `a: copy Account` | gets its own deep copy (lists, maps, data classes; a class can't be copied) |
 
-The call site doesn't mark it: `deposit(acc, 100)`. A read-only value can't be stored or returned where it could be changed later. See [spec-0.3](spec-0.3.md#parameter-modes) for the exact rules.
+The call site doesn't mark it: `deposit(acc, 100)`. A read-only value can't be stored or returned where it could be changed later, except that a method that isn't `mut` may return what it holds; its result is then as read only as the object. See [spec-0.3](spec-0.3.md#parameter-modes) for the exact rules.
 
 ## Visibility
 

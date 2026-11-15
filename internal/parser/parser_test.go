@@ -332,3 +332,21 @@ func TestRecoveredTree(t *testing.T) {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }
+
+func TestModes(t *testing.T) {
+	src := "class Counter\n{\n    mut count = 0\n\n    mut func add(n: Int)\n    {\n    }\n}\n\nfunc bump(c: mut Counter, xs: mut List<Int>?)\n{\n}\n\nmut func top()\n{\n}\n"
+	f, diags := parse(t, src)
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := "(class Counter (field mut count 0) (mut func add (n Int) (block)))\n" +
+		"(func bump (c mut Counter) (xs mut List<Int>?) (block))\n" +
+		"(mut func top (block))"
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+	fn := f.Decls[1].(*ast.FuncDecl)
+	if p := fn.Params[0]; p.Sp.Start.Col != 11 || p.MutSp.Start.Col != 14 {
+		t.Errorf("param spans: %+v %+v", p.Sp, p.MutSp)
+	}
+}

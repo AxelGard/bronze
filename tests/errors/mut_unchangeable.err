@@ -1,0 +1,2 @@
+error: `mut` does nothing on Int, which can't be changed
+  --> mut_unchangeable.brz:1:16

@@ -1,0 +1,2 @@
+error: `b.items` is read only
+  --> readonly_deep.brz:8:5

@@ -108,7 +108,7 @@ The language is exactly [spec-0.3](spec-0.3.md): spec-0.2, plus
 
 The breaking change goes first, so that every later step, test and example is written the new way.
 
-1. The new keywords; parameter modes `mut T` and `mut func`, with read only by default. Update the examples, golden tests and website so everything passes again.
+1. Parameter modes `mut T` and `mut func`, with read only by default. Update the examples, golden tests and website so everything passes again. (Each new keyword comes with the step that uses it.)
 2. Enums with values: `.value` and `Enum.from(...)`
 3. `static func`
 4. Inheritance: one class parent, inherited fields and methods, children as their parent's type, dynamic calls, the order of setting up an object, `super(A).init(...)`, `override`, `super(A).method()`

@@ -22,12 +22,12 @@ class Counter
         this.step = step
     }
 
-    func increment()
+    mut func increment()
     {
         this.count = this.count + this.step
     }
 
-    func reset()
+    mut func reset()
     {
         this.count = 0
     }
@@ -45,7 +45,7 @@ class Counter
 
 
 // objects are shared, so this changes the caller's counter
-func count_times(counter: Counter, times: Int)
+func count_times(counter: mut Counter, times: Int)
 {
     mut i = 0
     while i < times

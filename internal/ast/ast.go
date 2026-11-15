@@ -39,8 +39,11 @@ func (f *File) Span() diag.Span { return f.Sp }
 // ---------------------------------------------------------------------
 // Declarations
 
-// FuncDecl is `func name(params) -> result ! fail { body }`.
+// FuncDecl is `func name(params) -> result ! fail { body }`, or `mut func
+// ...` for a method that changes `this`.
 type FuncDecl struct {
+	Mut    bool // `mut func`
+	MutSp  diag.Span
 	Name   *Ident
 	Params []*Param
 	Result *TypeExpr // nil if the function returns no value
@@ -50,11 +53,13 @@ type FuncDecl struct {
 	Sp     diag.Span
 }
 
-// Param is `name: Type`.
+// Param is `name: Type`, or `name: mut Type`.
 type Param struct {
-	Name *Ident
-	Type *TypeExpr
-	Sp   diag.Span
+	Name  *Ident
+	Mut   bool // `mut T`: the function may change the caller's value
+	MutSp diag.Span
+	Type  *TypeExpr
+	Sp    diag.Span
 }
 
 // TypeExpr is a written type: `Int`, `Account?`, `List<Int>`.

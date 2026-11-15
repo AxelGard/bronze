@@ -1,0 +1,9 @@
+func double(n: mut Int) -> Int
+{
+    return n * 2
+}
+
+func main() -> Int
+{
+    return double(2) - 4
+}

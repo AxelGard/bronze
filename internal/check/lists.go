@@ -164,10 +164,16 @@ func (c *checker) indexTarget(e *ast.Index) Type {
 	switch t := t.(type) {
 	case *List:
 		c.intIndex(e.Index)
+		if !c.changes(e.X, "") {
+			return nil
+		}
 		c.info.Types[e] = t.Elem
 		return t.Elem
 	case *Map:
 		c.mapKey(t, e.Index)
+		if !c.changes(e.X, "") {
+			return nil
+		}
 		c.info.Types[e] = t.Val
 		return t.Val
 	}
@@ -195,6 +201,10 @@ func (c *checker) assignIndex(target *ast.Index, value ast.Expr) {
 			what = "a value"
 		}
 		c.errorf(value.Span(), "cannot assign %s to %s of %s, which holds %s", t, what, nonNull(c.info.Types[target.X]), want)
+		return
+	}
+	if want != nil {
+		c.stores(value, "stored in `"+c.text(target.X)+"`")
 	}
 }
 
@@ -222,6 +232,7 @@ type method struct {
 	params []string
 	types  []Type
 	result Type
+	change bool // it changes the list or map, so it can't be called on a read-only one
 }
 
 // Signature returns the method as it would be declared:
@@ -242,14 +253,14 @@ func listMethods(l *List) map[string]*method {
 	t := l.Elem
 	ms := []*method{
 		{name: "length", result: Int},
-		{name: "append", params: []string{"x"}, types: []Type{t}, result: NoValue},
-		{name: "insert", params: []string{"i", "x"}, types: []Type{Int, t}, result: NoValue},
-		{name: "remove_at", params: []string{"i"}, types: []Type{Int}, result: &Optional{Inner: t}},
-		{name: "pop", result: &Optional{Inner: t}},
+		{name: "append", change: true, params: []string{"x"}, types: []Type{t}, result: NoValue},
+		{name: "insert", change: true, params: []string{"i", "x"}, types: []Type{Int, t}, result: NoValue},
+		{name: "remove_at", change: true, params: []string{"i"}, types: []Type{Int}, result: &Optional{Inner: t}},
+		{name: "pop", change: true, result: &Optional{Inner: t}},
 		{name: "contains", params: []string{"x"}, types: []Type{t}, result: Bool},
 		{name: "index_of", params: []string{"x"}, types: []Type{t}, result: &Optional{Inner: Int}},
-		{name: "reverse", result: NoValue},
-		{name: "sort", result: NoValue},
+		{name: "reverse", change: true, result: NoValue},
+		{name: "sort", change: true, result: NoValue},
 		{name: "join", params: []string{"sep"}, types: []Type{String}, result: String},
 	}
 	byName := map[string]*method{}
@@ -278,13 +289,16 @@ func (c *checker) listMethod(e *ast.Call, m *ast.Member, l *List) Type {
 		d := c.errorf(m.Name.Sp, "`join` works on a List<String>, not on %s", l)
 		d.Help = []string{"convert the elements with `String(...)` first"}
 	}
-	c.methodArgs(e, bm)
+	c.methodArgs(e, m, bm)
 	return bm.result
 }
 
 // methodArgs checks the arguments of a call to a built-in method.
-func (c *checker) methodArgs(e *ast.Call, bm *method) {
+func (c *checker) methodArgs(e *ast.Call, m *ast.Member, bm *method) {
 	note := fmt.Sprintf("`%s.%s` is built in: `%s`", bm.recv, bm.name, bm.Signature())
+	if bm.change {
+		c.changes(m.X, fmt.Sprintf("`%s` changes %s", bm.name, c.text(m.X)))
+	}
 	if len(e.Args) != len(bm.types) {
 		c.args(e)
 		verb := "were"
@@ -300,6 +314,8 @@ func (c *checker) methodArgs(e *ast.Call, bm *method) {
 		if !assignable(t, bm.types[i]) && !c.nullMismatch(a, t, bm.types[i]) {
 			d := c.errorf(a.Span(), "argument `%s` of `%s` must be %s, found %s", bm.params[i], bm.name, bm.types[i], t)
 			d.Notes = []string{note}
+		} else if bm.change {
+			c.stores(a, "stored in `"+c.text(m.X)+"`")
 		}
 	}
 }

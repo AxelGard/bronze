@@ -1,0 +1,2 @@
+error: `ages` is read only
+  --> readonly_index.brz:3:5

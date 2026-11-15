@@ -1,0 +1,2 @@
+error: `nums` is read only, and can't be stored in a field
+  --> readonly_store.brz:8:15

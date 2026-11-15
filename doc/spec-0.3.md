@@ -10,7 +10,7 @@ Where this page makes a choice the worksheet didn't, it says **(0.3 choice)**. T
 
 ## Tokens
 
-- `data`, `interface`, `override`, `static`, `private`, `protected`, `super` and `copy` become keywords. They are no longer only reserved.
+- `data`, `interface`, `override`, `static`, `private`, `protected`, `super` and `copy` become keywords. They are no longer only reserved. (Each becomes a keyword with the step of the work order that implements it.)
 - `namespace`, `import`, `test` and `type` stay reserved.
 
 ## Grammar changes
@@ -103,7 +103,9 @@ class Account
 A value is **read only** when it is:
 - a plain parameter of a changeable type
 - `this` in a method that isn't a `mut func`
-- anything read out of a read-only value: a field, an element, a slice, a loop variable, a `keys()` or `values()` list, a narrowed `is` or `!= null` form of it. Read only goes **all the way down**: through a read-only `List<Account>`, the accounts are read only too.
+- anything read out of a read-only value: a field, an element, a loop variable, a narrowed `is` or `!= null` form of it. Read only goes **all the way down**: through a read-only `List<Account>`, the accounts are read only too.
+- a slice, `keys()` or `values()` of a read-only list or map, **if its elements can change**. These are new lists, so a slice of a read-only `List<Int>` is an ordinary changeable `List<Int>`; but a slice of a read-only `List<Account>` holds the same accounts, and is read only as a whole. **(0.3 choice)**
+- the result of calling a method that isn't a `mut func` on a read-only object (see below)
 - a `con` or `mut` variable whose initial value is read only, and a list or map literal with a read-only element **(0.3 choice)**
 
 Everything else is changeable: a new object, a list or map literal, a function's result, a `mut` or `copy` parameter, `this` in `init` or a `mut func`, and what is read out of a changeable value.
@@ -113,9 +115,31 @@ A read-only value **can't**:
 - call a `mut func`, or a built-in that changes it: `append`, `insert`, `remove_at`, `pop`, `reverse` and `sort` on a list, `remove` and `m[k] = v` on a map
 - be passed as a `mut T`
 - be **stored** where it could be changed later: assigned to a field or an element, appended or inserted into a list, or assigned to a `mut` variable that was declared changeable. "`a` is read only, and can't be stored here", with the help "declare the parameter as `mut Account`"
-- be **returned** **(0.3 choice)**: a function's result is always changeable, so returning a read-only value is an error, with the help "make the method a `mut func`" or "declare the parameter as `mut Account`". (Read-only results may come later.)
+- be **returned**, with one exception: a method that isn't a `mut func` may return what it read out of `this`. **(0.3 choice)**
 
 A read-only value **can** be passed as a plain `T` or as a `copy T`, compared, printed and looped over.
+
+### Results of methods
+
+A method that isn't a `mut func` may return objects it holds, like a `find` that returns one of its accounts:
+
+```
+class Bank
+{
+    mut first: Account? = null
+
+    func find(owner: String) -> Account?
+    {
+        con a = this.first
+        ...
+        return a
+    }
+}
+```
+
+**The result of a method that isn't a `mut func` is as read only as the object it is called on.** On a changeable `bank`, `bank.find("Ada")` is a changeable `Account`; on a read-only `bank` parameter, it is read only. **(0.3 choice)** This also covers methods that build a new value, whose result is then read only on a read-only object, even though nothing else holds it.
+
+A plain function can't return a read-only parameter: `func same(b: Box) -> Box { return b }` is an error, with the help "declare the parameter as `b: mut Box`".
 
 These rules don't apply to values of unchangeable types: a `String` field of a read-only object is just a `String`.
 
@@ -401,4 +425,4 @@ The existing features cover the new declarations:
 
 ## Not in 0.3
 
-Still for later: abstract methods and `final`, default bodies and fields in interfaces, static fields, `with` on data classes and named arguments, destructuring, read-only results and fields (`mut T` and `copy T` outside parameters), several class parents, and everything the [milestones](milestones.md) put in 0.4 and after.
+Still for later: abstract methods and `final`, default bodies and fields in interfaces, static fields, `with` on data classes and named arguments, destructuring, read-only result types written out and `mut T` / `copy T` outside parameters, several class parents, and everything the [milestones](milestones.md) put in 0.4 and after.

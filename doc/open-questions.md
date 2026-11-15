@@ -59,7 +59,8 @@ Explored in [`lambdas.brz`](explorations/lambdas.brz).
 
 ## Passing arguments
 Decided for 0.3: everything shared, with the mode on the parameter: `a: T` (read only), `a: mut T`, `a: copy T` (deep), plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [spec-0.3](spec-0.3.md#parameter-modes) and [`references.brz`](explorations/references.brz).
-- Read-only results: in 0.3 returning a read-only value is an error, so a getter that returns a list field must be a `mut func`. A read-only return type later?
+- Read-only results: in 0.3 a method that isn't `mut` gives a result as read only as its object, and a plain function can't return a read-only parameter. Should a written read-only return type replace or extend that?
+- Returning a read-only error parameter to fail with it (`return e`) is an error in 0.3. Should errors be exempt?
 - Can you write `x, y = y, x` directly (without a function)?
 - Does `con` on a local variable also freeze the object?
 - Can `mut T` / `copy T` be used for fields and return types?

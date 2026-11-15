@@ -25,9 +25,18 @@ func dump(b *strings.Builder, n Node) {
 			dump(b, d)
 		}
 	case *FuncDecl:
-		fmt.Fprintf(b, "(func %s", n.Name.Name)
+		if n.Mut {
+			b.WriteString("(mut func ")
+		} else {
+			b.WriteString("(func ")
+		}
+		b.WriteString(n.Name.Name)
 		for _, p := range n.Params {
-			fmt.Fprintf(b, " (%s %s)", p.Name.Name, typeString(p.Type))
+			mode := ""
+			if p.Mut {
+				mode = "mut "
+			}
+			fmt.Fprintf(b, " (%s %s%s)", p.Name.Name, mode, typeString(p.Type))
 		}
 		if n.Result != nil || n.Fail != nil {
 			b.WriteString(" ->")

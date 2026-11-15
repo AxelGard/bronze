@@ -95,6 +95,7 @@ type funcSig struct {
 	class  *Class // for methods of a class: the class of `this`
 	enum   *Enum  // for methods of an enum: the enum of `this`
 	isInit bool
+	mut    bool    // a `mut func`, which may change `this`
 	line   int     // where it is declared
 	sym    *Symbol // nil for init
 }
@@ -111,6 +112,7 @@ const (
 
 type variable struct {
 	kind VarKind
+	ro   int // read only (roThis, roOther): its value can't be changed through it
 	typ  Type
 	decl diag.Span
 	sym  *Symbol
@@ -243,7 +245,7 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 
 // signature resolves the parameter and result types of a function or method.
 func (c *checker) signature(fn *ast.FuncDecl, class *Class) *funcSig {
-	sig := &funcSig{name: fn.Name.Name, decl: fn, result: NoValue, class: class, line: fn.Name.Sp.Start.Line}
+	sig := &funcSig{name: fn.Name.Name, decl: fn, result: NoValue, class: class, mut: fn.Mut, line: fn.Name.Sp.Start.Line}
 	sig.isInit = class != nil && fn.Name.Name == "init"
 	seen := map[string]bool{}
 	for _, p := range fn.Params {
@@ -489,13 +491,20 @@ func (c *checker) resolveName(name *ast.Ident) Type {
 }
 
 func (c *checker) funcBody(sig *funcSig) {
+	if c.complete == nil {
+		c.checkModes(sig)
+	}
 	if sig.decl.Bad && c.complete == nil {
 		return
 	}
 	c.fn, c.loops = sig, 0
 	c.scope = &scope{vars: map[string]*variable{}}
 	for i, p := range sig.decl.Params {
-		c.declare(p.Name, &variable{kind: Param, typ: sig.params[i], decl: p.Name.Sp})
+		ro := 0
+		if !p.Mut && changeable(sig.params[i]) {
+			ro = roOther
+		}
+		c.declare(p.Name, &variable{kind: Param, ro: ro, typ: sig.params[i], decl: p.Name.Sp})
 	}
 	c.blockStmts(sig.decl.Body)
 	if hasValue(sig.result) && !terminates(sig.decl.Body) {
@@ -648,7 +657,11 @@ func (c *checker) stmt(s ast.Stmt) {
 		if s.Mut {
 			kind = Mut
 		}
-		c.declare(s.Name, &variable{kind: kind, typ: t, decl: s.Name.Sp})
+		ro := 0
+		if changeable(t) {
+			ro = c.roSource(s.Value)
+		}
+		c.declare(s.Name, &variable{kind: kind, ro: ro, typ: t, decl: s.Name.Sp})
 
 	case *ast.Assign:
 		switch target := s.Target.(type) {
@@ -707,6 +720,10 @@ func (c *checker) assignVar(id *ast.Ident, value ast.Expr) {
 	t := c.valueFor(value, want)
 	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
 		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, id.Name, want)
+		return
+	}
+	if v := c.scope.lookup(id.Name); want != nil && v != nil && v.ro == 0 {
+		c.stores(value, fmt.Sprintf("assigned to `%s`, which isn't read only", id.Name))
 	}
 }
 
@@ -761,6 +778,10 @@ func (c *checker) assignField(m *ast.Member, value ast.Expr) {
 	t := c.valueFor(value, want)
 	if want != nil && !assignable(t, want) && !c.nullMismatch(value, t, want) {
 		c.errorf(value.Span(), "cannot assign %s to `%s`, which is %s", t, m.Name.Name, want)
+		return
+	}
+	if want != nil {
+		c.stores(value, "stored in a field")
 	}
 }
 
@@ -783,6 +804,9 @@ func (c *checker) fieldTarget(m *ast.Member) Type {
 			d.Help = []string{"declare it with `mut` if it needs to change"}
 			return nil
 		}
+	}
+	if !c.changes(m.X, "") {
+		return nil
 	}
 	c.info.Types[m] = ft
 	return ft
@@ -853,9 +877,14 @@ func (c *checker) forStmt(s *ast.For) {
 	if len(s.Vars) == 2 {
 		vars = types[1:]
 	}
+	ro := c.roSource(s.X)
 	for i, v := range s.Vars {
 		if v.Name != "_" {
-			c.declare(v, &variable{kind: Loop, typ: vars[i], decl: v.Sp})
+			vro := 0
+			if changeable(vars[i]) {
+				vro = ro
+			}
+			c.declare(v, &variable{kind: Loop, ro: vro, typ: vars[i], decl: v.Sp})
 		}
 	}
 	c.loops++
@@ -934,5 +963,7 @@ func (c *checker) checkReturn(at diag.Span, value ast.Expr) {
 		if c.isError(t) && fails == nil {
 			d.Help = []string{fmt.Sprintf("to fail with it, declare `func %s(...) -> %s ! %s`", name, want, t)}
 		}
+	default:
+		c.returns(value)
 	}
 }
