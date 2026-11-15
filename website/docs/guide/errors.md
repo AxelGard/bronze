@@ -118,7 +118,7 @@ A call to a `-> ! E` function, or a call whose value you don't need, can stand o
 
 ## Your own errors
 
-`Error` is a built-in class with one field, `message`, made with `Error("text")`. A class that says `use Error` is an error too: it gets the `message` field, and can be used wherever an `Error` is expected. It can add fields of its own.
+`Error` is a built-in class with one field, `message`, made with `Error("text")`. A class that says `use Error` is an error too: it gets the `message` field, and can be used wherever an `Error` is expected. It can add fields of its own. Error classes can [use each other](classes.md#inheritance) too: a `class NotFound use DbError` is a `DbError` and an `Error`, and its `init` can set the message with `super(DbError).init(...)`.
 
 ```bronze
 class InsufficientFunds use Error

@@ -26,10 +26,21 @@ type Failure struct {
 }
 
 // isError reports whether v is an Error, or an object of a class that
-// uses Error.
-func isError(v Value) bool {
+// uses Error, directly or through its parents.
+func (in *interp) isError(v Value) bool {
 	obj, ok := v.(*Object)
-	return ok && (obj.Class.UseError || obj.Class.Builtin && obj.Class.Name.Name == "Error")
+	return ok && in.isA(obj, "Error")
+}
+
+// isA reports whether obj is of the class named name, or of one of its
+// children.
+func (in *interp) isA(obj *Object, name string) bool {
+	for k := in.classes[obj.Class.Name.Name]; k != nil; k = k.parent {
+		if k.decl.Name.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // returnSignal unwinds from an `else return` or `else (e) { ... }`
@@ -163,6 +174,10 @@ func Run(file *ast.File, src *diag.Source, stdout io.Writer) (code int, p *Panic
 		}
 	}
 
+	for _, cls := range in.classes {
+		in.link(cls)
+	}
+
 	// The program runs in its own goroutine, so that a Bronze panic can
 	// stop it with runtime.Goexit instead of unwinding through every call
 	// as a Go panic.
@@ -221,8 +236,31 @@ func literal(x ast.Expr) Value {
 
 type class struct {
 	decl    *ast.ClassDecl
-	inits   map[int]*ast.FuncDecl // by number of parameters
-	methods map[string]*ast.FuncDecl
+	parent  *class
+	inits   map[int]*ast.FuncDecl    // by number of parameters
+	methods map[string]*ast.FuncDecl // its own and its parents'
+	linked  bool
+}
+
+// link finds the parent of a class, and adds the parent's methods that it
+// doesn't override, so that a call finds the right method directly.
+func (in *interp) link(cls *class) {
+	if cls.linked {
+		return
+	}
+	cls.linked = true
+	for _, u := range cls.decl.Uses {
+		if p, ok := in.classes[u.Name]; ok {
+			cls.parent = p
+			in.link(p)
+			for name, m := range p.methods {
+				if _, own := cls.methods[name]; !own && !m.Static {
+					cls.methods[name] = m
+				}
+			}
+			break
+		}
+	}
 }
 
 type frame struct {
@@ -290,7 +328,7 @@ func (in *interp) call(name string, fn *ast.FuncDecl, this Value, args []Value, 
 	in.enter(name, fn.Name.Sp.Start.Line, this, at)
 	result := in.body(fn, args)
 	in.leave()
-	if fn.Fail != nil && isError(result) {
+	if fn.Fail != nil && in.isError(result) {
 		return &Failure{Err: result.(*Object)}
 	}
 	return result
@@ -326,20 +364,74 @@ func (in *interp) construct(cls *class, args []Value, at diag.Span) *Object {
 		line = init.Name.Sp.Start.Line
 	}
 	in.enter(cls.decl.Name.Name+".init", line, obj, at)
-	empty := &env{vars: map[string]Value{}}
-	if cls.decl.UseError {
-		for _, f := range in.classes["Error"].decl.Fields {
-			obj.Fields[f.Name.Name] = in.expr(f.Value, empty)
-		}
+	in.setFields(cls, obj)
+	in.runInit(cls, init, args)
+	in.leave()
+	return obj
+}
+
+// setFields gives every field of obj its initial value, the parents'
+// fields first.
+func (in *interp) setFields(cls *class, obj *Object) {
+	if cls.parent != nil {
+		in.setFields(cls.parent, obj)
 	}
+	empty := &env{vars: map[string]Value{}}
 	for _, f := range cls.decl.Fields {
 		obj.Fields[f.Name.Name] = in.expr(f.Value, empty)
+	}
+}
+
+// runInit runs an init of cls (nil for the empty one) on the object of
+// the current frame. Unless its first statement is `super(P).init(...)`,
+// the parent's `init()` runs first.
+func (in *interp) runInit(cls *class, init *ast.FuncDecl, args []Value) {
+	if cls.parent != nil && !startsWithSuperInit(init) {
+		at := cls.decl.Name.Sp
+		if init != nil {
+			at = init.Name.Sp
+		}
+		in.parentInit(cls.parent, nil, at)
 	}
 	if init != nil {
 		in.body(init, args)
 	}
+}
+
+// parentInit runs the init of parent class p that takes args, in a frame
+// of its own.
+func (in *interp) parentInit(p *class, args []Value, at diag.Span) {
+	init := p.inits[len(args)]
+	if init == nil {
+		// The built-in Error has no init(); its fields are enough.
+		in.runInit(p, nil, nil)
+		return
+	}
+	in.enter(p.decl.Name.Name+".init", init.Name.Sp.Start.Line, in.stack[len(in.stack)-1].this, at)
+	in.runInit(p, init, args)
 	in.leave()
-	return obj
+}
+
+// startsWithSuperInit reports whether the first statement of init is
+// `super(P).init(...)`.
+func startsWithSuperInit(init *ast.FuncDecl) bool {
+	if init == nil || len(init.Body.Stmts) == 0 {
+		return false
+	}
+	s, ok := init.Body.Stmts[0].(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+	call, ok := s.X.(*ast.Call)
+	if !ok {
+		return false
+	}
+	m, ok := call.Fn.(*ast.Member)
+	if !ok {
+		return false
+	}
+	_, ok = m.X.(*ast.Super)
+	return ok && m.Name.Name == "init"
 }
 
 // ---------------------------------------------------------------------
@@ -578,8 +670,8 @@ func (in *interp) expr(x ast.Expr, e *env) Value {
 	case *ast.NullLit:
 		return nil
 	case *ast.Is:
-		obj := in.expr(x.X, e).(*Object)
-		return x.Class.Name == "Error" || obj.Class.Name.Name == x.Class.Name
+		obj, ok := in.expr(x.X, e).(*Object)
+		return ok && in.isA(obj, x.Class.Name)
 	case *ast.Else:
 		return in.elseExpr(x, e)
 	case *ast.Ident:
@@ -739,6 +831,16 @@ func (in *interp) args(x *ast.Call, e *env) []Value {
 
 func (in *interp) callExpr(x *ast.Call, e *env) Value {
 	if m, ok := x.Fn.(*ast.Member); ok {
+		if sup, ok := m.X.(*ast.Super); ok {
+			p := in.classes[sup.Class.Name]
+			args := in.args(x, e)
+			if m.Name.Name == "init" {
+				in.parentInit(p, args, x.Sp)
+				return nil
+			}
+			fn := p.methods[m.Name.Name]
+			return in.call(sup.Class.Name+"."+fn.Name.Name, fn, in.stack[len(in.stack)-1].this, args, x.Sp)
+		}
 		if id, ok := m.X.(*ast.Ident); ok {
 			if en, ok := in.enums[id.Name]; ok {
 				return en.from(in.expr(x.Args[0], e)) // `Role.from(x)`, the only call on an enum

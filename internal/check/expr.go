@@ -72,6 +72,12 @@ func (c *checker) expr1(e ast.Expr) Type {
 		return c.ident(e)
 	case *ast.This:
 		return c.this(e)
+	case *ast.Super:
+		if c.superClass(e) != nil {
+			d := c.errorf(e.Sp, "`%s` is not a value", c.text(e))
+			d.Notes = []string{"`super(...)` is only used to call a method of the parent, like `super(...).init(...)`"}
+		}
+		return Invalid
 	case *ast.Member:
 		return c.member(e)
 	case *ast.Unary:
@@ -581,6 +587,9 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	if c.atMarker(m.Name) {
 		c.completeMember(m.X)
 		return Invalid
+	}
+	if sup, ok := m.X.(*ast.Super); ok {
+		return c.superCall(e, m, sup)
 	}
 	if en := c.enumName(m.X); en != nil {
 		c.ref(m.X.(*ast.Ident), en.Sym)

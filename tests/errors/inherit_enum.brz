@@ -1,0 +1,13 @@
+enum Color
+{
+    Red
+}
+
+class Paint use Color
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

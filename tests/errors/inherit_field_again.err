@@ -1,0 +1,2 @@
+error: `name` is already a field of `Animal`
+  --> inherit_field_again.brz:8:9

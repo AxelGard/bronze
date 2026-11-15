@@ -1,0 +1,2 @@
+error: `Dog` must call `super(Animal).init(...)` in an `init`, since `Animal` has no `init()`
+  --> parent_init_missing_class.brz:16:7

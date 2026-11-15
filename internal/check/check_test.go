@@ -535,7 +535,7 @@ func TestErrorAndNullErrors(t *testing.T) {
 		{"is non-error class", "func f(e: Error) -> Bool\n{\n    return e is Item\n}",
 			[]string{"3:17 `Item` is not an error class"}},
 		{"use error field clash", "class Bad use Error\n{\n    mut message = \"x\"\n}",
-			[]string{"3:9 `Bad` already has a field `message`, from `use Error`"}},
+			[]string{"3:9 `message` is already a field of `Error`"}},
 		// null
 		{"may be null field", "func f() -> Int\n{\n    con a = lookup(1)\n    return a.id\n}",
 			[]string{"4:12 `a` may be null"}},
@@ -619,6 +619,25 @@ func TestReadOnlyAllowed(t *testing.T) {
 	}
 	for _, src := range ok {
 		if errs := errors(t, counterClass+src+mainFunc); len(errs) > 0 {
+			t.Errorf("%q:\n%s", src, strings.Join(errs, "\n"))
+		}
+	}
+}
+
+func TestInheritanceAllowed(t *testing.T) {
+	animal := "class Animal\n{\n    mut name = \"\"\n    func speak() -> String\n    {\n        return \"...\"\n    }\n}\n"
+	ok := []string{
+		// a child is its parent's type, also as a T?
+		"class Dog use Animal\n{\n}\nfunc name_of(a: Animal) -> String\n{\n    return a.name\n}\nfunc f() -> String\n{\n    con d = Dog()\n    con maybe: Animal? = d\n    return name_of(d) + d.speak()\n}",
+		// an override, and super calls
+		"class Dog use Animal\n{\n    override func speak() -> String\n    {\n        return super(Animal).speak() + \"!\"\n    }\n}",
+		// the parent's init() runs by itself
+		"class Dog use Animal\n{\n    mut tricks = 0\n    func init(tricks: Int)\n    {\n        this.tricks = tricks\n        this.name = \"dog\"\n    }\n}",
+		// grandchildren, and errors that use other errors
+		"class Dog use Animal\n{\n}\nclass Puppy use Dog\n{\n    override func speak() -> String\n    {\n        return \"yip\"\n    }\n}\nclass DbError use Error\n{\n}\nclass NotFound use DbError\n{\n}\nfunc find() -> Int ! DbError\n{\n    return NotFound()\n}",
+	}
+	for _, src := range ok {
+		if errs := errors(t, animal+src+mainFunc); len(errs) > 0 {
 			t.Errorf("%q:\n%s", src, strings.Join(errs, "\n"))
 		}
 	}

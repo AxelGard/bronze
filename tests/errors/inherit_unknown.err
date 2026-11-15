@@ -1,0 +1,2 @@
+error: unknown class `Animal`
+  --> inherit_unknown.brz:1:15

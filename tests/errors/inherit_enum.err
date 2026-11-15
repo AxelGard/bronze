@@ -1,0 +1,2 @@
+error: `Color` is an enum, and can't be used
+  --> inherit_enum.brz:6:17

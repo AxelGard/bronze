@@ -38,6 +38,8 @@
 (for_statement variable: (identifier) @variable)
 (else_handler error: (identifier) @variable.parameter)
 (this) @variable.builtin
+"super" @variable.builtin
+(super class: (identifier) @type)
 
 ; literals
 (integer) @number
@@ -55,7 +57,7 @@
 
 ; keywords
 ["func" "return"] @keyword.function
-["con" "mut" "class" "enum" "use" "static"] @keyword
+["con" "mut" "class" "enum" "use" "static" "override"] @keyword
 ["if" "else" "match"] @keyword.conditional
 ["while" "for" "in" (break_statement) (continue_statement)] @keyword.repeat
 ["and" "or" "not" "is"] @keyword.operator

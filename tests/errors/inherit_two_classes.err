@@ -1,0 +1,2 @@
+error: a class can use only one class in 0.3, and `Weird` already uses `Animal`
+  --> inherit_two_classes.brz:20:25

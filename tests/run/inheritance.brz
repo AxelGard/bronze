@@ -1,0 +1,134 @@
+class Animal
+{
+    con name = ""
+    mut sounds = 0
+
+    func init(name: String)
+    {
+        print("Animal.init " + name)
+        this.name = name
+    }
+
+    func speak() -> String
+    {
+        return "..."
+    }
+
+    mut func talk() -> String
+    {
+        this.sounds += 1
+        return this.name + ": " + this.speak()
+    }
+}
+
+class Dog use Animal
+{
+    mut tricks = 0
+
+    func init(name: String)
+    {
+        super(Animal).init(name)
+        print("Dog.init")
+    }
+
+    override func speak() -> String
+    {
+        return "Woof (not " + super(Animal).speak() + ")"
+    }
+
+    func fetch() -> String
+    {
+        return this.name + " fetches"
+    }
+}
+
+class Puppy use Dog
+{
+    func init()
+    {
+        super(Dog).init("puppy")
+    }
+
+    override func speak() -> String
+    {
+        return "Yip"
+    }
+}
+
+class Base
+{
+    mut log = ""
+
+    func init()
+    {
+        this.log += "base "
+    }
+}
+
+class Child use Base
+{
+    func init()
+    {
+        this.log += "child"
+    }
+}
+
+class DbError use Error
+{
+    func init(what: String)
+    {
+        super(Error).init("db: " + what)
+    }
+}
+
+class NotFound use DbError
+{
+    con id = 0
+
+    func init(id: Int)
+    {
+        super(DbError).init("no row " + String(id))
+        this.id = id
+    }
+}
+
+func find(id: Int) -> String ! DbError
+{
+    if id > 1
+    {
+        return NotFound(id)
+    }
+    return "row 1"
+}
+
+func describe(a: mut Animal) -> String
+{
+    return a.talk()
+}
+
+func main() -> Int
+{
+    con a = Animal("cat")
+    con d = Dog("Rex")
+    con p = Puppy()
+    print(describe(a))
+    print(describe(d))
+    print(describe(p))
+    print(d.fetch())
+    print(p.fetch())
+    print(d.sounds)
+    con all: List<Animal> = [a, d, p]
+    for x in all
+    {
+        print(x.speak())
+    }
+    print(Child().log)
+    print(find(1) else "none")
+    con r = find(7) else (e)
+    {
+        print(e.message)
+        return 0
+    }
+    print(r)
+    return 1
+}

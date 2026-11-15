@@ -1,0 +1,28 @@
+class Animal
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+
+    func speak() -> String
+    {
+        return "..."
+    }
+}
+
+class Dog use Animal
+{
+    func init()
+    {
+        print("first")
+        super(Animal).init("dog")
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

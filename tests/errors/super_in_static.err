@@ -1,0 +1,2 @@
+error: `super` can't be used in a static method
+  --> super_in_static.brz:25:16

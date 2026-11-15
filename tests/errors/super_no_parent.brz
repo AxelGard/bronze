@@ -1,0 +1,12 @@
+class Plant
+{
+    func grow()
+    {
+        super(Plant).grow()
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

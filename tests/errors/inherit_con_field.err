@@ -1,0 +1,2 @@
+error: cannot assign to `name`: it is a `con` field
+  --> inherit_con_field.brz:21:14

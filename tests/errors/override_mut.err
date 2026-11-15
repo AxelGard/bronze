@@ -1,0 +1,2 @@
+error: `speak` must not be a `mut func`, like `Animal.speak`
+  --> override_mut.brz:23:23

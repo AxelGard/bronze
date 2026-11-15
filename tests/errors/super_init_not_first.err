@@ -1,0 +1,2 @@
+error: `super(Animal).init(...)` must be the first statement of `init`
+  --> super_init_not_first.brz:21:9

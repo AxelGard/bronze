@@ -1,0 +1,17 @@
+Animal.init cat
+Animal.init Rex
+Dog.init
+Animal.init puppy
+Dog.init
+cat: ...
+Rex: Woof (not ...)
+puppy: Yip
+Rex fetches
+puppy fetches
+1
+...
+Woof (not ...)
+Yip
+base child
+row 1
+db: no row 7

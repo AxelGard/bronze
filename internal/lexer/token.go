@@ -80,6 +80,8 @@ const (
 	BREAK
 	CONTINUE
 	STATIC
+	OVERRIDE
+	SUPER
 )
 
 var kindNames = [...]string{
@@ -150,6 +152,8 @@ var kindNames = [...]string{
 	BREAK:    "`break`",
 	CONTINUE: "`continue`",
 	STATIC:   "`static`",
+	OVERRIDE: "`override`",
+	SUPER:    "`super`",
 }
 
 // String returns a description of the kind for error messages, such as
@@ -181,13 +185,15 @@ var keywords = map[string]Kind{
 	"break":    BREAK,
 	"continue": CONTINUE,
 	"static":   STATIC,
+	"override": OVERRIDE,
+	"super":    SUPER,
 }
 
 var reserved = map[string]bool{
 	"data": true, "interface": true, "namespace": true, "import": true,
-	"override": true, "private": true, "protected": true,
+	"private": true, "protected": true,
 	"test": true,
-	"type": true, "super": true, "copy": true,
+	"type": true, "copy": true,
 }
 
 // Token is one token of source text.

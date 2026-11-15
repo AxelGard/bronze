@@ -1,0 +1,2 @@
+error: `Plant` is not the class parent of `Dog`
+  --> super_wrong_class.brz:24:15

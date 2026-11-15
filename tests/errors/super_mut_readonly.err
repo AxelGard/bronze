@@ -1,0 +1,2 @@
+error: `this` is read only
+  --> super_mut_readonly.brz:15:9

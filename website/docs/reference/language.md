@@ -25,14 +25,13 @@ A `{` in a string without a `\` starts an interpolation: `"total: {a + b}"`. It 
 ```text
 func  return  con  mut  if  else  while  for  in  break  continue
 and  or  not  true  false  class  enum  use  this  null  match  is
-static
+static  override  super
 ```
 
 These are reserved for later versions, and can't be used as names:
 
 ```text
-data  interface  namespace  import  override  private  protected
-test  type  super  copy
+data  interface  namespace  import  private  protected  test  type  copy
 ```
 
 ## Newlines
@@ -121,13 +120,14 @@ func name() -> R ! E                    returns R, or fails with E
 func name() -> ! E                      returns nothing, or fails with E
 
 class Name { fields and methods }
-class Name use Error { ... }            an error class, with a `message` field
+class Name use Parent { ... }           a child class; `use Error` makes an error class
 enum Name { cases, one per line, then methods }
 enum Name: String { Case = "value" ... }  an enum with values (Int or String)
 ```
 
 - **Fields**: `con name = value` or `mut name: T = value`. An initial value is required. A `con` field can be assigned only in `init`.
 - **Methods**: `mut func name(...)` for a method that changes `this`. In other methods `this` is read only.
+- **Inheritance**: one class parent. `override func` replaces a parent's method with exactly its signature; calls are dynamic. `super(Parent).method(...)` calls the parent's version, and `super(Parent).init(...)` may only be the first statement of an `init`; without it, the parent's `init()` runs first. `init`s and static methods aren't inherited.
 - **Static methods**: `static func name(...)` belongs to the class, has no `this`, and is called as `Class.name(...)`.
 - **Parameters**: `name: T` is read only (for objects, lists and maps, all the way down), `name: mut T` may change the caller's value. A read-only value can't be changed, stored, passed as `mut`, or returned (a method that isn't `mut` may return what it read from `this`; the result is as read only as the object). `mut` on `Int`, `Float`, `Bool`, `String` or an enum is an error.
 - **Enums with values**: every case has a literal value, all different. `r.value` gives it, and `Role.from(x)` gives a `Role?`.
@@ -178,8 +178,8 @@ type_name   = "Int" | "Float" | "Bool" | "String"
             | "Map" "<" type "," type ">"
             | IDENT
 
-class_decl  = "class" IDENT [ "use" "Error" ] "{" { NEWLINE } { member { NEWLINE } } "}"
-member      = field | [ "static" ] [ "mut" ] func_decl
+class_decl  = "class" IDENT [ "use" IDENT { "," IDENT } ] "{" { NEWLINE } { member { NEWLINE } } "}"
+member      = field | [ "static" | "override" ] [ "mut" ] func_decl
 field       = ( "con" | "mut" ) IDENT [ ":" type ] "=" expr
 
 enum_decl   = "enum" IDENT [ ":" ( "Int" | "String" ) ] "{" { NEWLINE } { ( case | func_decl ) { NEWLINE } } "}"
@@ -220,7 +220,7 @@ postfix     = primary { "(" [ args ] ")" | "." IDENT | "[" index "]" }
 index       = expr                                  // an index
             | [ add_expr ] ( ".." | "..=" ) [ add_expr ]   // a slice; `..=` needs an end
 args        = expr { "," expr }
-primary     = INT | FLOAT | STRING | "true" | "false" | "null" | "this"
+primary     = INT | FLOAT | STRING | "true" | "false" | "null" | "this" | "super" "(" IDENT ")"
             | IDENT | "(" expr ")" | match_expr | list_lit | map_lit
 list_lit    = "[" [ expr { "," expr } [ "," ] ] "]"
 map_lit     = "{" [ entry { "," entry } [ "," ] ] "}"      // newlines allowed after `{`, around `,`, before `}`

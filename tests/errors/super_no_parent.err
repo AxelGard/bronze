@@ -1,0 +1,2 @@
+error: `Plant` has no class parent
+  --> super_no_parent.brz:5:15

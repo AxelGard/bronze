@@ -207,9 +207,73 @@ So a signature tells you what a function does to what you pass it. The call does
 - A function can't return a read-only parameter. A method that isn't a `mut func` may return what it read out of `this`, like a `find` that returns one of its objects. The result is then read only wherever the object it was called on is.
 - `mut` only goes on types that can change: objects, lists and maps. `n: mut Int` is an error.
 
+## Inheritance
+
+`class Dog use Animal` makes `Dog` a **child** of `Animal`: it has all of `Animal`'s fields and methods, and a `Dog` can be used wherever an `Animal` is expected.
+
+```bronze
+class Animal
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+
+    func speak() -> String
+    {
+        return "..."
+    }
+
+    func introduce() -> String
+    {
+        return this.name + " says " + this.speak()
+    }
+}
+
+class Dog use Animal
+{
+    func init(name: String)
+    {
+        super(Animal).init(name)
+    }
+
+    override func speak() -> String
+    {
+        return "Woof"
+    }
+}
+
+func main() -> Int
+{
+    con pets: List<Animal> = [Animal("Cat"), Dog("Rex")]
+    for pet in pets
+    {
+        print(pet.introduce())
+    }
+    return 0
+}
+```
+
+```text title="Output"
+Cat says ...
+Rex says Woof
+```
+
+- A class has at most one class parent.
+- Replacing a parent's method needs **`override`**, and the method must have exactly the parent's parameters and result. Calls use the object's own version: `introduce` above calls `Dog`'s `speak` for a dog.
+- **`super(Animal).speak()`** calls the parent's version of a method.
+- A child doesn't get its parent's `init`s. Its `init` sets up the parent with **`super(Animal).init(...)`**, which must be its first statement. Without that call, the parent's `init()` runs by itself first; if the parent has no `init()`, the call is required.
+- Setting up an object gives every field its initial value, the parent's first, then runs the child's `init`.
+- A child can't declare a field its parent already has, and a parent's `con` field can only be set in the parent's own `init`.
+- Static methods aren't inherited.
+
+Error classes use inheritance too: `class NotFound use DbError` is a `DbError`, and through it an `Error`. See [errors](errors.md).
+
 ## Not yet
 
-Inheritance, interfaces and `private`/`protected` are planned for later versions. The one kind of inheritance that works now is [`use Error`](errors.md).
+Interfaces and `private`/`protected` are planned for later versions.
 
 ## Next
 

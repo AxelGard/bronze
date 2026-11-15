@@ -1,0 +1,2 @@
+error: `speak` must return String, like `Animal.speak`
+  --> override_signature.brz:23:19

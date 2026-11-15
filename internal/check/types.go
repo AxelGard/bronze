@@ -152,7 +152,8 @@ type Class struct {
 	Fields  map[string]*Field
 	Methods map[string]*funcSig
 	Inits   map[int]*funcSig // by number of parameters
-	Super   *Class           // Error, for a class that uses Error
+	Super   *Class           // the class parent: another class, or Error
+	state   int              // members: 0 not collected, 1 collecting, 2 done
 	Sym     *Symbol
 }
 
@@ -172,6 +173,7 @@ func (c *Class) initArities() []int {
 // Field is a field of a class.
 type Field struct {
 	Name  string
+	Owner *Class // the class that declares it
 	Mut   bool
 	Decl  *ast.Field
 	typ   Type // nil until the initial value is checked

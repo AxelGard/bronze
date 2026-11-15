@@ -1,0 +1,2 @@
+error: `speak` replaces `Animal.speak`, and needs `override`
+  --> override_missing.brz:23:10

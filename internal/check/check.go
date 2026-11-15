@@ -217,9 +217,10 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 
 	c.errCls = c.classes["Error"]
 	for _, d := range classes {
-		if d.UseError {
-			c.classes[d.Name.Name].Super = c.errCls
-		}
+		c.classUses(c.classes[d.Name.Name])
+	}
+	for _, d := range classes {
+		c.breakCycle(c.classes[d.Name.Name])
 	}
 	for _, fn := range funcs {
 		sig := c.signature(fn, nil)
@@ -309,66 +310,6 @@ func (c *checker) failType(fn *ast.FuncDecl, sig *funcSig) {
 // isError reports whether t is Error or a class that uses it.
 func (c *checker) isError(t Type) bool {
 	return c.errCls != nil && t != Invalid && assignable(t, c.errCls) && !silent(t)
-}
-
-// classMembers records the fields, methods and inits of a class. The types
-// of fields are found later, from their initial values.
-func (c *checker) classMembers(cls *Class) {
-	d := cls.Decl
-	if cls.Super != nil {
-		for name, f := range cls.Super.Fields {
-			cls.Fields[name] = f
-		}
-	}
-	for _, f := range d.Fields {
-		if cls.Super != nil && cls.Super.Fields[f.Name.Name] != nil {
-			d := c.errorf(f.Name.Sp, "`%s` already has a field `%s`, from `use %s`", cls.Name, f.Name.Name, cls.Super.Name)
-			d.Help = []string{fmt.Sprintf("set it in `init` instead: `this.%s = ...`", f.Name.Name)}
-			continue
-		}
-		if prev, ok := cls.Fields[f.Name.Name]; ok {
-			c.errorf(f.Name.Sp, "`%s` already has a field `%s`", cls.Name, f.Name.Name).Notes = []string{
-				fmt.Sprintf("the first one is at line %d", prev.Decl.Name.Sp.Start.Line),
-			}
-			continue
-		}
-		cls.Fields[f.Name.Name] = &Field{Name: f.Name.Name, Mut: f.Mut, Decl: f, sym: c.newSym(f.Name, SymField, d.Builtin)}
-	}
-	for _, m := range d.Methods {
-		name := m.Name.Name
-		sig := c.signature(m, cls)
-		if f, ok := cls.Fields[name]; ok {
-			c.errorf(m.Name.Sp, "`%s` already has a field `%s`", cls.Name, name).Notes = []string{
-				fmt.Sprintf("the field is at line %d; a method can't have the same name", f.Decl.Name.Sp.Start.Line),
-			}
-			continue
-		}
-		if sig.isInit {
-			if prev, ok := cls.Inits[len(sig.params)]; ok {
-				d := c.errorf(m.Name.Sp, "`%s` already has an `init` with %s", cls.Name, plural(len(sig.params), "parameter"))
-				d.Notes = []string{
-					fmt.Sprintf("the other one is at line %d", prev.line),
-					"several `init`s must have different numbers of parameters",
-				}
-				continue
-			}
-			cls.Inits[len(sig.params)] = sig
-			continue
-		}
-		if prev, ok := cls.Methods[name]; ok {
-			c.errorf(m.Name.Sp, "`%s` already has a method `%s`", cls.Name, name).Notes = []string{
-				fmt.Sprintf("the first one is at line %d", prev.line),
-				"only `init` can be declared several times",
-			}
-			continue
-		}
-		sig.sym = c.newSym(m.Name, SymMethod, d.Builtin)
-		cls.Methods[name] = sig
-	}
-	if len(cls.Inits) == 0 {
-		// A class without an init gets an empty one.
-		cls.Inits[0] = &funcSig{name: "init", result: NoValue, class: cls, isInit: true, line: d.Name.Sp.Start.Line}
-	}
 }
 
 // enumMembers records the cases and methods of an enum.
@@ -500,6 +441,7 @@ func (c *checker) resolveName(name *ast.Ident) Type {
 func (c *checker) funcBody(sig *funcSig) {
 	if c.complete == nil {
 		c.checkModes(sig)
+		c.checkParentInit(sig)
 	}
 	if sig.decl.Bad && c.complete == nil {
 		return
@@ -802,13 +744,18 @@ func (c *checker) fieldTarget(m *ast.Member) Type {
 	ft := c.fieldType(f)
 	if !f.Mut {
 		_, viaThis := m.X.(*ast.This)
-		if !(viaThis && c.fn != nil && c.fn.isInit && c.fn.class == cls) {
+		if !(viaThis && c.fn != nil && c.fn.isInit && c.fn.class == f.Owner) {
 			d := c.errorf(m.Name.Sp, "cannot assign to `%s`: it is a `con` field", f.Name)
 			d.Notes = []string{
-				fmt.Sprintf("`%s.%s` is declared at line %d", cls.Name, f.Name, f.Decl.Name.Sp.Start.Line),
+				fmt.Sprintf("`%s.%s` is declared at line %d", f.Owner.Name, f.Name, f.Decl.Name.Sp.Start.Line),
 				"a `con` field can only be set in `init`, through `this`",
 			}
-			d.Help = []string{"declare it with `mut` if it needs to change"}
+			if viaThis && c.fn != nil && c.fn.isInit && f.Owner != cls {
+				d.Notes[1] = fmt.Sprintf("a `con` field can only be set in an `init` of the class that declares it, `%s`", f.Owner.Name)
+				d.Help = []string{fmt.Sprintf("pass it to `super(%s).init(...)`", c.fn.class.Super.Name)}
+			} else {
+				d.Help = []string{"declare it with `mut` if it needs to change"}
+			}
 			return nil
 		}
 	}

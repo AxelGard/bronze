@@ -54,6 +54,7 @@ module.exports = grammar({
     function_declaration: ($) =>
       seq(
         optional('static'),
+        optional('override'),
         optional('mut'),
         'func',
         field('name', $.identifier),
@@ -82,7 +83,7 @@ module.exports = grammar({
       seq(
         'class',
         field('name', $.identifier),
-        optional(seq('use', field('use', $.identifier))),
+        optional(seq('use', commaSep1(field('use', $.identifier)))),
         field('body', $.class_body),
       ),
 
@@ -218,6 +219,7 @@ module.exports = grammar({
         $.false,
         $.null,
         $.this,
+        $.super,
       ),
 
     else_expression: ($) =>
@@ -339,6 +341,9 @@ module.exports = grammar({
     false: (_) => 'false',
     null: (_) => 'null',
     this: (_) => 'this',
+
+    // `super(Animal)`, before `.method(...)`.
+    super: ($) => seq('super', '(', field('class', $.identifier), ')'),
 
     comment: (_) =>
       token(choice(seq('//', /[^\n]*/), seq('/*', /[^*]*\*+([^/*][^*]*\*+)*/, '/'))),

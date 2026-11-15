@@ -29,6 +29,9 @@ func dump(b *strings.Builder, n Node) {
 		if n.Static {
 			b.WriteString("static ")
 		}
+		if n.Override {
+			b.WriteString("override ")
+		}
 		if n.Mut {
 			b.WriteString("mut ")
 		}
@@ -55,8 +58,13 @@ func dump(b *strings.Builder, n Node) {
 		b.WriteByte(')')
 	case *ClassDecl:
 		fmt.Fprintf(b, "(class %s", n.Name.Name)
-		if n.UseError {
-			b.WriteString(" use Error")
+		for i, u := range n.Uses {
+			if i == 0 {
+				b.WriteString(" use ")
+			} else {
+				b.WriteString(", ")
+			}
+			b.WriteString(u.Name)
 		}
 		for _, f := range n.Fields {
 			b.WriteByte(' ')
@@ -269,6 +277,8 @@ func dump(b *strings.Builder, n Node) {
 		fmt.Fprintf(b, " %s)", n.Name.Name)
 	case *This:
 		b.WriteString("this")
+	case *Super:
+		fmt.Fprintf(b, "super(%s)", n.Class.Name)
 	case *Match:
 		b.WriteString("(match ")
 		dump(b, n.X)

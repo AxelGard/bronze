@@ -1,0 +1,4 @@
+panic: negative balance
+  at Account.init (parent_init_panic.brz:9)
+  at Savings.init (parent_init_panic.brz:19)
+  at main         (parent_init_panic.brz:26)

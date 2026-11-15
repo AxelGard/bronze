@@ -1,0 +1,22 @@
+class Animal
+{
+    mut sounds = 0
+
+    mut func talk()
+    {
+        this.sounds += 1
+    }
+}
+
+class Dog use Animal
+{
+    func bark()
+    {
+        super(Animal).talk()
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

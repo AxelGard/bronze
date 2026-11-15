@@ -1,0 +1,2 @@
+error: `super(Animal)` must be followed by `.` and a method
+  --> super_not_value.brz:25:16

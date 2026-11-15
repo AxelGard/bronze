@@ -189,7 +189,6 @@ func TestErrors(t *testing.T) {
 			"errors and null",
 			"class B use Thing {}\nfunc f() -> Int?? { }\nfunc g()\n{\n    con a = f() else 1 else 2\n    h()\n    else return\n    con b = x is A == true\n}",
 			[]string{
-				"1:13 expected `Error` after `use`, found `Thing`",
 				"2:17 `Int??` is not allowed: a `?` type is already nullable",
 				"5:24 an expression can only have one `else`",
 				"7:5 `else` must be on the same line as the expression it handles",
@@ -358,6 +357,17 @@ func TestEnumValues(t *testing.T) {
 	}
 	want := "(enum Priority: Int (Low (- 1)) (High 10) (func up -> Priority (block (return (. Priority High)))))\n" +
 		"(enum Role: String (Admin \"admin\"))"
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestInheritance(t *testing.T) {
+	f, diags := parse(t, "class Dog use Animal, Named\n{\n    override func speak() -> String\n    {\n        return super(Animal).speak()\n    }\n}\n")
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := "(class Dog use Animal, Named (override func speak -> String (block (return (call (. super(Animal) speak))))))"
 	if got := ast.Dump(f); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

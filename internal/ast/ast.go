@@ -42,17 +42,19 @@ func (f *File) Span() diag.Span { return f.Sp }
 // FuncDecl is `func name(params) -> result ! fail { body }`, or `mut func
 // ...` for a method that changes `this`.
 type FuncDecl struct {
-	Static   bool // `static func`: a method of the class, not of an object
-	StaticSp diag.Span
-	Mut      bool // `mut func`
-	MutSp    diag.Span
-	Name     *Ident
-	Params   []*Param
-	Result   *TypeExpr // nil if the function returns no value
-	Fail     *TypeExpr // the error type after `!`, or nil
-	Body     *Block
-	Bad      bool // the body had a syntax error
-	Sp       diag.Span
+	Static     bool // `static func`: a method of the class, not of an object
+	StaticSp   diag.Span
+	Override   bool // `override func`: replaces a parent's method
+	OverrideSp diag.Span
+	Mut        bool // `mut func`
+	MutSp      diag.Span
+	Name       *Ident
+	Params     []*Param
+	Result     *TypeExpr // nil if the function returns no value
+	Fail       *TypeExpr // the error type after `!`, or nil
+	Body       *Block
+	Bad        bool // the body had a syntax error
+	Sp         diag.Span
 }
 
 // Param is `name: Type`, or `name: mut Type`.
@@ -72,15 +74,15 @@ type TypeExpr struct {
 	Sp       diag.Span
 }
 
-// ClassDecl is `class Name use Error { fields and methods }`.
+// ClassDecl is `class Name use Parent { fields and methods }`.
 type ClassDecl struct {
-	Name     *Ident
-	UseError bool // `use Error`
-	Fields   []*Field
-	Methods  []*FuncDecl
-	Bad      bool // some member had a syntax error
-	Builtin  bool // declared by bronze itself, like Error
-	Sp       diag.Span
+	Name    *Ident
+	Uses    []*Ident // the names after `use`: a parent class, or Error
+	Fields  []*Field
+	Methods []*FuncDecl
+	Bad     bool // some member had a syntax error
+	Builtin bool // declared by bronze itself, like Error
+	Sp      diag.Span
 }
 
 // Field is `con name: Type = value` or `mut name = value` in a class.
@@ -345,6 +347,13 @@ type This struct {
 	Sp diag.Span
 }
 
+// Super is `super(Parent)`, which is only used before `.method(...)` or
+// `.init(...)`.
+type Super struct {
+	Class *Ident
+	Sp    diag.Span
+}
+
 // Match is `match x { pattern => value ... }`.
 type Match struct {
 	X    Expr
@@ -457,6 +466,7 @@ func (e *Slice) Span() diag.Span   { return e.Sp }
 func (e *Call) Span() diag.Span    { return e.Sp }
 func (e *Member) Span() diag.Span  { return e.X.Span().To(e.Name.Sp) }
 func (e *This) Span() diag.Span    { return e.Sp }
+func (e *Super) Span() diag.Span   { return e.Sp }
 func (e *Match) Span() diag.Span   { return e.Sp }
 func (p *Pattern) Span() diag.Span { return p.Sp }
 func (e *Paren) Span() diag.Span   { return e.Sp }
@@ -481,6 +491,7 @@ func (*Slice) exprNode()     {}
 func (*Call) exprNode()      {}
 func (*Member) exprNode()    {}
 func (*This) exprNode()      {}
+func (*Super) exprNode()     {}
 func (*Match) exprNode()     {}
 func (*Paren) exprNode()     {}
 func (*BadExpr) exprNode()   {}

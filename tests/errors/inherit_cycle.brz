@@ -1,0 +1,12 @@
+class A use B
+{
+}
+
+class B use A
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

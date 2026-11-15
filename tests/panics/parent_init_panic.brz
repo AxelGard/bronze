@@ -1,0 +1,28 @@
+class Account
+{
+    mut balance = 0
+
+    func init(balance: Int)
+    {
+        if balance < 0
+        {
+            panic("negative balance")
+        }
+        this.balance = balance
+    }
+}
+
+class Savings use Account
+{
+    func init(balance: Int)
+    {
+        super(Account).init(balance)
+    }
+}
+
+func main() -> Int
+{
+    print("opening")
+    con s = Savings(-5)
+    return 0
+}

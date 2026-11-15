@@ -1,0 +1,14 @@
+class Animal
+{
+    con name = ""
+}
+
+class Dog use Animal
+{
+    con name = "dog"
+}
+
+func main() -> Int
+{
+    return 0
+}

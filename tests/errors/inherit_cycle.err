@@ -1,0 +1,2 @@
+error: `A` uses itself
+  --> inherit_cycle.brz:1:7

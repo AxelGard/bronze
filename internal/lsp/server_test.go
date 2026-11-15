@@ -299,6 +299,15 @@ enum Status
     Frozen
 }
 
+class Savings use Account
+{
+}
+
+func rate(s: Savings) -> Int
+{
+    return s.balance
+}
+
 func top_up(a: mut Account, by: Int)
 {
     a.balance += by
@@ -347,6 +356,8 @@ func main() -> Int
 		{"withdraw", 2, "mut func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
 		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
 		{"a.balance", 1, "a: mut Account", ""},
+		{"Savings", 1, "class Savings use Account", ""},
+		{"balance\n}", 1, "mut balance: Int", "in `Account`"},
 		{"opened", 2, "static func opened() -> Account", "in `Account`"},
 		{"Role", 1, "enum Role: String", ""},
 		{"Admin", 1, "Role.Admin = \"admin\"", ""},

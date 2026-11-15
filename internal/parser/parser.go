@@ -171,7 +171,7 @@ func (p *parser) decl() (d ast.Decl) {
 		fn := p.funcDecl()
 		p.endOfLine("declaration")
 		return fn
-	case lexer.STATIC:
+	case lexer.STATIC, lexer.OVERRIDE:
 		fn := p.modFuncDecl()
 		p.endOfLine("declaration")
 		return fn
@@ -213,14 +213,17 @@ func (p *parser) syncDecl() {
 	}
 }
 
-// modFuncDecl parses a function with modifiers: `static func ...` or
-// `mut func ...`. Where they are allowed is up to the checker.
+// modFuncDecl parses a function with modifiers: `static func ...`,
+// `override func ...` or `mut func ...`. Where they are allowed is up to the checker.
 func (p *parser) modFuncDecl() *ast.FuncDecl {
 	start := p.tok().Span
-	var static, mut diag.Span
-	isStatic, isMut := false, false
+	var static, override, mut diag.Span
+	isStatic, isOverride, isMut := false, false, false
 	if p.at(lexer.STATIC) {
 		static, isStatic = p.advance().Span, true
+	}
+	if p.at(lexer.OVERRIDE) {
+		override, isOverride = p.advance().Span, true
 	}
 	if p.at(lexer.MUT) {
 		mut, isMut = p.advance().Span, true
@@ -230,6 +233,7 @@ func (p *parser) modFuncDecl() *ast.FuncDecl {
 	}
 	fn := p.funcDecl()
 	fn.Static, fn.StaticSp = isStatic, static
+	fn.Override, fn.OverrideSp = isOverride, override
 	fn.Mut, fn.MutSp = isMut, mut
 	fn.Sp = start.To(fn.Sp)
 	return fn
@@ -271,13 +275,13 @@ func (p *parser) classDecl() *ast.ClassDecl {
 	c := &ast.ClassDecl{Name: p.ident()}
 	if p.at(lexer.USE) {
 		p.advance()
-		t := p.tok()
-		if t.Kind != lexer.IDENT || t.Text != "Error" {
-			p.failNote("`use` only works with `Error` for now",
-				"expected `Error` after `use`, found %s", describe(t))
+		for {
+			c.Uses = append(c.Uses, p.ident())
+			if !p.at(lexer.COMMA) {
+				break
+			}
+			p.advance()
 		}
-		p.advance()
-		c.UseError = true
 	}
 	p.skipNewlines()
 	p.expect(lexer.LBRACE)
@@ -313,7 +317,7 @@ func (p *parser) member(c *ast.ClassDecl) {
 		}
 	}()
 	switch {
-	case p.at(lexer.STATIC), p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC:
+	case p.at(lexer.STATIC), p.at(lexer.OVERRIDE), p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC:
 		c.Methods = append(c.Methods, p.modFuncDecl())
 	case p.at(lexer.CON), p.at(lexer.MUT):
 		c.Fields = append(c.Fields, p.field())
@@ -377,7 +381,7 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 	case lexer.FUNC:
 		e.Methods = append(e.Methods, p.funcDecl())
 		p.endOfLine("method")
-	case lexer.MUT, lexer.STATIC:
+	case lexer.MUT, lexer.STATIC, lexer.OVERRIDE:
 		e.Methods = append(e.Methods, p.modFuncDecl())
 		p.endOfLine("method")
 	default:
@@ -1167,6 +1171,17 @@ func (p *parser) primary() ast.Expr {
 	case lexer.THIS:
 		p.advance()
 		return &ast.This{Sp: t.Span}
+	case lexer.SUPER:
+		p.advance()
+		p.expect(lexer.LPAREN)
+		cls := p.ident()
+		end := p.expect(lexer.RPAREN).Span
+		if !p.at(lexer.DOT) {
+			d := p.diags.Errorf(t.Span.To(end), "`super(%s)` must be followed by `.` and a method", cls.Name)
+			d.Help = []string{fmt.Sprintf("call the parent's method, like `super(%s).init(...)`", cls.Name)}
+			panic(bailout{})
+		}
+		return &ast.Super{Class: cls, Sp: t.Span.To(end)}
 	case lexer.MATCH:
 		return p.match()
 	case lexer.LBRACK:

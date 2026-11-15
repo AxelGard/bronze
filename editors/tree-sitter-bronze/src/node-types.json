@@ -80,6 +80,10 @@
           "named": true
         },
         {
+          "type": "super",
+          "named": true
+        },
+        {
           "type": "this",
           "named": true
         },
@@ -193,6 +197,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -286,6 +294,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -434,6 +446,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -594,6 +610,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -653,7 +673,7 @@
         ]
       },
       "use": {
-        "multiple": false,
+        "multiple": true,
         "required": false,
         "types": [
           {
@@ -789,6 +809,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -882,6 +906,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -1001,6 +1029,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -1093,6 +1125,10 @@
         },
         {
           "type": "string",
+          "named": true
+        },
+        {
+          "type": "super",
           "named": true
         },
         {
@@ -1217,6 +1253,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -1352,6 +1392,10 @@
           "named": true
         },
         {
+          "type": "super",
+          "named": true
+        },
+        {
           "type": "this",
           "named": true
         },
@@ -1467,6 +1511,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -1570,6 +1618,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -1739,6 +1791,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -1845,6 +1901,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -1932,6 +1992,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -2028,6 +2092,10 @@
         },
         {
           "type": "string",
+          "named": true
+        },
+        {
+          "type": "super",
           "named": true
         },
         {
@@ -2136,6 +2204,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -2229,6 +2301,10 @@
         },
         {
           "type": "string",
+          "named": true
+        },
+        {
+          "type": "super",
           "named": true
         },
         {
@@ -2342,6 +2418,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -2429,6 +2509,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -2542,6 +2626,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -2635,6 +2723,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -2751,6 +2843,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -2888,6 +2984,10 @@
         },
         {
           "type": "string",
+          "named": true
+        },
+        {
+          "type": "super",
           "named": true
         },
         {
@@ -3038,6 +3138,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -3142,6 +3246,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -3235,6 +3343,10 @@
         },
         {
           "type": "string",
+          "named": true
+        },
+        {
+          "type": "super",
           "named": true
         },
         {
@@ -3348,6 +3460,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -3435,6 +3551,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -3542,6 +3662,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -3598,6 +3722,22 @@
           "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "super",
+    "named": true,
+    "fields": {
+      "class": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -3704,6 +3844,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -3837,6 +3981,10 @@
             "named": true
           },
           {
+            "type": "super",
+            "named": true
+          },
+          {
             "type": "this",
             "named": true
           },
@@ -3940,6 +4088,10 @@
           },
           {
             "type": "string",
+            "named": true
+          },
+          {
+            "type": "super",
             "named": true
           },
           {
@@ -4176,11 +4328,19 @@
     "named": false
   },
   {
+    "type": "override",
+    "named": false
+  },
+  {
     "type": "return",
     "named": false
   },
   {
     "type": "static",
+    "named": false
+  },
+  {
+    "type": "super",
     "named": false
   },
   {

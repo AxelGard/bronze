@@ -86,6 +86,9 @@ func (c *checker) setHovers() {
 	}
 	for _, cls := range c.classes {
 		cls.Sym.Hover = "class " + cls.Name
+		if cls.Super != nil && !cls.Decl.Builtin {
+			cls.Sym.Hover += " use " + cls.Super.Name
+		}
 		for _, f := range cls.Fields {
 			if f.sym == nil || f.sym.Hover != "" {
 				continue
@@ -98,16 +101,12 @@ func (c *checker) setHovers() {
 			if t := typeText(f.typ); t != "" {
 				f.sym.Hover += ": " + t
 			}
-			owner := cls.Name
-			if cls.Super != nil && cls.Super.Fields[f.Name] == f {
-				owner = cls.Super.Name
-			}
-			f.sym.In = owner
+			f.sym.In = f.Owner.Name
 		}
 		for _, sig := range cls.Methods {
 			if sig.sym != nil {
 				sig.sym.Hover = sigHover(sig)
-				sig.sym.In = cls.Name
+				sig.sym.In = sig.class.Name
 			}
 		}
 	}

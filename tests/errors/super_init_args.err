@@ -1,0 +1,2 @@
+error: `super(Animal).init` takes 1 argument, but 0 were given
+  --> super_init_args.brz:20:9
