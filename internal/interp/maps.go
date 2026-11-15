@@ -8,12 +8,24 @@ import (
 
 // Map is a map. Maps are shared, like objects, and keep their keys in the
 // order they were first added. Keys are int64, string, bool or *Case
-// values, so they can be Go map keys.
+// values, which can be Go map keys, or data objects, which are looked up
+// by keyOf.
 type Map struct {
 	keys    []Value
 	vals    []Value
 	pos     map[Value]int // the position of each key in keys
 	looping int           // how many `for` loops are looping over it
+}
+
+// keyOf is what a key is looked up by: the key itself, or for a data
+// object the text it prints as. All the keys of a map have the same type,
+// and a data class that is a key has only con fields, so that text is
+// unique and doesn't change.
+func keyOf(k Value) Value {
+	if obj, ok := k.(*Object); ok {
+		return "\x00" + Format(obj)
+	}
+	return k
 }
 
 // NewMap returns an empty map.
@@ -24,7 +36,7 @@ func (m *Map) Len() int { return len(m.keys) }
 
 // Get returns the value for a key, and whether the key is there.
 func (m *Map) Get(k Value) (Value, bool) {
-	if i, ok := m.pos[k]; ok {
+	if i, ok := m.pos[keyOf(k)]; ok {
 		return m.vals[i], true
 	}
 	return nil, false
@@ -32,27 +44,27 @@ func (m *Map) Get(k Value) (Value, bool) {
 
 // Set adds a key, or replaces its value in place.
 func (m *Map) Set(k, v Value) {
-	if i, ok := m.pos[k]; ok {
+	if i, ok := m.pos[keyOf(k)]; ok {
 		m.vals[i] = v
 		return
 	}
-	m.pos[k] = len(m.keys)
+	m.pos[keyOf(k)] = len(m.keys)
 	m.keys = append(m.keys, k)
 	m.vals = append(m.vals, v)
 }
 
 // Remove removes a key, and returns its value and whether it was there.
 func (m *Map) Remove(k Value) (Value, bool) {
-	i, ok := m.pos[k]
+	i, ok := m.pos[keyOf(k)]
 	if !ok {
 		return nil, false
 	}
 	v := m.vals[i]
 	m.keys = slices.Delete(m.keys, i, i+1)
 	m.vals = slices.Delete(m.vals, i, i+1)
-	delete(m.pos, k)
+	delete(m.pos, keyOf(k))
 	for j := i; j < len(m.keys); j++ {
-		m.pos[m.keys[j]] = j
+		m.pos[keyOf(m.keys[j])] = j
 	}
 	return v, true
 }
@@ -71,7 +83,7 @@ func (in *interp) mapMethod(m *Map, name string, args []Value, at diag.Span) Val
 	case "length":
 		return int64(m.Len())
 	case "contains":
-		_, ok := m.pos[args[0]]
+		_, ok := m.pos[keyOf(args[0])]
 		return ok
 	case "remove":
 		in.mapChanging(m, at)

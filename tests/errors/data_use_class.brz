@@ -1,0 +1,10 @@
+class Base
+{
+}
+
+data Money(amount: Int) use Base
+
+func main() -> Int
+{
+    return 0
+}

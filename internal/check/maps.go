@@ -10,8 +10,13 @@ import (
 
 // validKey reports whether t can be the key type of a map.
 func validKey(t Type) bool {
-	_, isEnum := t.(*Enum)
-	return t == Int || t == String || t == Bool || isEnum
+	switch t := t.(type) {
+	case *Enum:
+		return true
+	case *Class:
+		return t.Data && (t.dataState != 2 || t.keyable)
+	}
+	return t == Int || t == String || t == Bool
 }
 
 // mapType resolves `Map<K, V>`.
@@ -23,7 +28,9 @@ func (c *checker) mapType(t *ast.TypeExpr) Type {
 	}
 	key, val := c.resolveType(t.Args[0]), c.resolveType(t.Args[1])
 	okKey := c.elemType(t.Args[0], key, "a map's keys")
-	if okKey && !validKey(key) {
+	if k, ok := key.(*Class); ok && k.Data && k.dataState != 2 {
+		c.dataKeys = append(c.dataKeys, dataKey{t.Args[0], k})
+	} else if okKey && !validKey(key) {
 		c.badKey(t.Args[0], key)
 		okKey = false
 	}
@@ -34,7 +41,11 @@ func (c *checker) mapType(t *ast.TypeExpr) Type {
 }
 
 func (c *checker) badKey(at ast.Node, t Type) {
-	d := c.errorf(at.Span(), "a map key can be an Int, String, Bool or enum, not %s", t)
+	if k, ok := t.(*Class); ok && k.Data {
+		c.dataKeyError(at, k)
+		return
+	}
+	d := c.errorf(at.Span(), "a map key can be an Int, String, Bool, enum or data class, not %s", t)
 	d.Notes = []string{"keys are compared by value, so they can only be simple values"}
 }
 

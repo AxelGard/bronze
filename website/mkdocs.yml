@@ -61,6 +61,7 @@ nav:
       - Control flow: guide/control-flow.md
       - Functions: guide/functions.md
       - Classes: guide/classes.md
+      - Data classes: guide/data-classes.md
       - Enums and match: guide/enums-and-match.md
       - Errors: guide/errors.md
       - "Null and T?": guide/null.md

@@ -1,0 +1,11 @@
+class Conn
+{
+}
+
+data Session(id: Int, conn: Conn)
+
+func main() -> Int
+{
+    print(Session(1, Conn()))
+    return 0
+}

@@ -77,8 +77,10 @@ type checker struct {
 	classes map[string]*Class
 	ifaces  map[string]*Interface
 	enums   map[string]*Enum
-	broken  map[string]bool // names of declarations with syntax errors
-	errCls  *Class          // the built-in Error class
+
+	dataKeys []dataKey       // map key types that are data classes, checked later
+	broken   map[string]bool // names of declarations with syntax errors
+	errCls   *Class          // the built-in Error class
 
 	inPrelude bool // checking the prelude: don't record references
 
@@ -210,6 +212,7 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 			classes = append(classes, d)
 			c.classes[name.Name] = &Class{
 				Name:    name.Name,
+				Data:    d.Data,
 				Decl:    d,
 				Fields:  map[string]*Field{},
 				Methods: map[string]*funcSig{},
@@ -253,6 +256,12 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 	for _, d := range classes {
 		c.implements(c.classes[d.Name.Name])
 	}
+	for _, d := range classes {
+		if d.Data {
+			c.dataInfo(c.classes[d.Name.Name])
+		}
+	}
+	c.checkDataKeys()
 	for _, d := range enums {
 		c.enumMembers(c.enums[d.Name.Name])
 	}
@@ -406,6 +415,11 @@ func (c *checker) fieldType(f *Field) Type {
 		}
 		f.typ, f.state = Invalid, 2
 		return Invalid
+	}
+	if f.Decl.Value == nil {
+		// A field of a data class that its constructor sets.
+		f.typ, f.state = c.resolveType(f.Decl.Type), 2
+		return f.typ
 	}
 	f.state = 1
 	saveFn, saveScope, saveLoops := c.fn, c.scope, c.loops
@@ -782,7 +796,14 @@ func (c *checker) fieldTarget(m *ast.Member) Type {
 				fmt.Sprintf("`%s.%s` is declared at line %d", f.Owner.Name, f.Name, f.Decl.Name.Sp.Start.Line),
 				"a `con` field can only be set in `init`, through `this`",
 			}
-			if viaThis && c.fn != nil && c.fn.isInit && f.Owner != cls {
+			if f.Owner.Data {
+				d.Notes[1] = "the constructor of a data class sets its `con` fields, and then they don't change"
+				if f.Owner.Decl.Short {
+					d.Help = []string{fmt.Sprintf("make a new one instead: `%s(...)`", f.Owner.Name)}
+				} else {
+					d.Help = []string{"declare it with `mut` if it needs to change"}
+				}
+			} else if viaThis && c.fn != nil && c.fn.isInit && f.Owner != cls {
 				d.Notes[1] = fmt.Sprintf("a `con` field can only be set in an `init` of the class that declares it, `%s`", f.Owner.Name)
 				d.Help = []string{fmt.Sprintf("pass it to `super(%s).init(...)`", c.fn.class.Super.Name)}
 			} else {

@@ -1,0 +1,9 @@
+data Money(amount: Int)
+{
+    con currency = "EUR"
+}
+
+func main() -> Int
+{
+    return 0
+}

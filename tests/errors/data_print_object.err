@@ -1,0 +1,2 @@
+error: cannot print Session, since some of its fields can't be printed
+  --> data_print_object.brz:9:11

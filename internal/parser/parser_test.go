@@ -182,8 +182,8 @@ func TestErrors(t *testing.T) {
 		},
 		{
 			"reserved word",
-			"func f()\n{\n    con data = 1\n}",
-			[]string{"3:9 `data` is reserved for a later version, and can't be used as a name"},
+			"func f()\n{\n    con namespace = 1\n}",
+			[]string{"3:9 `namespace` is reserved for a later version, and can't be used as a name"},
 		},
 		{
 			"errors and null",
@@ -390,6 +390,21 @@ func TestInterface(t *testing.T) {
 		t.Fatal(diags[0].Message)
 	}
 	want := "(interface Solid use Shape (func volume -> Float) (mut func scale (by Float)))"
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestData(t *testing.T) {
+	src := "data Money(amount: Int, currency: String)\n\ndata Point(x: Int, y: Int)\n{\n    func sum() -> Int\n    {\n        return this.x + this.y\n    }\n}\n\ndata NotFound(id: Int) use Error\n\ndata Wallet\n{\n    mut amount: Int\n    con currency: String\n    mut history: List<Int> = []\n}\n"
+	f, diags := parse(t, src)
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := "(data Money (field con amount: Int) (field con currency: String))\n" +
+		"(data Point (field con x: Int) (field con y: Int) (func sum -> Int (block (return (+ (. this x) (. this y))))))\n" +
+		"(data NotFound use Error (field con id: Int))\n" +
+		"(data Wallet (field mut amount: Int) (field con currency: String) (field mut history: List<Int> (list)))"
 	if got := ast.Dump(f); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

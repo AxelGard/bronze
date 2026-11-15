@@ -19,7 +19,9 @@ import (
 // read only means nothing.
 func changeable(t Type) bool {
 	switch t := t.(type) {
-	case *Class, *Interface, *List, *Map:
+	case *Class:
+		return !t.Data || t.dataState != 2 || !t.frozen
+	case *Interface, *List, *Map:
 		return true
 	case *Optional:
 		return changeable(t.Inner)

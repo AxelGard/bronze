@@ -1,0 +1,2 @@
+error: the fields of a short data class are all `con`
+  --> data_short_mut.brz:1:20

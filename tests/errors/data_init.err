@@ -1,0 +1,2 @@
+error: a data class gets its constructor from its fields, so it can't have an `init`
+  --> data_init.brz:3:10

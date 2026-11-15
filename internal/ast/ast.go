@@ -93,6 +93,8 @@ type TypeExpr struct {
 type ClassDecl struct {
 	Name    *Ident
 	Uses    []*Ident // the names after `use`: a parent class, or Error
+	Data    bool     // a data class: `data Name(...)` or `data Name { ... }`
+	Short   bool     // the short form, `data Money(amount: Int, ...)`
 	Fields  []*Field
 	Methods []*FuncDecl
 	Bad     bool // some member had a syntax error
@@ -100,7 +102,8 @@ type ClassDecl struct {
 	Sp      diag.Span
 }
 
-// Field is `con name: Type = value` or `mut name = value` in a class.
+// Field is `con name: Type = value` or `mut name = value` in a class. In a
+// data class, Value may be nil: the constructor sets the field.
 type Field struct {
 	Vis   Visibility
 	VisSp diag.Span

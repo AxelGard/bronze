@@ -155,7 +155,7 @@ func (p *parser) decl() (d ast.Decl) {
 			p.recovered++
 			bad := &ast.BadDecl{}
 			// Keep the name, so that uses of it don't cause more errors.
-			if k := p.toks[start].Kind; (k == lexer.FUNC || k == lexer.CLASS || k == lexer.ENUM || k == lexer.INTERFACE) &&
+			if k := p.toks[start].Kind; (k == lexer.FUNC || k == lexer.CLASS || k == lexer.ENUM || k == lexer.INTERFACE || k == lexer.DATA) &&
 				p.toks[start+1].Kind == lexer.IDENT {
 				t := p.toks[start+1]
 				bad.Name = &ast.Ident{Name: t.Text, Sp: t.Span}
@@ -171,6 +171,10 @@ func (p *parser) decl() (d ast.Decl) {
 		fn := p.funcDecl()
 		p.endOfLine("declaration")
 		return fn
+	case lexer.DATA:
+		c := p.dataDecl()
+		p.endOfLine("declaration")
+		return c
 	case lexer.INTERFACE:
 		i := p.interfaceDecl()
 		p.endOfLine("declaration")
@@ -213,7 +217,7 @@ func (p *parser) syncDecl() {
 			depth++
 		case lexer.RBRACE:
 			depth = max(depth-1, 0)
-		case lexer.FUNC, lexer.CLASS, lexer.ENUM, lexer.INTERFACE:
+		case lexer.FUNC, lexer.CLASS, lexer.ENUM, lexer.INTERFACE, lexer.DATA:
 			if depth == 0 && p.pos > 0 && p.toks[p.pos-1].Kind == lexer.NEWLINE {
 				return
 			}
@@ -370,17 +374,71 @@ func (p *parser) interfaceMember(i *ast.InterfaceDecl) {
 func (p *parser) classDecl() *ast.ClassDecl {
 	start := p.expect(lexer.CLASS).Span
 	c := &ast.ClassDecl{Name: p.ident()}
-	if p.at(lexer.USE) {
-		p.advance()
+	p.uses(c)
+	p.skipNewlines()
+	p.classBody(c, start)
+	return c
+}
+
+// dataDecl parses a data class: the short form `data Money(amount: Int,
+// currency: String)`, with an optional body of methods, or the long form
+// `data Wallet { fields and methods }`.
+func (p *parser) dataDecl() *ast.ClassDecl {
+	start := p.expect(lexer.DATA).Span
+	c := &ast.ClassDecl{Name: p.ident(), Data: true}
+	if !p.at(lexer.LPAREN) {
+		p.uses(c)
+		p.skipNewlines()
+		p.classBody(c, start)
+		return c
+	}
+	c.Short = true
+	p.advance()
+	if !p.at(lexer.RPAREN) {
 		for {
-			c.Uses = append(c.Uses, p.ident())
+			param := p.param()
+			if param.Mut {
+				p.fail(param.MutSp, "the fields of a short data class are all `con`")
+			}
+			c.Fields = append(c.Fields, &ast.Field{Name: param.Name, Type: param.Type, Sp: param.Sp})
 			if !p.at(lexer.COMMA) {
 				break
 			}
 			p.advance()
 		}
 	}
+	c.Sp = start.To(p.expect(lexer.RPAREN).Span)
+	p.uses(c)
+	if len(c.Uses) > 0 {
+		c.Sp = start.To(c.Uses[len(c.Uses)-1].Sp)
+	}
+	save := p.pos
 	p.skipNewlines()
+	if !p.at(lexer.LBRACE) {
+		p.pos = save // no body
+		return c
+	}
+	p.classBody(c, start)
+	return c
+}
+
+// uses parses an optional `use A, B` into c.
+func (p *parser) uses(c *ast.ClassDecl) {
+	if !p.at(lexer.USE) {
+		return
+	}
+	p.advance()
+	for {
+		c.Uses = append(c.Uses, p.ident())
+		if !p.at(lexer.COMMA) {
+			break
+		}
+		p.advance()
+	}
+}
+
+// classBody parses `{ members }` into c.
+func (p *parser) classBody(c *ast.ClassDecl, start diag.Span) {
 	p.expect(lexer.LBRACE)
 	p.skipNewlines()
 	for !p.at(lexer.RBRACE) {
@@ -390,13 +448,12 @@ func (p *parser) classDecl() *ast.ClassDecl {
 			}
 			c.Bad = true
 			c.Sp = start.To(p.tok().Span)
-			return c
+			return
 		}
 		p.member(c)
 		p.skipNewlines()
 	}
 	c.Sp = start.To(p.advance().Span)
-	return c
 }
 
 // member parses one field or method into c. On a syntax error it skips to
@@ -420,7 +477,10 @@ func (p *parser) member(c *ast.ClassDecl) {
 		fn.Vis, fn.VisSp = vis, visSp
 		c.Methods = append(c.Methods, fn)
 	case p.at(lexer.CON), p.at(lexer.MUT):
-		f := p.field()
+		if c.Short {
+			p.failNote("its fields are the ones in `( )`", "the short form of a data class can't declare fields in its body")
+		}
+		f := p.fieldOf(c.Data)
 		f.Vis, f.VisSp = vis, visSp
 		c.Fields = append(c.Fields, f)
 	default:
@@ -507,14 +567,25 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 	}
 }
 
-func (p *parser) field() *ast.Field {
+// fieldOf parses a field. In a data class, a field with a type may leave
+// out its initial value.
+func (p *parser) fieldOf(data bool) *ast.Field {
 	t := p.advance()
 	f := &ast.Field{Mut: t.Kind == lexer.MUT, Name: p.ident()}
 	if p.at(lexer.COLON) {
 		p.advance()
 		f.Type = p.typeExpr()
 	}
+	if data && f.Type != nil && !p.at(lexer.ASSIGN) {
+		f.Sp = t.Span.To(f.Type.Sp)
+		return f
+	}
 	if !p.at(lexer.ASSIGN) {
+		if data {
+			d := p.diags.Errorf(p.tok().Span, "field `%s` needs a type or an initial value", f.Name.Name)
+			d.Help = []string{fmt.Sprintf("write its type, `%s %s: Type`, to set it in the constructor", t.Text, f.Name.Name)}
+			panic(bailout{})
+		}
 		d := p.diags.Errorf(p.tok().Span, "field `%s` needs an initial value", f.Name.Name)
 		d.Help = []string{fmt.Sprintf("give it a value: `%s %s = ...`", t.Text, f.Name.Name)}
 		panic(bailout{})

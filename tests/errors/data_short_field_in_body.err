@@ -1,0 +1,2 @@
+error: the short form of a data class can't declare fields in its body
+  --> data_short_field_in_body.brz:3:5

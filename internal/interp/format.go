@@ -19,6 +19,21 @@ func Format(v Value) string {
 		return v
 	case *Case:
 		return v.Name
+	case *Object:
+		// a data object: `Money(amount: 5, currency: "EUR")`
+		var b strings.Builder
+		b.WriteString(v.Class.Name.Name)
+		b.WriteByte('(')
+		for i, f := range v.Class.Fields {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(f.Name.Name)
+			b.WriteString(": ")
+			b.WriteString(formatInner(v.Fields[f.Name.Name]))
+		}
+		b.WriteByte(')')
+		return b.String()
 	case *List:
 		var b strings.Builder
 		b.WriteByte('[')

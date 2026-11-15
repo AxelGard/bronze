@@ -22,6 +22,14 @@ func (c *checker) classUses(cls *Class) {
 			c.ref(u, c.ifaces[u.Name].Sym)
 			cls.Ifaces = append(cls.Ifaces, c.ifaces[u.Name])
 			cls.ifaceAt = append(cls.ifaceAt, idx)
+		case ok && parent.Data:
+			c.ref(u, parent.Sym)
+			d := c.errorf(u.Sp, "`%s` is a data class, and can't be used", u.Name)
+			d.Notes = []string{"a data class is complete as it is; use an interface to share methods"}
+		case ok && cls.Data && !parent.Decl.Builtin:
+			c.ref(u, parent.Sym)
+			d := c.errorf(u.Sp, "a data class can use interfaces and `Error`, but not the class `%s`", u.Name)
+			d.Help = []string{fmt.Sprintf("make `%s` a class, or `%s` an interface", cls.Name, u.Name)}
 		case ok:
 			c.ref(u, parent.Sym)
 			if cls.Super != nil {
@@ -143,6 +151,9 @@ func (c *checker) classMembers(cls *Class) {
 		sig.sym = c.newSym(m.Name, SymMethod, d.Builtin)
 		c.override(cls, sig, parentMethod(parent, name))
 		cls.Methods[name] = sig
+	}
+	if cls.Data {
+		c.dataConstructor(cls)
 	}
 	if len(cls.Inits) == 0 {
 		// A class without an init gets an empty one.

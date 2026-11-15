@@ -154,17 +154,22 @@ var builtinTypes = map[string]Type{
 
 // Class is a class type. Objects are shared by reference.
 type Class struct {
-	Name    string
-	Decl    *ast.ClassDecl
-	Fields  map[string]*Field
-	Methods map[string]*funcSig
-	Inits   map[int]*funcSig    // by number of parameters
-	Super   *Class              // the class parent: another class, or Error
-	Ifaces  []*Interface        // the interfaces after `use`
-	ifaceAt []int               // for each of Ifaces, its index in Decl.Uses
-	impl    map[*Interface]bool // every interface it is, through parents too
-	state   int                 // members: 0 not collected, 1 collecting, 2 done
-	Sym     *Symbol
+	Name      string
+	Decl      *ast.ClassDecl
+	Fields    map[string]*Field
+	Methods   map[string]*funcSig
+	Inits     map[int]*funcSig    // by number of parameters
+	Super     *Class              // the class parent: another class, or Error
+	Ifaces    []*Interface        // the interfaces after `use`
+	ifaceAt   []int               // for each of Ifaces, its index in Decl.Uses
+	impl      map[*Interface]bool // every interface it is, through parents too
+	Data      bool                // a data class
+	dataState int                 // dataInfo: 0 not done, 1 working, 2 done
+	frozen    bool                // a data class whose values can't change
+	printable bool                // a data class that print takes
+	keyable   bool                // a data class that can be a map key
+	state     int                 // members: 0 not collected, 1 collecting, 2 done
+	Sym       *Symbol
 }
 
 func (c *Class) String() string { return c.Name }

@@ -1,0 +1,87 @@
+interface Priced
+{
+    func total() -> Int
+}
+
+data Money(amount: Int, currency: String)
+{
+    func plus(other: Money) -> Money
+    {
+        return Money(this.amount + other.amount, this.currency)
+    }
+}
+
+data LineItem(name: String, price: Money, count: Int) use Priced
+{
+    func total() -> Int
+    {
+        return this.price.amount * this.count
+    }
+}
+
+data Wallet
+{
+    mut amount: Int
+    con currency: String
+    mut history: List<Int> = []
+
+    mut func spend(n: Int)
+    {
+        this.amount -= n
+        this.history.append(n)
+    }
+
+    func is_empty() -> Bool
+    {
+        return this.amount == 0
+    }
+}
+
+data Point(x: Int, y: Int)
+
+data NotFound(id: Int) use Error
+
+func find(id: Int) -> String ! Error
+{
+    if id > 3
+    {
+        return NotFound(id)
+    }
+    return "found"
+}
+
+func main() -> Int
+{
+    con m = Money(5, "EUR")
+    print(m)
+    print(m == Money(5, "EUR"))
+    print(m != Money(6, "EUR"))
+    print(m.plus(Money(2, "EUR")))
+    con item = LineItem("tea", Money(3, "EUR"), 2)
+    print(item)
+    print("{item.name} costs {item.total()}")
+    con w = Wallet(100, "EUR")
+    w.spend(30)
+    print(w)
+    print(w.is_empty())
+    con seen: Map<Point, String> = {}
+    seen[Point(1, 2)] = "a"
+    seen[Point(1, 2)] = "b"
+    seen[Point(3, 4)] = "c"
+    print(seen)
+    print(seen[Point(1, 2)] else "none")
+    print(seen.contains(Point(9, 9)))
+    con items = [Money(1, "EUR"), Money(2, "EUR")]
+    print(items.contains(Money(2, "EUR")))
+    con e = find(7) else (err)
+    {
+        print(err.message)
+        if err is NotFound
+        {
+            print(err.id)
+        }
+        return 0
+    }
+    print(e)
+    return 1
+}

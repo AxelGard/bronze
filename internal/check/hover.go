@@ -87,8 +87,21 @@ func (c *checker) setHovers() {
 	}
 	for _, cls := range c.classes {
 		cls.Sym.Hover = "class " + cls.Name
+		switch {
+		case cls.Data && cls.Decl.Short:
+			cls.Sym.Hover = "data " + cls.Name + dataParamsText(cls.Decl)
+		case cls.Data:
+			cls.Sym.Hover = "data " + cls.Name
+		}
+		var uses []string
 		if cls.Super != nil && !cls.Decl.Builtin {
-			cls.Sym.Hover += " use " + cls.Super.Name
+			uses = append(uses, cls.Super.Name)
+		}
+		for _, i := range cls.Ifaces {
+			uses = append(uses, i.Name)
+		}
+		if len(uses) > 0 {
+			cls.Sym.Hover += " use " + strings.Join(uses, ", ")
 		}
 		for _, f := range cls.Fields {
 			if f.sym == nil || f.sym.Hover != "" {

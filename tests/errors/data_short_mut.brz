@@ -1,0 +1,6 @@
+data Money(amount: mut Int)
+
+func main() -> Int
+{
+    return 0
+}

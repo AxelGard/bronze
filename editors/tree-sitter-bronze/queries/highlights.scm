@@ -11,6 +11,8 @@
 (class_declaration use: (identifier) @type)
 (enum_declaration name: (identifier) @type)
 (interface_declaration name: (identifier) @type)
+(data_declaration name: (identifier) @type)
+(data_declaration use: (identifier) @type)
 (interface_declaration use: (identifier) @type)
 (method_signature name: (identifier) @function)
 (is_expression class: (identifier) @type)
@@ -60,7 +62,7 @@
 
 ; keywords
 ["func" "return"] @keyword.function
-["con" "mut" "class" "enum" "use" "static" "override" "interface"] @keyword
+["con" "mut" "class" "enum" "use" "static" "override" "interface" "data"] @keyword
 (visibility) @keyword.modifier
 ["if" "else" "match"] @keyword.conditional
 ["while" "for" "in" (break_statement) (continue_statement)] @keyword.repeat

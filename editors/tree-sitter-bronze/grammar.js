@@ -49,6 +49,7 @@ module.exports = grammar({
         $.class_declaration,
         $.enum_declaration,
         $.interface_declaration,
+        $.data_declaration,
       ),
 
     // ------------------------------------------------------------------
@@ -104,8 +105,27 @@ module.exports = grammar({
         choice('con', 'mut'),
         field('name', $.identifier),
         optional(seq(':', field('type', $.type))),
-        '=',
-        field('value', $._expression),
+        optional(seq('=', field('value', $._expression))),
+      ),
+
+    // `data Money(amount: Int, currency: String)`, with an optional body of
+    // methods, or the long form `data Wallet { fields and methods }`, whose
+    // fields may leave out their initial value.
+    data_declaration: ($) =>
+      seq(
+        'data',
+        field('name', $.identifier),
+        choice(
+          seq(
+            field('fields', $.parameter_list),
+            optional(seq('use', commaSep1(field('use', $.identifier)))),
+            optional(field('body', $.class_body)),
+          ),
+          seq(
+            optional(seq('use', commaSep1(field('use', $.identifier)))),
+            field('body', $.class_body),
+          ),
+        ),
       ),
 
     // An interface has method signatures only, without bodies.
@@ -167,8 +187,7 @@ module.exports = grammar({
         choice('con', 'mut'),
         field('name', $.identifier),
         optional(seq(':', field('type', $.type))),
-        '=',
-        field('value', $._expression),
+        optional(seq('=', field('value', $._expression))),
       ),
 
     assignment: ($) =>

@@ -84,7 +84,7 @@ func TestLiterals(t *testing.T) {
 }
 
 func TestKeywords(t *testing.T) {
-	toks, _ := lex(t, "func con mut for data x")
+	toks, _ := lex(t, "func con mut for namespace x")
 	want := []Kind{FUNC, CON, MUT, FOR, RESERVED, IDENT}
 	for i, k := range want {
 		if toks[i].Kind != k {

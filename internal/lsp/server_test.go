@@ -305,6 +305,13 @@ enum Status
     Frozen
 }
 
+data Money(amount: Int, currency: String)
+
+func cents(m: Money) -> Int
+{
+    return m.amount * 100
+}
+
 interface Named
 {
     func label() -> String
@@ -376,8 +383,10 @@ func main() -> Int
 		{"withdraw", 2, "mut func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
 		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
 		{"a.balance", 1, "a: mut Account", ""},
-		{"Savings", 1, "class Savings use Account", ""},
+		{"Savings", 1, "class Savings use Account, Named", ""},
 		{"Named", 1, "interface Named", ""},
+		{"Money", 1, "data Money(amount: Int, currency: String)", ""},
+		{"amount * 100", 1, "con amount: Int", "in `Money`"},
 		{"label()", 3, "func label() -> String", "in `Named`"},
 		{"memo", 1, "private mut memo: String", "in `Account`"},
 		{"fee", 1, "protected func fee() -> Int", "in `Account`"},

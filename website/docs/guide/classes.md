@@ -449,4 +449,4 @@ circle: 3.0
 
 ## Next
 
-[Enums and match](enums-and-match.md).
+[Data classes](data-classes.md).

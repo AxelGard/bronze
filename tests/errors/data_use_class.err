@@ -1,0 +1,2 @@
+error: a data class can use interfaces and `Error`, but not the class `Base`
+  --> data_use_class.brz:5:29

@@ -1,0 +1,10 @@
+data Wallet
+{
+    mut amount: Int
+}
+
+func main() -> Int
+{
+    con m: Map<Wallet, Int> = {}
+    return 0
+}

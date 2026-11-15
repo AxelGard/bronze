@@ -1,0 +1,2 @@
+error: `mut` does nothing on Money, which can't be changed
+  --> data_mut_frozen.brz:3:16

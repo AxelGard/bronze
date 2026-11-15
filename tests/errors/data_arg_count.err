@@ -1,0 +1,2 @@
+error: `Money` takes 2 arguments, but 1 was given
+  --> data_arg_count.brz:5:13

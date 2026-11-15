@@ -210,8 +210,12 @@ func (c *checker) assignIndex(target *ast.Index, value ast.Expr) {
 
 // printable reports whether `print` and `String(...)` take a value of
 // type t.
-func printable(t Type) bool {
+func printable(t Type) bool { return printableType(t) }
+
+func printableType(t Type) bool {
 	switch t := t.(type) {
+	case *Class:
+		return t.Data && (t.dataState != 2 || t.printable)
 	case *Enum:
 		return true
 	case *List:

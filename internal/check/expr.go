@@ -765,6 +765,8 @@ func (sig *funcSig) declNote() string {
 	switch {
 	case sig.class != nil && sig.class.Decl.Builtin:
 		return fmt.Sprintf("`%s` is built in", sig.class.Name)
+	case sig.isInit && sig.class.Data:
+		return fmt.Sprintf("`%s(...)` takes %s", sig.class.Name, dataParamsText(sig.class.Decl))
 	case sig.isInit && sig.decl == nil:
 		return fmt.Sprintf("`%s` has no `init`, so it is created with `%s()`", sig.class.Name, sig.class.Name)
 	case sig.isInit:
@@ -805,8 +807,16 @@ func (c *checker) builtin(e *ast.Call, name string) Type {
 		if c.mayBeNull(e.Args[0], types[0]) {
 			return NoValue
 		}
-		switch t := types[0]; t.(type) {
+		switch t := types[0]; tt := t.(type) {
 		case *Class:
+			if tt.Data && printable(t) {
+				break
+			}
+			if tt.Data {
+				d := c.errorf(e.Args[0].Span(), "cannot print %s, since some of its fields can't be printed", t)
+				d.Notes = []string{"a data class prints when all of its fields do; objects of plain classes don't"}
+				break
+			}
 			d := c.errorf(e.Args[0].Span(), "cannot print an object of class %s", t)
 			d.Help = []string{"print its fields instead"}
 		case *Interface:

@@ -1,0 +1,11 @@
+data Money(amount: Int, currency: String)
+
+func double(m: mut Money) -> Int
+{
+    return m.amount * 2
+}
+
+func main() -> Int
+{
+    return 0
+}

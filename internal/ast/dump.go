@@ -77,7 +77,11 @@ func dump(b *strings.Builder, n Node) {
 		}
 		b.WriteByte(')')
 	case *ClassDecl:
-		fmt.Fprintf(b, "(class %s", n.Name.Name)
+		kw := "class"
+		if n.Data {
+			kw = "data"
+		}
+		fmt.Fprintf(b, "(%s %s", kw, n.Name.Name)
 		for i, u := range n.Uses {
 			if i == 0 {
 				b.WriteString(" use ")
@@ -107,8 +111,10 @@ func dump(b *strings.Builder, n Node) {
 		if n.Type != nil {
 			fmt.Fprintf(b, ": %s", typeString(n.Type))
 		}
-		b.WriteByte(' ')
-		dump(b, n.Value)
+		if n.Value != nil {
+			b.WriteByte(' ')
+			dump(b, n.Value)
+		}
 		b.WriteByte(')')
 	case *EnumDecl:
 		fmt.Fprintf(b, "(enum %s", n.Name.Name)
@@ -379,3 +385,6 @@ func typeString(t *TypeExpr) string {
 	}
 	return s
 }
+
+// TypeString writes a type as it is written in source: `List<Int>?`.
+func TypeString(t *TypeExpr) string { return typeString(t) }

@@ -1,0 +1,50 @@
+==================
+Data classes
+==================
+
+data Money(amount: Int, currency: String)
+
+data NotFound(id: Int) use Error
+
+data Wallet
+{
+    mut amount: Int
+    mut history: List<Int> = []
+}
+
+---
+
+(source_file
+  (data_declaration
+    (identifier)
+    (parameter_list
+      (parameter
+        (identifier)
+        (type
+          (identifier)))
+      (parameter
+        (identifier)
+        (type
+          (identifier)))))
+  (data_declaration
+    (identifier)
+    (parameter_list
+      (parameter
+        (identifier)
+        (type
+          (identifier))))
+    (identifier))
+  (data_declaration
+    (identifier)
+    (class_body
+      (field_declaration
+        (identifier)
+        (type
+          (identifier)))
+      (field_declaration
+        (identifier)
+        (type
+          (identifier)
+          (type
+            (identifier)))
+        (list)))))

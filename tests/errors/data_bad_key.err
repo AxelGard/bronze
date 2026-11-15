@@ -1,0 +1,2 @@
+error: `Wallet` can't be a map key, since its fields aren't all `con` and keys themselves
+  --> data_bad_key.brz:8:16

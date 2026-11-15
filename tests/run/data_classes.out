@@ -1,0 +1,14 @@
+Money(amount: 5, currency: "EUR")
+true
+true
+Money(amount: 7, currency: "EUR")
+LineItem(name: "tea", price: Money(amount: 3, currency: "EUR"), count: 2)
+tea costs 6
+Wallet(amount: 70, currency: "EUR", history: [30])
+false
+{Point(x: 1, y: 2): "b", Point(x: 3, y: 4): "c"}
+b
+false
+true
+NotFound(id: 7)
+7

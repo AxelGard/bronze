@@ -181,6 +181,18 @@ func equal(a, b Value) bool {
 	case *Map:
 		b, ok := b.(*Map)
 		return ok && mapEqual(a, b)
+	case *Object:
+		b, ok := b.(*Object)
+		if !ok || !a.Class.Data || a.Class != b.Class {
+			return a == b
+		}
+		// data objects are equal when their own fields are
+		for _, f := range a.Class.Fields {
+			if !equal(a.Fields[f.Name.Name], b.Fields[f.Name.Name]) {
+				return false
+			}
+		}
+		return true
 	}
 	return a == b
 }

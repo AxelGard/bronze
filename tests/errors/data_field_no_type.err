@@ -1,0 +1,2 @@
+error: field `amount` needs a type or an initial value
+  --> data_field_no_type.brz:3:15

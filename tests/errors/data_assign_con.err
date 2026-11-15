@@ -1,0 +1,2 @@
+error: cannot assign to `amount`: it is a `con` field
+  --> data_assign_con.brz:6:7

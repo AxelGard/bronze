@@ -392,9 +392,29 @@ func (in *interp) construct(cls *class, args []Value, at diag.Span) *Object {
 	}
 	in.enter(cls.decl.Name.Name+".init", line, obj, at)
 	in.setFields(cls, obj)
-	in.runInit(cls, init, args)
+	if cls.decl.Data {
+		in.dataFields(cls, obj, args)
+	} else {
+		in.runInit(cls, init, args)
+	}
 	in.leave()
 	return obj
+}
+
+// dataFields sets the fields of a new data object that have no initial
+// value from the constructor's arguments, in order. A data class that
+// uses Error gets the text it prints as as its message.
+func (in *interp) dataFields(cls *class, obj *Object, args []Value) {
+	i := 0
+	for _, f := range cls.decl.Fields {
+		if f.Value == nil {
+			obj.Fields[f.Name.Name] = args[i]
+			i++
+		}
+	}
+	if in.isError(obj) {
+		obj.Fields["message"] = Format(obj)
+	}
 }
 
 // setFields gives every field of obj its initial value, the parents'
@@ -405,7 +425,9 @@ func (in *interp) setFields(cls *class, obj *Object) {
 	}
 	empty := &env{vars: map[string]Value{}}
 	for _, f := range cls.decl.Fields {
-		obj.Fields[f.Name.Name] = in.expr(f.Value, empty)
+		if f.Value != nil {
+			obj.Fields[f.Name.Name] = in.expr(f.Value, empty)
+		}
 	}
 }
 

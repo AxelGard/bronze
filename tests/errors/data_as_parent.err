@@ -1,0 +1,2 @@
+error: `Money` is a data class, and can't be used
+  --> data_as_parent.brz:3:16

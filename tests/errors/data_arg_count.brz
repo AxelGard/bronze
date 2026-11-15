@@ -1,0 +1,7 @@
+data Money(amount: Int, currency: String)
+
+func main() -> Int
+{
+    con m = Money(5)
+    return 0
+}

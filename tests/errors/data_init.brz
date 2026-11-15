@@ -1,0 +1,11 @@
+data Money(amount: Int, currency: String)
+{
+    func init()
+    {
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

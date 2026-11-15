@@ -1,2 +1,2 @@
-error: a map key can be an Int, String, Bool or enum, not Float
+error: a map key can be an Int, String, Bool, enum or data class, not Float
   --> map_bad_key.brz:3:21

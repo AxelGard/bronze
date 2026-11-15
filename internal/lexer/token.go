@@ -85,6 +85,7 @@ const (
 	PRIVATE
 	PROTECTED
 	INTERFACE
+	DATA
 )
 
 var kindNames = [...]string{
@@ -160,6 +161,7 @@ var kindNames = [...]string{
 	PRIVATE:   "`private`",
 	PROTECTED: "`protected`",
 	INTERFACE: "`interface`",
+	DATA:      "`data`",
 }
 
 // String returns a description of the kind for error messages, such as
@@ -196,10 +198,11 @@ var keywords = map[string]Kind{
 	"private":   PRIVATE,
 	"protected": PROTECTED,
 	"interface": INTERFACE,
+	"data":      DATA,
 }
 
 var reserved = map[string]bool{
-	"data": true, "namespace": true, "import": true,
+	"namespace": true, "import": true,
 	"test": true, "type": true, "copy": true,
 }
 

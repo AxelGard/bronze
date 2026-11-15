@@ -1,0 +1,9 @@
+data Wallet
+{
+    mut amount
+}
+
+func main() -> Int
+{
+    return 0
+}
