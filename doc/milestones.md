@@ -84,3 +84,40 @@ The language is exactly [spec-0.2](spec-0.2.md): spec-0.1, plus
 9. The two example programs
 
 With each step: golden tests for its diagnostics and panics, the tree-sitter grammar, and the website.
+
+## 0.3.0
+
+The language is exactly [spec-0.3](spec-0.3.md): spec-0.2, plus
+- parameters read only by default, `mut T`, `copy T` and `mut func` (this breaks 0.2 programs that change a parameter or `this`)
+- inheritance with one class parent, `override`, `super(A)`
+- `is` for all classes and interfaces, with narrowing
+- interfaces
+- data classes, short and long form
+- `static func`
+- `private` and `protected`
+- enums with `Int` and `String` values
+
+### Done when
+
+1. A new program, `examples/projects/shop.brz`, prints its expected output and exits with 0. It has data classes (`Money`, `LineItem`), an interface (`Discount`) with two classes, an `Order` class with private fields and a static constructor, a child class (`VipCustomer use Customer`) with `override` and `super`, an enum with values (`Status: String`), and `mut`, `copy` and plain parameters. `core.brz`, `counter.brz`, `bank.brz`, `algorithms.brz` and `words.brz` still print the same output, with `mut` added where they change a parameter or `this`.
+2. `bronze check` reports clear errors for at least: changing a read-only parameter or `this`, calling a `mut func` or a changing built-in on a read-only value, storing or returning a read-only value, `mut` or `copy` on a type that can't change, `copy` of a class, two class parents, a missing or needless `override`, an override with a different signature, `super(A).init` not first, a parent without `init()` that isn't called, `super` naming something other than the class parent, redeclaring a parent's field, `is` that can never be true, a missing interface method, creating an interface, `init` in a data class, a data class used as a parent, a bad data class map key, `this` in a static method, a static method called on an object, using a `private` or `protected` member from outside, `private` on a top-level function, a bad enum value type, a missing or duplicate enum value.
+3. `bronze lsp` handles the new declarations: hover, go to definition, completion and rename, as spec-0.3 describes.
+4. The tree-sitter grammar parses every valid program, and the website documents everything new, with every example run by `tests/docs_test.go`.
+
+### Work order
+
+The breaking change goes first, so that every later step, test and example is written the new way.
+
+1. The new keywords; parameter modes `mut T` and `mut func`, with read only by default. Update the examples, golden tests and website so everything passes again.
+2. Enums with values: `.value` and `Enum.from(...)`
+3. `static func`
+4. Inheritance: one class parent, inherited fields and methods, children as their parent's type, dynamic calls, the order of setting up an object, `super(A).init(...)`, `override`, `super(A).method()`
+5. `is` for all classes, with narrowing
+6. `private` and `protected`
+7. Interfaces
+8. Data classes: short and long form, the constructor, `==`, printing, `use Error`, map keys
+9. `copy T`
+10. The language server: hover, go to definition, completion and rename for the new declarations
+11. `examples/projects/shop.brz`
+
+With each step: golden tests for its diagnostics, the tree-sitter grammar, and the website.

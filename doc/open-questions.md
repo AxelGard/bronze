@@ -18,22 +18,19 @@ What we still need to decide. When something is settled, it moves into the other
 - Can some returned values be ignored: `con low, _ = min_max(a, b)`?
 - Overloading for all functions, or only `init`? What about clashes with default parameters?
 - Named arguments: `connect(host: "db", timeout: 5)`?
-- Static fields? Can static methods be inherited?
 
 ## Classes
-- Plain `super.method()` without naming a parent?
 - The return type on `init`: required, optional, or not allowed?
-- Abstract methods? `final`?
-- Interfaces: declaration syntax, default method bodies, fields?
-- Can `super(A)` reach a grandparent (e.g. a shared diamond base)?
+- Can `super(A)` reach a grandparent (e.g. a shared diamond base)? (0.3: only the class parent.)
+- Later, with more experience: plain `super.method()`, abstract methods and `final`, default bodies in interfaces, static fields (all decided against for 0.3).
+- An override returning a child of the parent's result type (`-> Dog` for `-> Animal`)?
 
 ## Data classes
 - Copy with changes: `a.with(amount: 750)`?
 - Destructuring: `con Money(amount, cur) = a`?
-- Can a data class `use` other classes, or only interfaces?
 - Validation in constructors (`Email` must contain `@`)?
-- Mutable data classes as map keys?
-- Mixing short and long form?
+- Mixing short and long form? (0.3: the short form may have a body with methods only.)
+- Should printing a data class hide its `private` fields? (0.3: they are printed.)
 
 ## Namespaces
 - Block form `namespace x { }`, file form (`namespace x` at the top), or both?
@@ -42,7 +39,6 @@ What we still need to decide. When something is settled, it moves into the other
 ## Errors
 - Can an `else (e) { }` block produce a fallback value, or must it always leave?
 - Is `-> ! Error` the right way to write "returns nothing, can fail"?
-- Checking the kind: `if e is NotFound`?
 
 ## Generics
 Explored in [`generics.brz`](explorations/generics.brz).
@@ -62,12 +58,11 @@ Explored in [`lambdas.brz`](explorations/lambdas.brz).
 - Names: `where` or `filter`, `fold` or `reduce`?
 
 ## Passing arguments
-Trying out: everything shared, with the mode on the type: `a: T` (read only), `a: mut T`, `a: copy T`, plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [`references.brz`](explorations/references.brz).
-- Mark `mut` at the call site too?
+Decided for 0.3: everything shared, with the mode on the parameter: `a: T` (read only), `a: mut T`, `a: copy T` (deep), plus `mut func` for methods that change `this`. No `ref`: functions return new values instead. See [spec-0.3](spec-0.3.md#parameter-modes) and [`references.brz`](explorations/references.brz).
+- Read-only results: in 0.3 returning a read-only value is an error, so a getter that returns a list field must be a `mut func`. A read-only return type later?
 - Can you write `x, y = y, x` directly (without a function)?
 - Does `con` on a local variable also freeze the object?
 - Can `mut T` / `copy T` be used for fields and return types?
-- Is `copy` shallow or deep?
 - Objects like DB connections: are their methods `mut`?
 
 ## Other areas

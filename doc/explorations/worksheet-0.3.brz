@@ -1,5 +1,5 @@
 /*
-    worksheet-0.3.brz: open choices for 0.3.0                [worksheet]
+    worksheet-0.3.brz: the choices for 0.3.0      [worksheet, answered]
 
     0.3.0 adds (doc/milestones.md): inheritance, `override`, `super`,
     interfaces, data classes, `static`, `private`/`protected`, enums with
@@ -25,6 +25,8 @@
 
     Fill in each `// CHOICE:` line with a letter (or your own answer).
     (R) marks the option I'd pick, with the reason.
+
+    Answered. The result is doc/spec-0.3.md.
 */
 
 
@@ -74,7 +76,7 @@ class Dog use Animal
     }
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -88,7 +90,7 @@ class Dog use Animal
     b)     Also plain `super.speak()` when there is one class parent.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -103,7 +105,7 @@ class Dog use Animal
            the parent's `init` has run.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -121,7 +123,7 @@ class Dog use Animal
            depend on arguments the parent got.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -136,7 +138,7 @@ class Dog use Animal
            Nicer, but can wait.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -161,7 +163,7 @@ func describe(pet: Animal) -> String
     return pet.speak()
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -172,7 +174,7 @@ func describe(pet: Animal) -> String
            classes that can't be created.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ==================================================================
@@ -224,7 +226,7 @@ class Square use Shape
     }
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -236,7 +238,7 @@ class Square use Shape
     b)     Having the methods is enough (structural, like Go).
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -248,7 +250,7 @@ class Square use Shape
     b)     Not in 0.3.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ==================================================================
@@ -289,7 +291,7 @@ data Wallet
     }
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -300,7 +302,7 @@ data Wallet
     b)     `Money(5, "EUR")`: like the constructor call.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -315,7 +317,7 @@ data Wallet
 
 data NotFound(id: Int) use Error
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -328,7 +330,7 @@ data NotFound(id: Int) use Error
     b)     Not as keys in 0.3.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -340,7 +342,7 @@ data NotFound(id: Int) use Error
     b)     In 0.3, with named arguments only for `with`.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ==================================================================
@@ -371,7 +373,7 @@ class Temperature
     }
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -383,7 +385,7 @@ class Temperature
     b)     Yes, callable as `Dog.create()`.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -409,7 +411,7 @@ class Account
     }
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -420,7 +422,7 @@ class Account
     b)     Yes.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -432,7 +434,7 @@ class Account
     b)     No, only through `this`.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ==================================================================
@@ -460,7 +462,7 @@ enum Priority: Int
     High = 10
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -473,7 +475,7 @@ enum Priority: Int
     b)     For `Int`, missing values count up from the one before (or 0).
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -491,7 +493,7 @@ func parse_role(s: String) -> Role
     return Role.from(s) else Role.Member
 }
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ==================================================================
@@ -533,7 +535,7 @@ func preview(a: copy Account) -> Int
     return a.balance
 }
 
-// CHOICE:
+// CHOICE: a  (breaking 0.2 programs is fine: only the author uses Bronze for now)
 
 
 /* ------------------------------------------------------------------
@@ -548,7 +550,7 @@ func preview(a: copy Account) -> Int
     c)     Deep for everything.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a
 
 
 /* ------------------------------------------------------------------
@@ -559,7 +561,7 @@ func preview(a: copy Account) -> Int
     b) (R) No: the signature says it, and the LSP can show it.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: b
 
 
 /* ==================================================================
@@ -581,4 +583,4 @@ func preview(a: copy Account) -> Int
     b)     Your own idea.
 ------------------------------------------------------------------ */
 
-// CHOICE:
+// CHOICE: a

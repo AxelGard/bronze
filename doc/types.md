@@ -92,4 +92,7 @@ con r = Role.Admin
 print(r.can_delete())     // true
 ```
 
+- The value type is `Int` or `String`, and every case has a value, written out. No two cases have the same value.
+- `r.value` gives the value, and `Role.from("admin")` gives a `Role?`. `print(r)` shows the case name.
+
 Enums whose cases carry their own data (`Circle(radius: Float)`) are not part of Bronze for now.

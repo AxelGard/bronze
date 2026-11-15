@@ -1,5 +1,9 @@
 /*
-    references.brz: passing arguments, with the mode on the type   [trying out]
+    references.brz: passing arguments, with the mode on the type   [decided]
+
+    Decided for 0.3 (doc/spec-0.3.md): no `mut` at the call site, and
+    `copy` is deep for lists, maps and data classes, and an error for
+    classes. The rest of the open questions at the bottom are still open.
 
     Every object is shared (passed by reference). What a function may do
     with it is part of the parameter's TYPE:

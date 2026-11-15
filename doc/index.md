@@ -15,7 +15,8 @@ Everything decided about Bronze so far.
 | [Implementation](implementation.md) | Go, tree-walking interpreter, architecture |
 | [Spec 0.1](spec-0.1.md) | The exact language version 0.1.0 implements |
 | [Spec 0.2](spec-0.2.md) | The changes for 0.2.0: `T?` for all types, lists, maps, `for`, interpolation |
-| [Milestones](milestones.md) | Version plan, and when 0.1.0 and 0.2.0 are done |
+| [Spec 0.3](spec-0.3.md) | The changes for 0.3.0: read-only parameters, inheritance, interfaces, data classes, `static`, visibility, enum values |
+| [Milestones](milestones.md) | Version plan, and when 0.1.0, 0.2.0 and 0.3.0 are done |
 | [Open questions](open-questions.md) | What we still need to decide |
 
 ## Examples
@@ -36,7 +37,7 @@ Design files in [`explorations/`](explorations/): options side by side, workshee
 
 | File | Shows |
 |---|---|
-| [`worksheet-0.3.brz`](explorations/worksheet-0.3.brz) | Worksheet: the choices for 0.3.0 (open) |
+| [`worksheet-0.3.brz`](explorations/worksheet-0.3.brz) | Worksheet: the choices for 0.3.0 (answered; see spec-0.3) |
 | [`worksheet-0.2.brz`](explorations/worksheet-0.2.brz) | Worksheet: the choices for 0.2.0 (answered; see spec-0.2) |
 | [`basics.brz`](explorations/basics.brz) | Worksheet: 24 basic topics to decide |
 | [`basic.brz`](explorations/basic.brz) | Classes, multiple inheritance, diamonds, `super(A)`, `static` |
@@ -45,5 +46,5 @@ Design files in [`explorations/`](explorations/): options side by side, workshee
 | [`namespaces.brz`](explorations/namespaces.brz) | Data classes, namespaces, visibility |
 | [`generics.brz`](explorations/generics.brz) | Generics with `<T>`, constraints, a generic repository (exploration) |
 | [`lambdas.brz`](explorations/lambdas.brz) | Functions as values, one-expression lambdas, iterators |
-| [`references.brz`](explorations/references.brz) | Passing arguments: `T`, `mut T`, `copy T` |
+| [`references.brz`](explorations/references.brz) | Passing arguments: `T`, `mut T`, `copy T` (decided for 0.3) |
 

@@ -31,7 +31,7 @@ Everything is **public by default**.
 | **`private`** | only the class, data class or namespace it is declared in |
 | **`protected`** | the class **and its children** (class members only) |
 
-This applies to fields, methods and functions.
+This applies to fields, methods and functions. Until namespaces exist (0.5), `private` and `protected` go only on class members. `private` allows any object of the class, not only `this`, and a child can't see its parent's `private` members.
 
 ```
 namespace accounts
