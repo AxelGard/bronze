@@ -1,0 +1,95 @@
+class Animal
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+}
+
+class Dog use Animal
+{
+    func init(name: String)
+    {
+        super(Animal).init(name)
+    }
+
+    func fetch() -> String
+    {
+        return this.name + " fetches"
+    }
+}
+
+class Cat use Animal
+{
+    func init(name: String)
+    {
+        super(Animal).init(name)
+    }
+}
+
+class NotFound use Error
+{
+    con id = 0
+
+    func init(id: Int)
+    {
+        super(Error).init("no item " + String(id))
+        this.id = id
+    }
+}
+
+func describe(pet: Animal) -> String
+{
+    if pet is Dog
+    {
+        return pet.fetch()
+    }
+    return pet.name + " sleeps"
+}
+
+func lookup(id: Int) -> Int ! Error
+{
+    if id > 10
+    {
+        return NotFound(id)
+    }
+    if id < 0
+    {
+        return Error("negative")
+    }
+    return id
+}
+
+func try_it(id: Int)
+{
+    con n = lookup(id) else (e)
+    {
+        if e is NotFound
+        {
+            print("missing " + String(e.id))
+            return
+        }
+        print(e.message)
+        return
+    }
+    print(n)
+}
+
+func main() -> Int
+{
+    print(describe(Dog("Rex")))
+    print(describe(Cat("Tom")))
+    con maybe: Animal? = null
+    print(maybe is Dog)
+    con some: Animal? = Dog("Fido")
+    if some is Dog
+    {
+        print(some.fetch())
+    }
+    try_it(3)
+    try_it(42)
+    try_it(-1)
+    return 0
+}

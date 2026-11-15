@@ -1,0 +1,25 @@
+class Animal
+{
+}
+
+class Dog use Animal
+{
+    func fetch() -> String
+    {
+        return "ball"
+    }
+}
+
+class Plant
+{
+}
+
+func main() -> Int
+{
+    mut a: Animal = Dog()
+    if a is Dog
+    {
+        print(a.fetch())
+    }
+    return 0
+}

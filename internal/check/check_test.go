@@ -531,9 +531,9 @@ func TestErrorAndNullErrors(t *testing.T) {
 		{"else on call that can't fail", "func g()\n{\n}\nfunc f()\n{\n    g() else return\n}",
 			[]string{"6:5 `g` can't fail, so there is nothing for `else` to handle"}},
 		{"is on non-error", "func f(i: Item) -> Bool\n{\n    return i is NotFound\n}",
-			[]string{"3:12 `is` checks which kind of error this is, but it is Item"}},
+			[]string{"3:12 `i` is an Item, and can never be a NotFound"}},
 		{"is non-error class", "func f(e: Error) -> Bool\n{\n    return e is Item\n}",
-			[]string{"3:17 `Item` is not an error class"}},
+			[]string{"3:12 `e` is an Error, and can never be an Item"}},
 		{"use error field clash", "class Bad use Error\n{\n    mut message = \"x\"\n}",
 			[]string{"3:9 `message` is already a field of `Error`"}},
 		// null

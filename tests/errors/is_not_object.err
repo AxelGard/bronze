@@ -1,0 +1,2 @@
+error: `is` checks the class of an object, but `n` is Int
+  --> is_not_object.brz:20:11

@@ -159,7 +159,7 @@ func try_withdraw(balance: Int, amount: Int)
     {
         if e is InsufficientFunds
         {
-            print("too little money: " + e.message)
+            print("too little money: " + String(e.missing) + " short")
         }
         else
         {
@@ -181,11 +181,11 @@ func main() -> Int
 
 ```text title="Output"
 left: 70
-too little money: need 30 more
+too little money: 30 short
 error: invalid amount: -5
 ```
 
-`e is InsufficientFunds` checks which kind of error `e` is.
+`e is InsufficientFunds` checks which kind of error `e` is. Inside the `if`, `e` is an `InsufficientFunds`, so its own fields, like `missing`, can be used. See [`is`](classes.md#is).
 
 A function can name a specific error type, `-> Int ! InsufficientFunds`, and then it can only fail with that one. With `else return`, the caller's error type must be able to hold the error: a function that fails with `Error` can pass on any error, but one that fails with `InvalidAmount` can't pass on an `InsufficientFunds`.
 

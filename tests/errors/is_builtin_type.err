@@ -1,0 +1,2 @@
+error: `is` checks the class of an object, and `Int` is not a class
+  --> is_builtin_type.brz:20:16

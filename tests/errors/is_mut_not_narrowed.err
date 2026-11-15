@@ -1,0 +1,2 @@
+error: `Animal` has no method `fetch`
+  --> is_mut_not_narrowed.brz:22:17

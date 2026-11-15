@@ -2,6 +2,7 @@ package check
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/AxelGard/bronze/internal/ast"
 	"github.com/AxelGard/bronze/internal/lexer"
@@ -143,25 +144,62 @@ func resultValue(t Type) Type {
 // isExpr checks `x is C`.
 func (c *checker) isExpr(e *ast.Is) Type {
 	t := c.value(e.X)
-	switch {
-	case c.mayBeNull(e.X, t):
-	case !silent(t) && !c.isError(t):
-		c.errorf(e.X.Span(), "`is` checks which kind of error this is, but it is %s", t)
-	}
 	name := e.Class.Name
-	if cls := c.classes[name]; cls != nil {
-		c.ref(e.Class, cls.Sym)
-	}
-	switch cls := c.classes[name]; {
-	case cls != nil && c.isError(cls):
-	case cls != nil:
-		d := c.errorf(e.Class.Sp, "`%s` is not an error class", name)
-		d.Notes = []string{"`is` works only with `Error` and classes that use it"}
+	target := c.classes[name]
+	switch {
+	case target != nil:
+		c.ref(e.Class, target.Sym)
+	case c.enums[name] != nil:
+		c.errorf(e.Class.Sp, "`%s` is an enum; `is` checks the class of an object", name)
+	case builtinTypes[name] != nil || genericTypes[name]:
+		d := c.errorf(e.Class.Sp, "`is` checks the class of an object, and `%s` is not a class", name)
+		d.Notes = []string{"the checker already knows the types of other values"}
 	case c.broken[name]:
 	default:
 		c.errorf(e.Class.Sp, "unknown class `%s`", name)
 	}
+	if silent(t) {
+		return Bool
+	}
+	cls, ok := nonNull(t).(*Class)
+	if !ok {
+		c.errorf(e.X.Span(), "`is` checks the class of an object, but `%s` is %s", c.text(e.X), t)
+		return Bool
+	}
+	if target != nil && !assignable(target, cls) && !assignable(cls, target) {
+		d := c.errorf(e.Span(), "`%s` is %s %s, and can never be %s %s", c.text(e.X), article(cls.Name), cls.Name, article(name), name)
+		d.Notes = []string{fmt.Sprintf("neither `%s` nor `%s` uses the other", cls.Name, name)}
+	}
 	return Bool
+}
+
+// article returns "an" before a vowel, and "a" otherwise.
+func article(word string) string {
+	if word != "" && strings.ContainsRune("AEIOUaeiou", rune(word[0])) {
+		return "an"
+	}
+	return "a"
+}
+
+// isCheck looks for `x is C`, where x is a `con` variable, a parameter or
+// an `else (e)` binding. It returns x's name and a copy of x with type C.
+func (c *checker) isCheck(cond ast.Expr) (string, *variable) {
+	is, ok := cond.(*ast.Is)
+	if !ok {
+		return "", nil
+	}
+	id, ok := is.X.(*ast.Ident)
+	if !ok {
+		return "", nil
+	}
+	v := c.scope.lookup(id.Name)
+	cls := c.classes[is.Class.Name]
+	if v == nil || v.kind == Mut || cls == nil || !assignable(cls, nonNull(v.typ)) {
+		return "", nil // not a narrower type: `dog is Animal` is always true
+	}
+	narrowed := *v
+	narrowed.typ = cls
+	return id.Name, &narrowed
 }
 
 // ---------------------------------------------------------------------
@@ -219,6 +257,11 @@ func (c *checker) nullNeedsType(name *ast.Ident, value ast.Expr, mut bool) {
 func (c *checker) ifStmt(s *ast.If) {
 	c.cond(s.Cond)
 	name, narrowed, notNull := c.nullCheck(s.Cond)
+	if narrowed == nil {
+		if n, v := c.isCheck(s.Cond); v != nil {
+			name, narrowed, notNull = n, v, true
+		}
+	}
 
 	in := func(when bool, check func()) {
 		if narrowed == nil || notNull != when {

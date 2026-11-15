@@ -1,0 +1,29 @@
+class Animal
+{
+}
+
+class Dog use Animal
+{
+    func fetch() -> String
+    {
+        return "ball"
+    }
+}
+
+class Plant
+{
+}
+
+func play(a: Animal) -> String
+{
+    if a is Dog
+    {
+        print("dog")
+    }
+    return a.fetch()
+}
+
+func main() -> Int
+{
+    return 0
+}

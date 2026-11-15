@@ -1,0 +1,2 @@
+error: `p` is a Plant, and can never be a Dog
+  --> is_never.brz:20:11

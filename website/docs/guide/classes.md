@@ -269,6 +269,47 @@ Rex says Woof
 - A child can't declare a field its parent already has, and a parent's `con` field can only be set in the parent's own `init`.
 - Static methods aren't inherited.
 
+## is
+
+`x is C` asks whether an object is a `C`, or a child of `C`. Inside `if x is C`, a `con` variable or a parameter `x` is a `C`, so `C`'s own methods can be used:
+
+```bronze
+class Animal
+{
+}
+
+class Dog use Animal
+{
+    func fetch() -> String
+    {
+        return "fetches the ball"
+    }
+}
+
+func play(pet: Animal) -> String
+{
+    if pet is Dog
+    {
+        return pet.fetch()
+    }
+    return "sleeps"
+}
+
+func main() -> Int
+{
+    print(play(Dog()))
+    print(play(Animal()))
+    return 0
+}
+```
+
+```text title="Output"
+fetches the ball
+sleeps
+```
+
+On a `T?`, `is` is false for `null`, and inside the `if` the value is not null. Like `!= null`, it doesn't narrow a `mut` variable or a field, and only inside the `if` itself. `x is C` where `x` could never be a `C` is an error.
+
 Error classes use inheritance too: `class NotFound use DbError` is a `DbError`, and through it an `Error`. See [errors](errors.md).
 
 ## Not yet

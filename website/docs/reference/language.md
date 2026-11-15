@@ -71,7 +71,7 @@ From the lowest precedence to the highest:
 | `and` | `Bool` | `Bool`, short-circuit |
 | `== !=` | two values of the same type, a `T?` and a `T`, or a `T?` and `null`; lists and maps by value | `Bool` |
 | `< <= > >=` | two `Int`s, two `Float`s or two `String`s | `Bool` |
-| `x is C` | `x` is an error, `C` is `Error` or a class that uses it | `Bool` |
+| `x is C` | `x` is an object (or a `T?` of one) and `C` a class it could be | `Bool`; inside `if x is C`, a `con` or parameter `x` is a `C` |
 | `a..b`, `a..=b` | two `Int`s | the `Int`s from `a` up to `b`, without or with `b`; a `List<Int>` outside a `for` |
 | `+ -` | two `Int`s or two `Float`s; `+` also joins two `String`s | the same type |
 | `* / %` | two `Int`s or two `Float`s (`%` only `Int`) | the same type |

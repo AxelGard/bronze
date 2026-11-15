@@ -1,0 +1,2 @@
+error: `Animal` has no method `fetch`
+  --> is_narrowing_only_in_then.brz:23:14

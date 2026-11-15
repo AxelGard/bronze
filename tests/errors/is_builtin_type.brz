@@ -1,0 +1,22 @@
+class Animal
+{
+}
+
+class Dog use Animal
+{
+    func fetch() -> String
+    {
+        return "ball"
+    }
+}
+
+class Plant
+{
+}
+
+func main() -> Int
+{
+    con a = Animal()
+    print(a is Int)
+    return 0
+}
