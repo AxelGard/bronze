@@ -1,0 +1,17 @@
+class Token
+{
+    private func init()
+    {
+    }
+
+    static func make() -> Token
+    {
+        return Token()
+    }
+}
+
+func main() -> Int
+{
+    con t = Token()
+    return 0
+}

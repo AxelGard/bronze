@@ -53,6 +53,7 @@ module.exports = grammar({
     // that changes `this`.
     function_declaration: ($) =>
       seq(
+        optional($.visibility),
         optional('static'),
         optional('override'),
         optional('mut'),
@@ -90,8 +91,11 @@ module.exports = grammar({
     class_body: ($) =>
       seq('{', repeat(choice($.field_declaration, $.function_declaration)), '}'),
 
+    visibility: (_) => choice('private', 'protected'),
+
     field_declaration: ($) =>
       seq(
+        optional($.visibility),
         choice('con', 'mut'),
         field('name', $.identifier),
         optional(seq(':', field('type', $.type))),

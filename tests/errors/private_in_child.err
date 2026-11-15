@@ -1,0 +1,2 @@
+error: `pin` is private to `Account`
+  --> private_in_child.brz:21:21

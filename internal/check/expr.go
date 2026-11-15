@@ -190,6 +190,9 @@ func (c *checker) fieldOfType(m *ast.Member, t Type) (*Field, *Class) {
 	}
 	if f := cls.Fields[m.Name.Name]; f != nil {
 		c.ref(m.Name, f.sym)
+		if f.Decl != nil {
+			c.access(m.Name, f.Decl.Vis, f.Owner, nil, f.Decl.Name.Sp.Start.Line)
+		}
 		return f, cls
 	}
 	switch {
@@ -220,6 +223,19 @@ func (c *checker) member(m *ast.Member) Type {
 	return c.fieldType(f)
 }
 
+// staticMakers lists the public static methods of cls that return a cls,
+// like "`Token.make(...)`".
+func staticMakers(cls *Class) string {
+	var names []string
+	for _, n := range sortedKeys(cls.Methods) {
+		sig := cls.Methods[n]
+		if sig.static && sigVis(sig) == ast.Public && sig.result == Type(cls) {
+			names = append(names, fmt.Sprintf("`%s.%s(...)`", cls.Name, n))
+		}
+	}
+	return strings.Join(names, " or ")
+}
+
 // className returns the class that x names, if x is the name of a class.
 func (c *checker) className(x ast.Expr) *Class {
 	id, ok := x.(*ast.Ident)
@@ -236,6 +252,7 @@ func (c *checker) staticCall(e *ast.Call, m *ast.Member, cls *Class) Type {
 	switch {
 	case sig != nil && sig.static:
 		c.ref(m.Name, sig.sym)
+		c.accessSig(m.Name, sig)
 		c.checkArgs(e, name, sig, c.argsFor(e, sig.params))
 		return sig.result
 	case sig != nil:
@@ -579,6 +596,17 @@ func (c *checker) construct(e *ast.Call, cls *Class) Type {
 		d.Notes = []string{fmt.Sprintf("its `init`s take %s arguments", strings.Join(ns, " or "))}
 		return cls
 	}
+	if vis := sigVis(sig); !c.canUse(vis, cls, nil) {
+		d := c.errorf(e.Fn.Span(), "the `init` of `%s` that takes %s is %s", cls.Name, plural(len(sig.params), "argument"), vis)
+		if vis == ast.Private {
+			d.Notes = []string{fmt.Sprintf("only `%s`'s own methods can create one this way", cls.Name)}
+		} else {
+			d.Notes = []string{fmt.Sprintf("only `%s` and its children can create one this way", cls.Name)}
+		}
+		if sigs := staticMakers(cls); sigs != "" {
+			d.Help = []string{"create one with " + sigs}
+		}
+	}
 	c.checkArgs(e, cls.Name, sig, c.argsFor(e, sig.params))
 	return cls
 }
@@ -620,6 +648,7 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 			return Invalid
 		}
 		c.ref(m.Name, sig.sym)
+		c.accessSig(m.Name, sig)
 		c.checkArgs(e, name, sig, c.argsFor(e, sig.params))
 		return sig.result
 	}
@@ -647,6 +676,7 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		return Invalid
 	}
 	c.ref(m.Name, sig.sym)
+	c.accessSig(m.Name, sig)
 	if sig.static {
 		d := c.errorf(m.Name.Sp, "`%s` is static: call it as `%s.%s(...)`", name, cls.Name, name)
 		d.Notes = []string{"a static method belongs to the class, not to an object"}

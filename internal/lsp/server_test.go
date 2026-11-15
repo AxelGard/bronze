@@ -280,6 +280,12 @@ func TestHover(t *testing.T) {
 	src := `class Account
 {
     mut balance = 0
+    private mut memo = ""
+
+    protected func fee() -> Int
+    {
+        return 1
+    }
 
     mut func withdraw(amount: Int) -> Int ! Error
     {
@@ -357,6 +363,8 @@ func main() -> Int
 		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
 		{"a.balance", 1, "a: mut Account", ""},
 		{"Savings", 1, "class Savings use Account", ""},
+		{"memo", 1, "private mut memo: String", "in `Account`"},
+		{"fee", 1, "protected func fee() -> Int", "in `Account`"},
 		{"balance\n}", 1, "mut balance: Int", "in `Account`"},
 		{"opened", 2, "static func opened() -> Account", "in `Account`"},
 		{"Role", 1, "enum Role: String", ""},

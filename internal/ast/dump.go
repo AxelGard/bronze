@@ -26,6 +26,9 @@ func dump(b *strings.Builder, n Node) {
 		}
 	case *FuncDecl:
 		b.WriteByte('(')
+		if n.Vis != Public {
+			b.WriteString(n.Vis.String() + " ")
+		}
 		if n.Static {
 			b.WriteString("static ")
 		}
@@ -79,6 +82,9 @@ func dump(b *strings.Builder, n Node) {
 		kw := "con"
 		if n.Mut {
 			kw = "mut"
+		}
+		if n.Vis != Public {
+			kw = n.Vis.String() + " " + kw
 		}
 		fmt.Fprintf(b, "(field %s %s", kw, n.Name.Name)
 		if n.Type != nil {

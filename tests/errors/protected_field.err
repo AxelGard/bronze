@@ -1,0 +1,2 @@
+error: `balance` is protected: only `Account` and its children can use it
+  --> protected_field.brz:19:21

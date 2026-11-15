@@ -1,0 +1,28 @@
+class Account
+{
+    private mut pin = ""
+    protected mut balance = 0
+
+    private func secret() -> String
+    {
+        return this.pin
+    }
+
+    protected func fee() -> Int
+    {
+        return 1
+    }
+}
+
+class Savings use Account
+{
+    func show() -> String
+    {
+        return this.pin
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

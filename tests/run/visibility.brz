@@ -1,0 +1,70 @@
+class Account
+{
+    con owner = ""
+    private mut pin = ""
+    protected mut balance = 0
+
+    protected func init(owner: String, pin: String)
+    {
+        this.owner = owner
+        this.pin = pin
+    }
+
+    static func open(owner: String) -> Account
+    {
+        return Account(owner, "0000")
+    }
+
+    func same_pin(other: Account) -> Bool
+    {
+        return this.pin == other.pin
+    }
+
+    protected func fee() -> Int
+    {
+        return 1
+    }
+
+    mut func deposit(amount: Int)
+    {
+        this.balance += amount - this.fee()
+    }
+
+    func balance_of() -> Int
+    {
+        return this.balance
+    }
+}
+
+class Savings use Account
+{
+    func init(owner: String)
+    {
+        super(Account).init(owner, "1234")
+    }
+
+    protected override func fee() -> Int
+    {
+        return 0
+    }
+
+    mut func bonus()
+    {
+        this.balance += 10
+    }
+}
+
+func main() -> Int
+{
+    con a = Account.open("Ada")
+    con b = Account.open("Bob")
+    con s = Savings("Sam")
+    a.deposit(100)
+    s.deposit(100)
+    s.bonus()
+    print(a.balance_of())
+    print(s.balance_of())
+    print(a.same_pin(b))
+    print(a.same_pin(s))
+    return 0
+}

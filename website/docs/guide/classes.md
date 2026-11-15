@@ -312,9 +312,71 @@ On a `T?`, `is` is false for `null`, and inside the `if` the value is not null. 
 
 Error classes use inheritance too: `class NotFound use DbError` is a `DbError`, and through it an `Error`. See [errors](errors.md).
 
+## private and protected
+
+Fields and methods are public by default. **`private`** hides one from everything but the class's own methods, and **`protected`** also lets the class's children use it:
+
+```bronze
+class Account
+{
+    con owner = ""
+    private mut pin = ""
+    protected mut balance = 0
+
+    func init(owner: String, pin: String)
+    {
+        this.owner = owner
+        this.pin = pin
+    }
+
+    func same_pin(other: Account) -> Bool
+    {
+        return this.pin == other.pin
+    }
+}
+
+class Savings use Account
+{
+    func init(owner: String)
+    {
+        super(Account).init(owner, "1234")
+    }
+
+    mut func add_interest()
+    {
+        this.balance += 10
+    }
+}
+
+func main() -> Int
+{
+    con s = Savings("Ada")
+    s.add_interest()
+    print(s.same_pin(Account("Bob", "1234")))
+    print(s.pin)
+    return 0
+}
+```
+
+```text title="Output"
+error: `pin` is private to `Account`
+  --> main.brz:37:13
+   |
+37 |     print(s.pin)
+   |             ^^^
+   |
+   = note: it is declared at line 4; only `Account`'s own methods can use it
+```
+
+- A private member works on any object of the class, not only `this`: `same_pin` reads `other.pin`.
+- A child can't use its parent's private members, and can't declare a method with the name of one.
+- An override keeps the visibility of the method it replaces.
+- A `private init` means only the class itself can create objects that way, for example in a static method. A child can call a `protected init` with `super(...).init(...)`.
+- `private` and `protected` are only for fields and methods, until namespaces come.
+
 ## Not yet
 
-Interfaces and `private`/`protected` are planned for later versions.
+Interfaces are planned for a later version.
 
 ## Next
 

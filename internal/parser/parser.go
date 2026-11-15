@@ -171,6 +171,11 @@ func (p *parser) decl() (d ast.Decl) {
 		fn := p.funcDecl()
 		p.endOfLine("declaration")
 		return fn
+	case lexer.PRIVATE, lexer.PROTECTED:
+		t := p.advance()
+		d := p.diags.Errorf(t.Span, "`%s` is for class members in 0.3", t.Text)
+		d.Notes = []string{"top-level declarations are visible to the whole program; namespaces, which can hide them, come in 0.5"}
+		return p.decl()
 	case lexer.STATIC, lexer.OVERRIDE:
 		fn := p.modFuncDecl()
 		p.endOfLine("declaration")
@@ -316,17 +321,31 @@ func (p *parser) member(c *ast.ClassDecl) {
 			p.syncStmt(start)
 		}
 	}()
+	vis, visSp := p.visibility()
 	switch {
-	case p.at(lexer.STATIC), p.at(lexer.OVERRIDE), p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC:
-		c.Methods = append(c.Methods, p.modFuncDecl())
+	case p.at(lexer.STATIC), p.at(lexer.OVERRIDE), p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC, p.at(lexer.FUNC):
+		fn := p.modFuncDecl()
+		fn.Vis, fn.VisSp = vis, visSp
+		c.Methods = append(c.Methods, fn)
 	case p.at(lexer.CON), p.at(lexer.MUT):
-		c.Fields = append(c.Fields, p.field())
-	case p.at(lexer.FUNC):
-		c.Methods = append(c.Methods, p.funcDecl())
+		f := p.field()
+		f.Vis, f.VisSp = vis, visSp
+		c.Fields = append(c.Fields, f)
 	default:
 		p.failHere("expected a field (`con` or `mut`) or a method (`func`), found %s", describe(p.tok()))
 	}
 	p.endOfLine("member")
+}
+
+// visibility reads an optional `private` or `protected`.
+func (p *parser) visibility() (ast.Visibility, diag.Span) {
+	switch p.kind() {
+	case lexer.PRIVATE:
+		return ast.Private, p.advance().Span
+	case lexer.PROTECTED:
+		return ast.Protected, p.advance().Span
+	}
+	return ast.Public, diag.Span{}
 }
 
 func (p *parser) enumDecl() *ast.EnumDecl {
@@ -383,6 +402,12 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 		p.endOfLine("method")
 	case lexer.MUT, lexer.STATIC, lexer.OVERRIDE:
 		e.Methods = append(e.Methods, p.modFuncDecl())
+		p.endOfLine("method")
+	case lexer.PRIVATE, lexer.PROTECTED:
+		vis, visSp := p.visibility()
+		fn := p.modFuncDecl()
+		fn.Vis, fn.VisSp = vis, visSp
+		e.Methods = append(e.Methods, fn)
 		p.endOfLine("method")
 	default:
 		p.failNote("cases are written one per line, as plain names",

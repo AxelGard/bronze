@@ -1528,6 +1528,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "visibility",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -1694,6 +1704,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "visibility",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -4001,6 +4021,11 @@
     }
   },
   {
+    "type": "visibility",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "while_statement",
     "named": true,
     "fields": {
@@ -4329,6 +4354,14 @@
   },
   {
     "type": "override",
+    "named": false
+  },
+  {
+    "type": "private",
+    "named": false
+  },
+  {
+    "type": "protected",
     "named": false
   },
   {

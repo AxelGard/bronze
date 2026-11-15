@@ -1,0 +1,2 @@
+error: `fee` must be protected, like `Account.fee`
+  --> override_visibility.brz:19:19

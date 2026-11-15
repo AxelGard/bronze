@@ -25,13 +25,13 @@ A `{` in a string without a `\` starts an interpolation: `"total: {a + b}"`. It 
 ```text
 func  return  con  mut  if  else  while  for  in  break  continue
 and  or  not  true  false  class  enum  use  this  null  match  is
-static  override  super
+static  override  super  private  protected
 ```
 
 These are reserved for later versions, and can't be used as names:
 
 ```text
-data  interface  namespace  import  private  protected  test  type  copy
+data  interface  namespace  import  test  type  copy
 ```
 
 ## Newlines
@@ -128,6 +128,7 @@ enum Name: String { Case = "value" ... }  an enum with values (Int or String)
 - **Fields**: `con name = value` or `mut name: T = value`. An initial value is required. A `con` field can be assigned only in `init`.
 - **Methods**: `mut func name(...)` for a method that changes `this`. In other methods `this` is read only.
 - **Inheritance**: one class parent. `override func` replaces a parent's method with exactly its signature; calls are dynamic. `super(Parent).method(...)` calls the parent's version, and `super(Parent).init(...)` may only be the first statement of an `init`; without it, the parent's `init()` runs first. `init`s and static methods aren't inherited.
+- **Visibility**: members are public by default; `private` ones only for the declaring class's methods (on any of its objects), `protected` ones also for its children. Only on fields and methods.
 - **Static methods**: `static func name(...)` belongs to the class, has no `this`, and is called as `Class.name(...)`.
 - **Parameters**: `name: T` is read only (for objects, lists and maps, all the way down), `name: mut T` may change the caller's value. A read-only value can't be changed, stored, passed as `mut`, or returned (a method that isn't `mut` may return what it read from `this`; the result is as read only as the object). `mut` on `Int`, `Float`, `Bool`, `String` or an enum is an error.
 - **Enums with values**: every case has a literal value, all different. `r.value` gives it, and `Role.from(x)` gives a `Role?`.
@@ -179,7 +180,7 @@ type_name   = "Int" | "Float" | "Bool" | "String"
             | IDENT
 
 class_decl  = "class" IDENT [ "use" IDENT { "," IDENT } ] "{" { NEWLINE } { member { NEWLINE } } "}"
-member      = field | [ "static" | "override" ] [ "mut" ] func_decl
+member      = [ "private" | "protected" ] ( field | [ "static" | "override" ] [ "mut" ] func_decl )
 field       = ( "con" | "mut" ) IDENT [ ":" type ] "=" expr
 
 enum_decl   = "enum" IDENT [ ":" ( "Int" | "String" ) ] "{" { NEWLINE } { ( case | func_decl ) { NEWLINE } } "}"

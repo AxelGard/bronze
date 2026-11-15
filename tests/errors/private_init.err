@@ -1,0 +1,2 @@
+error: the `init` of `Token` that takes 0 arguments is private
+  --> private_init.brz:15:13

@@ -61,6 +61,7 @@ func sigHover(sig *funcSig) string {
 	if sig.static {
 		s = "static " + s
 	}
+	s = visPrefix(sigVis(sig)) + s
 	switch r := sig.result.(type) {
 	case *Failable:
 		if r.Value == NoValue {
@@ -97,7 +98,7 @@ func (c *checker) setHovers() {
 			if f.Mut {
 				kw = "mut "
 			}
-			f.sym.Hover = kw + f.Name
+			f.sym.Hover = visPrefix(f.Decl.Vis) + kw + f.Name
 			if t := typeText(f.typ); t != "" {
 				f.sym.Hover += ": " + t
 			}

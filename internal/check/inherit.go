@@ -192,6 +192,9 @@ func (c *checker) override(cls *Class, sig, prev *funcSig) {
 		}
 		d.Help = []string{"remove `override`"}
 	case prev == nil:
+	case sigVis(prev) == ast.Private:
+		d := c.errorf(m.Name.Sp, "`%s` already has a private method `%s`", prev.class.Name, m.Name.Name)
+		d.Notes = []string{"a private method can't be overridden, and a child can't use its name"}
 	case prev.static || m.Static:
 		d := c.errorf(m.Name.Sp, "`%s` is already a method of `%s`", m.Name.Name, prev.class.Name)
 		d.Notes = []string{"static methods can't be overridden, or override a method"}
@@ -230,6 +233,9 @@ func sigDiff(sig, want *funcSig) string {
 			return "return nothing"
 		}
 		return "return " + resultText(want.result)
+	}
+	if sigVis(sig) != sigVis(want) {
+		return "be " + sigVis(want).String()
 	}
 	if sig.mut != want.mut {
 		if want.mut {
@@ -344,6 +350,7 @@ func (c *checker) superCall(e *ast.Call, m *ast.Member, sup *ast.Super) Type {
 		if sig.sym != nil {
 			c.ref(m.Name, sig.sym)
 		}
+		c.accessSig(m.Name, sig)
 		c.checkArgs(e, parent.Name, sig, c.argsFor(e, sig.params))
 		return NoValue
 	}
@@ -359,6 +366,7 @@ func (c *checker) superCall(e *ast.Call, m *ast.Member, sup *ast.Super) Type {
 		return Invalid
 	}
 	c.ref(m.Name, sig.sym)
+	c.accessSig(m.Name, sig)
 	if sig.mut && c.thisReadOnly() {
 		d := c.errorf(sup.Sp, "`this` is read only")
 		d.Label = fmt.Sprintf("`%s` is a `mut func`", name)

@@ -1,0 +1,2 @@
+error: `pin` is private to `Account`
+  --> private_field_assign.brz:20:7

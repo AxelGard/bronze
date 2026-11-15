@@ -124,7 +124,7 @@ func (c *checker) completeMember(x ast.Expr) {
 	c.complete.Found = true
 	if cls := c.className(x); cls != nil {
 		for _, n := range sortedKeys(cls.Methods) {
-			if sig := cls.Methods[n]; sig.static {
+			if sig := cls.Methods[n]; sig.static && c.canUse(sigVis(sig), sig.class, nil) {
 				c.complete.Items = append(c.complete.Items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(sig)})
 			}
 		}
@@ -150,6 +150,9 @@ func (c *checker) completeMember(x ast.Expr) {
 	case *Class:
 		for _, n := range sortedKeys(t.Fields) {
 			f := t.Fields[n]
+			if f.Decl != nil && !c.canUse(f.Decl.Vis, f.Owner, nil) {
+				continue
+			}
 			kw := "con "
 			if f.Mut {
 				kw = "mut "
@@ -161,7 +164,7 @@ func (c *checker) completeMember(x ast.Expr) {
 			items = append(items, Completion{Label: n, Kind: CompleteField, Detail: detail})
 		}
 		for _, n := range sortedKeys(t.Methods) {
-			if !t.Methods[n].static {
+			if sig := t.Methods[n]; !sig.static && c.canUse(sigVis(sig), sig.class, nil) {
 				items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
 			}
 		}

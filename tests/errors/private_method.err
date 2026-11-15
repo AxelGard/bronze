@@ -1,0 +1,2 @@
+error: `secret` is private to `Account`
+  --> private_method.brz:19:21

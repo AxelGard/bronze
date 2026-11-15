@@ -1,0 +1,2 @@
+error: `private` is for class members in 0.3
+  --> private_top_level.brz:1:1

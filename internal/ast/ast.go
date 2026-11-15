@@ -42,6 +42,8 @@ func (f *File) Span() diag.Span { return f.Sp }
 // FuncDecl is `func name(params) -> result ! fail { body }`, or `mut func
 // ...` for a method that changes `this`.
 type FuncDecl struct {
+	Vis        Visibility
+	VisSp      diag.Span
 	Static     bool // `static func`: a method of the class, not of an object
 	StaticSp   diag.Span
 	Override   bool // `override func`: replaces a parent's method
@@ -55,6 +57,19 @@ type FuncDecl struct {
 	Body       *Block
 	Bad        bool // the body had a syntax error
 	Sp         diag.Span
+}
+
+// Visibility is who can use a field or method.
+type Visibility int
+
+const (
+	Public    Visibility = iota // everyone; the default
+	Private                     // only the class that declares it
+	Protected                   // the class and its children
+)
+
+func (v Visibility) String() string {
+	return [...]string{"public", "private", "protected"}[v]
 }
 
 // Param is `name: Type`, or `name: mut Type`.
@@ -87,6 +102,8 @@ type ClassDecl struct {
 
 // Field is `con name: Type = value` or `mut name = value` in a class.
 type Field struct {
+	Vis   Visibility
+	VisSp diag.Span
 	Mut   bool
 	Name  *Ident
 	Type  *TypeExpr // nil if not written

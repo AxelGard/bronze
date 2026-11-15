@@ -1,0 +1,9 @@
+private func helper() -> Int
+{
+    return 1
+}
+
+func main() -> Int
+{
+    return helper()
+}

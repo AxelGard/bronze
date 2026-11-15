@@ -1,0 +1,22 @@
+class Account
+{
+    private mut pin = ""
+    protected mut balance = 0
+
+    private func secret() -> String
+    {
+        return this.pin
+    }
+
+    protected func fee() -> Int
+    {
+        return 1
+    }
+}
+
+func main() -> Int
+{
+    con a = Account()
+    a.pin = "1234"
+    return 0
+}

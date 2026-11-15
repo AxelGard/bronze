@@ -1,0 +1,34 @@
+==================
+Visibility
+==================
+
+class Account
+{
+    private mut pin = ""
+
+    protected func fee() -> Int
+    {
+        return 1
+    }
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (field_declaration
+        (visibility)
+        (identifier)
+        (string))
+      (function_declaration
+        (visibility)
+        (identifier)
+        (parameter_list)
+        (return_type
+          (type
+            (identifier)))
+        (block
+          (return_statement
+            (integer)))))))

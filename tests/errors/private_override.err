@@ -1,0 +1,2 @@
+error: `Account` already has a private method `secret`
+  --> private_override.brz:19:10

@@ -372,3 +372,14 @@ func TestInheritance(t *testing.T) {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }
+
+func TestVisibility(t *testing.T) {
+	f, diags := parse(t, "class Account\n{\n    private mut pin = \"\"\n\n    protected static func fee() -> Int\n    {\n        return 1\n    }\n}\n")
+	if len(diags) > 0 {
+		t.Fatal(diags[0].Message)
+	}
+	want := `(class Account (field private mut pin "") (protected static func fee -> Int (block (return 1))))`
+	if got := ast.Dump(f); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
