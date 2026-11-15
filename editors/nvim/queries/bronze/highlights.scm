@@ -1,1 +1,0 @@
-../../../tree-sitter-bronze/queries/highlights.scm

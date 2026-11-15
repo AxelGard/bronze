@@ -22,8 +22,8 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `tests/run/`, `tests/errors/`, `tests/panics/` | Golden tests; see `tests/README.md` |
 | `website/` | User docs (MkDocs Material), published to GitHub Pages by `.github/workflows/docs.yml`. **Only what is implemented and working.** Every ```` ```bronze ```` block is run by `tests/docs_test.go`, and an ```` ```text title="Output" ```` block right after it must match exactly (stdout then stderr, file named `main.brz`). Update it when a feature lands |
 | `editors/tree-sitter-bronze/` | Tree-sitter grammar and highlight queries; see its README |
-| `editors/nvim/` | Neovim plugin: filetype, tree-sitter registration, `bronze lsp` |
-| `scripts/install.sh` | Installs `bronze` and the Neovim parser (`make install`) |
+| `editors/nvim/` | Neovim plugin: filetype, highlighting, `bronze lsp`. `bronze setup nvim` (`internal/cli/setup.go`) installs it with the compiled parser into Neovim's data dir; the files are embedded by `editors/embed.go` |
+| `scripts/install.sh` | Builds `bronze` into `~/.local/bin`, then runs `bronze setup nvim` (`make install`) |
 | `std/algo.bz` | Old leftover from before the redesign; ignore |
 
 ## Current state
@@ -39,7 +39,7 @@ make run-core    # build, then run examples/core.brz
 bin/bronze run examples/projects/bank.brz
 make fmt vet
 make tree-sitter  # generate and test the tree-sitter grammar (needs the tree-sitter CLI)
-make install      # bronze into ~/.local/bin, and the parser into Neovim (scripts/install.sh)
+make install      # bronze into ~/.local/bin, then `bronze setup nvim` (scripts/install.sh)
 make dist VERSION=v0.1.0   # release archives for macOS and Linux into dist/
 cd website && pip install -r requirements.txt && mkdocs serve   # the website, locally
 ```

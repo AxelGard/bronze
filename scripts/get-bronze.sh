@@ -62,3 +62,7 @@ case ":$PATH:" in
 *":$bindir:"*) ;;
 *) printf '\n%s is not on your PATH. Add it, for example in ~/.zshrc or ~/.bashrc:\n    export PATH="%s:$PATH"\n' "$bindir" "$bindir" ;;
 esac
+
+if command -v nvim >/dev/null 2>&1; then
+    printf '\nFor Neovim (highlighting and the language server), run:\n    bronze setup nvim\n'
+fi

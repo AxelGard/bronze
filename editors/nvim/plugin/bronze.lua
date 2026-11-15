@@ -1,41 +1,63 @@
--- Bronze support for Neovim: tree-sitter highlighting and the language
--- server. This file is editors/nvim/plugin/bronze.lua in the Bronze repo.
+-- Bronze for Neovim: highlighting with the tree-sitter parser, and the
+-- language server. `bronze setup nvim` installs this file, together with
+-- the parser and its highlight queries, as a package in Neovim's data
+-- directory. Needs Neovim 0.11 or later; nvim-treesitter is not needed.
 
 if vim.g.loaded_bronze then
   return
 end
 vim.g.loaded_bronze = true
 
--- The repository root, three directories up from this file.
-local repo = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h:h:h")
+-- The package directory: plugin/ is in it.
+local package_dir = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h")
 
--- Tree-sitter: tell nvim-treesitter where the grammar is, so that
--- `:TSInstall bronze` builds it. The grammar's src/parser.c is committed,
--- so building needs only a C compiler. (Highlight queries come from
--- queries/bronze/ in this plugin.)
-local ok, parsers = pcall(require, "nvim-treesitter.parsers")
-if ok and parsers.get_parser_configs then
-  parsers.get_parser_configs().bronze = {
-    install_info = {
-      url = repo,
-      location = "editors/tree-sitter-bronze",
-      files = { "src/parser.c" },
-      generate_requires_npm = false,
-      requires_generate_from_grammar = false,
-    },
-    filetype = "bronze",
-  }
+local function warn_once(key, msg)
+  if vim.g["bronze_warned_" .. key] then
+    return
+  end
+  vim.g["bronze_warned_" .. key] = true
+  vim.schedule(function()
+    vim.notify("bronze: " .. msg, vim.log.levels.WARN)
+  end)
+end
+
+-- Tells when the parser was set up by another version of bronze than the
+-- one on the PATH, so that the grammar may be out of date.
+local function check_version()
+  local f = io.open(package_dir .. "/version.txt")
+  if not f or vim.fn.executable("bronze") ~= 1 then
+    return
+  end
+  local installed = vim.trim(f:read("*a"))
+  f:close()
+  vim.system({ "bronze", "version" }, { text = true }, function(out)
+    local current = vim.trim(out.stdout or "")
+    if out.code == 0 and current ~= installed then
+      warn_once("version", "the Neovim support was set up by " .. installed .. ", but " .. current
+        .. " is installed; run `bronze setup nvim` to update it")
+    end
+  end)
 end
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "bronze",
   group = vim.api.nvim_create_augroup("bronze", { clear = true }),
   callback = function(args)
-    pcall(vim.treesitter.start, args.buf, "bronze")
+    vim.bo[args.buf].commentstring = "// %s"
+    if not pcall(vim.treesitter.start, args.buf, "bronze") then
+      warn_once("parser", "the Bronze parser is not installed; run `bronze setup nvim`")
+    end
+    if vim.fn.executable("bronze") ~= 1 then
+      warn_once("path", "`bronze` is not on the PATH, so the language server can't start")
+    end
+    if not vim.g.bronze_version_checked then
+      vim.g.bronze_version_checked = true
+      check_version()
+    end
   end,
 })
 
--- The language server: `bronze lsp` (Neovim 0.11 or later).
+-- The language server: `bronze lsp`.
 if vim.lsp.config and vim.fn.executable("bronze") == 1 then
   vim.lsp.config("bronze", {
     cmd = { "bronze", "lsp" },

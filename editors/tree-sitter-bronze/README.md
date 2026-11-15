@@ -21,7 +21,7 @@ From the repository root:
 make tree-sitter      # generate, run the corpus tests, and parse every valid .brz program
 ```
 
-This needs the tree-sitter CLI (`npm install -g tree-sitter-cli`). After changing the grammar, run `:TSInstall bronze` in Neovim (or `make install`) to rebuild the parser there.
+This needs the tree-sitter CLI (`npm install -g tree-sitter-cli`). After changing the grammar, run `make install` to rebuild the parser for Neovim (it runs `bronze setup nvim`, which compiles the `src/parser.c` built into `bronze`).
 
 ## Neovim
 

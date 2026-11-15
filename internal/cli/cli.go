@@ -1,4 +1,5 @@
-// Package cli implements the bronze command: run, check and version.
+// Package cli implements the bronze command: run, check, lsp, setup and
+// version.
 package cli
 
 import (
@@ -39,6 +40,7 @@ Usage:
   bronze run <file.brz>     check, then run a program
   bronze check <file.brz>   check syntax and types only
   bronze lsp                run the language server on stdin and stdout
+  bronze setup nvim         set up Neovim: highlighting and the language server
   bronze version            print the version
 `
 
@@ -61,6 +63,8 @@ func MainIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 0
 	case "lsp":
 		return lsp.Serve(stdin, stdout, stderr, Version)
+	case "setup":
+		return setup(args[1:], stdout, stderr)
 	case "run", "check":
 		if len(args) != 2 {
 			fmt.Fprint(stderr, usage)

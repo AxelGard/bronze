@@ -4,10 +4,13 @@
 bronze run <file.brz>     check, then run a program
 bronze check <file.brz>   check syntax and types only
 bronze lsp                run the language server on stdin and stdout
+bronze setup nvim         set up Neovim: highlighting and the language server
 bronze version            print the version
 ```
 
 `bronze help` (or `-h`, `--help`) prints the same list.
+
+`bronze setup nvim` is described in [Editors](editors.md#neovim). It takes `--dir <dir>` to install the Neovim package somewhere else.
 
 ## Exit codes
 

@@ -5,7 +5,7 @@ Bronze comes with two things editors can use:
 - a **language server**, `bronze lsp`, for errors as you type, go to definition, hover, completion, and rename
 - a **tree-sitter grammar**, in [`editors/tree-sitter-bronze`](https://github.com/AxelGard/bronze/tree/master/editors/tree-sitter-bronze), for highlighting
 
-There is a ready-made plugin for Neovim. Other editors that speak LSP or tree-sitter can use the same two pieces.
+For Neovim, `bronze setup nvim` sets up both. Other editors that speak LSP or tree-sitter can use the same two pieces.
 
 ## The language server
 
@@ -25,29 +25,23 @@ Each file is checked on its own, since a Bronze program is one file for now.
 
 ## Neovim
 
-The plugin is in [`editors/nvim`](https://github.com/AxelGard/bronze/tree/master/editors/nvim). It gives `.brz` files the `bronze` filetype, tree-sitter highlighting, and starts `bronze lsp`.
+With `bronze` installed and on your `PATH`, one command sets up Neovim (0.11 or later):
 
-It needs Neovim 0.11 or later, and [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) (master branch) for highlighting.
+```sh
+bronze setup nvim
+```
 
-1. Clone the Bronze repository, and add its `editors/nvim` directory as a plugin. With packer:
+It installs a package into Neovim's data directory (`~/.local/share/nvim/site/pack/bronze/start/bronze`), which Neovim loads by itself, and compiles the tree-sitter parser there with your C compiler. You get the `bronze` filetype, highlighting, `//` comments, and the language server with completion as you type. No plugin manager and no nvim-treesitter are needed.
 
-    ```lua
-    use "~/path/to/bronze/editors/nvim"
-    ```
+Open a `.brz` file to check it: `:InspectTree` shows the syntax tree, and `:checkhealth vim.lsp` the language server.
 
-    Restart Neovim.
+Run `bronze setup nvim` again after updating `bronze`; Neovim warns when they don't match. To remove it, delete the package directory. Completion pops up as you type, except when nvim-cmp or blink.cmp is loaded (they ask the server themselves); set `vim.g.bronze_autocomplete = false` to turn it off.
 
-2. Make sure `bronze` is on your `PATH` (see [Install](../install.md)). The plugin only starts the language server if it finds it.
+If you set it up the old way, with `editors/nvim` in a plugin manager and the parser from nvim-treesitter, remove that plugin entry and run `:TSUninstall bronze`. `bronze setup nvim` tells you if Neovim still finds the old parser.
 
-3. Build the parser, in Neovim:
+!!! note "Compiling the parser"
+    It needs a C compiler: `cc`, or the one in `$CC`. On macOS, install one with `xcode-select --install`. If it fails with `ld: tapi error` or `unknown architecture`, the selected Xcode is older than the macOS SDK: run `sudo xcode-select -s /Library/Developer/CommandLineTools`, or update Xcode.
 
-    ```vim
-    :TSInstallSync bronze
-    ```
+## Other editors
 
-    Or run `make install` in the clone: it builds `bronze` into `~/.local/bin` and the parser in one go. Run it again after pulling changes.
-
-To check that it works, open a `.brz` file: `:InspectTree` shows the syntax tree, `:checkhealth vim.lsp` the language server, and `:LspLog` its log.
-
-!!! note "Building the parser on macOS"
-    It needs a working C compiler. If it fails with `ld: tapi error` or `unknown architecture`, the selected Xcode is older than the macOS SDK: run `sudo xcode-select -s /Library/Developer/CommandLineTools`, or update Xcode.
+The language server works with any editor that speaks LSP: run `bronze lsp`, which talks over stdin and stdout. The tree-sitter grammar is in [`editors/tree-sitter-bronze`](https://github.com/AxelGard/bronze/tree/master/editors/tree-sitter-bronze), with highlight queries in `queries/highlights.scm`.

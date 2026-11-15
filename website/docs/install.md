@@ -25,6 +25,8 @@ Make sure the directory is on your `PATH`, then check:
 bronze version
 ```
 
+For Neovim, also run `bronze setup nvim`; see [Editors](reference/editors.md#neovim).
+
 The archives are also on the [releases page](https://github.com/AxelGard/bronze/releases).
 
 !!! note "macOS"
@@ -44,7 +46,7 @@ go install github.com/AxelGard/bronze/cmd/bronze@latest
 git clone https://github.com/AxelGard/bronze
 cd bronze
 make build        # bin/bronze
-make install      # bronze into ~/.local/bin, and the tree-sitter parser into Neovim
+make install      # bronze into ~/.local/bin, then `bronze setup nvim` if Neovim is installed
 ```
 
 `make install` is mostly for working on Bronze itself; see [Editors](reference/editors.md) for what it sets up.

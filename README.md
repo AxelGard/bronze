@@ -37,13 +37,13 @@ bronze run examples/projects/bank.brz
 bronze check my_program.brz
 ```
 
-For editor support (highlighting and the language server), see [editors/nvim](editors/nvim/README.md).
+For Neovim (highlighting and the language server), run `bronze setup nvim`; see [editors/nvim](editors/nvim/README.md).
 
 ## Working on Bronze
 
 ```
 make build              # builds bin/bronze
 make test               # go test ./...
-make install            # bronze into ~/.local/bin, and the Neovim parser
+make install            # bronze into ~/.local/bin, then `bronze setup nvim`
 bin/bronze run examples/core.brz
 ```
