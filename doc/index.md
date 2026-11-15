@@ -30,6 +30,7 @@ Programs that run with `bronze run`. Each has its expected output at the bottom.
 | [`projects/bank.brz`](../examples/projects/bank.brz) | Classes, enums, match, errors, null |
 | [`algorithms.brz`](../examples/algorithms.brz) | Sorting, searching, primes: lists, ranges, `for` |
 | [`projects/words.brz`](../examples/projects/words.brz) | Counting words: maps, string methods, interpolation |
+| [`projects/shop.brz`](../examples/projects/shop.brz) | A small shop: data classes, an interface, inheritance, `private`, `static`, enum values, `mut` and `copy` |
 
 ## Explorations
 

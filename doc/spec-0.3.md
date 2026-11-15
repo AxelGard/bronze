@@ -210,6 +210,7 @@ class Dog use Animal
 
 - A child's `init` may call **`super(Animal).init(...)`**, and only as its **first statement**: "`super(Animal).init` must be the first statement of `init`".
 - If it doesn't, `Animal`'s `init()` without arguments runs before the child's `init` body. If `Animal` has no such `init`: "`Dog` must call `super(Animal).init(...)`: `Animal` has no `init()`".
+- **(0.3 choice)** The built-in `Error` is the exception: it has only `init(message)`, but a child of it doesn't have to call `super(Error).init(...)`. Its `message` then starts as `""`, as in 0.1 and 0.2.
 - **(0.3 choice)** `init`s are not inherited. A child without an `init` gets an empty `init()`, as in 0.1, which runs the parent's `init()`; if the parent has none, it is the same error, at the class.
 
 Setting up `Dog("Rex")`:
@@ -289,7 +290,7 @@ class Square use Shape
 - A child of a class that uses an interface is also that interface.
 - An interface can use other interfaces: `interface Solid use Shape { func volume() -> Float }`. A class that uses `Solid` must have the methods of both, and is a `Shape` too. An interface can't use a class, and can't use itself.
 - Two interfaces of a class may ask for the same method, if the signatures are the same. Different signatures are an error.
-- `==` on interface values compares identity, as for classes.
+- `==` on interface values compares identity, as for classes. **(0.3 choice)** `==` also takes two object types where one can be used as the other: a `Dog` and an `Animal`, or a `Square` and a `Shape`.
 - An interface counts as a changeable type for parameter modes, and `copy Shape` is an error, since the value may be a class.
 
 ## Data classes
@@ -371,6 +372,7 @@ class Account
 - **`private`**: only usable in the methods and `init`s of the class that declares it, on **any object of that class**, not only `this`: `other.pin` works inside `Account`. A child class can't use its parent's `private` members.
 - **`protected`**: usable in the class that declares it and in its descendants, on any object. **(0.3 choice)**
 - Outside, using one is an error: "`pin` is private to `Account`".
+- **(0.3 choice)** Enum methods can be `private` too, for the enum's own methods; `protected` means the same there.
 - `private` and `protected` go only on fields and methods (including `init` and `static func`). On a top-level function, class, enum or interface they are an error: "private is for class members in 0.3". (Namespaces come in 0.5.)
 - A `private init` means only the class itself can create objects, for example in a `static func`. A child can still call a `protected init` with `super(...).init(...)`, but not a `private` one.
 - A method used for an interface must be public.

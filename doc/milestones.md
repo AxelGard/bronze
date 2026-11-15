@@ -6,7 +6,7 @@ Each version is a working language you can use.
 |---|---|---|
 | **0.1.0** | functions, variables, control flow, simple classes, enums with methods, `match`, errors with `else`, `T?` and null | `core.brz`, `projects/counter.brz` and `projects/bank.brz` run |
 | **0.2.0** | `T?` for all types, `for`, ranges, `break`/`continue`, lists, maps, string interpolation, `+=`, slicing; **LSP**: diagnostics, go to definition, rename, hover | small scripts and algorithms |
-| 0.3.0 | inheritance, `override`, `super`, interfaces, data classes, `static`, `private`/`protected`, enums with values, parameter modes (`mut T`, `copy T`) | domain models |
+| **0.3.0** | inheritance, `override`, `super`, interfaces, data classes, `static`, `private`/`protected`, enums with values, parameter modes (`mut T`, `copy T`); **LSP**: rename keeps overrides together | `projects/shop.brz`: domain models |
 | 0.4.0 | the Go error form `con x, err = f()`, `else continue`/`else break`, multiple return values, lambdas and function types | real error handling |
 | 0.5.0 | multiple files, namespaces, imports, `bronze test` | a real project layout |
 | 0.6.0 | standard library: files, `shell`, env, JSON | useful command-line tools |
@@ -86,6 +86,8 @@ The language is exactly [spec-0.2](spec-0.2.md): spec-0.1, plus
 With each step: golden tests for its diagnostics and panics, the tree-sitter grammar, and the website.
 
 ## 0.3.0
+
+Implemented: all 11 steps of the work order below.
 
 The language is exactly [spec-0.3](spec-0.3.md): spec-0.2, plus
 - parameters read only by default, `mut T`, `copy T` and `mut func` (this breaks 0.2 programs that change a parameter or `this`)

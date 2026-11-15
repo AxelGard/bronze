@@ -1,0 +1,361 @@
+// shop.brz
+//
+// A mini project for 0.3.0: a small shop, as a domain model.
+// Shows data classes, an interface with two classes, a class with private
+// fields and a static constructor, a child class with `override` and
+// `super`, an enum with values, `is`, and plain, `mut` and `copy`
+// parameters.
+// Run it with:  bronze run examples/projects/shop.brz
+
+
+// ------------------------------------------------------------------
+// Values
+// ------------------------------------------------------------------
+
+// Money is a value: it can't change, so it is passed around like an Int.
+data Money(cents: Int, currency: String)
+{
+    func plus(other: Money) -> Money
+    {
+        return Money(this.cents + other.cents, this.currency)
+    }
+
+    func times(n: Int) -> Money
+    {
+        return Money(this.cents * n, this.currency)
+    }
+
+    func percent(p: Int) -> Money
+    {
+        return Money(this.cents * p / 100, this.currency)
+    }
+
+    func text() -> String
+    {
+        con whole = this.cents / 100
+        con rest = this.cents % 100
+        mut pad = ""
+        if rest < 10
+        {
+            pad = "0"
+        }
+        return "{whole}.{pad}{rest} {this.currency}"
+    }
+}
+
+data LineItem(name: String, price: Money, count: Int)
+{
+    func total() -> Money
+    {
+        return this.price.times(this.count)
+    }
+}
+
+data OutOfStock(name: String) use Error
+
+
+// Stored in a database as text, so its values are written out.
+enum Status: String
+{
+    Open = "open"
+    Paid = "paid"
+    Shipped = "shipped"
+}
+
+
+// ------------------------------------------------------------------
+// Customers
+// ------------------------------------------------------------------
+
+class Customer
+{
+    con name = ""
+
+    func init(name: String)
+    {
+        this.name = name
+    }
+
+    func label() -> String
+    {
+        return this.name
+    }
+
+    // the percent off every order
+    func rebate() -> Int
+    {
+        return 0
+    }
+}
+
+class VipCustomer use Customer
+{
+    con level = 1
+
+    func init(name: String, level: Int)
+    {
+        super(Customer).init(name)
+        this.level = level
+    }
+
+    override func label() -> String
+    {
+        return super(Customer).label() + " (VIP {this.level})"
+    }
+
+    override func rebate() -> Int
+    {
+        return 5 * this.level
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Discounts
+// ------------------------------------------------------------------
+
+interface Discount
+{
+    func name() -> String
+    func off(subtotal: Money) -> Money
+}
+
+class PercentOff use Discount
+{
+    con percent = 0
+
+    func init(percent: Int)
+    {
+        this.percent = percent
+    }
+
+    func name() -> String
+    {
+        return "{this.percent}% off"
+    }
+
+    func off(subtotal: Money) -> Money
+    {
+        return subtotal.percent(this.percent)
+    }
+}
+
+class AmountOff use Discount
+{
+    con amount = Money(0, "EUR")
+    con above = Money(0, "EUR")
+
+    func init(amount: Money, above: Money)
+    {
+        this.amount = amount
+        this.above = above
+    }
+
+    func name() -> String
+    {
+        return "{this.amount.text()} off above {this.above.text()}"
+    }
+
+    func off(subtotal: Money) -> Money
+    {
+        if subtotal.cents < this.above.cents
+        {
+            return Money(0, subtotal.currency)
+        }
+        return this.amount
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Orders
+// ------------------------------------------------------------------
+
+class Order
+{
+    con number = 0
+    con customer: Customer? = null
+    private mut items: List<LineItem> = []
+    private mut discounts: List<Discount> = []
+    mut status = Status.Open
+
+    // The order keeps the customer, so it may change it: `mut`.
+    private func init(number: Int, customer: mut Customer)
+    {
+        this.number = number
+        this.customer = customer
+    }
+
+    // The way to make an order: numbers come from the shop.
+    static func open(number: Int, customer: mut Customer) -> Order
+    {
+        return Order(number, customer)
+    }
+
+    mut func add(item: LineItem) -> ! OutOfStock
+    {
+        if item.count > 5
+        {
+            return OutOfStock(item.name)
+        }
+        this.items.append(item)
+    }
+
+    mut func apply(d: mut Discount)
+    {
+        this.discounts.append(d)
+    }
+
+    func subtotal() -> Money
+    {
+        mut sum = Money(0, "EUR")
+        for item in this.items
+        {
+            sum = sum.plus(item.total())
+        }
+        return sum
+    }
+
+    func total() -> Money
+    {
+        con sub = this.subtotal()
+        mut off = 0
+        for d in this.discounts
+        {
+            off += d.off(sub).cents
+        }
+        con c = this.customer
+        if c != null
+        {
+            off += sub.percent(c.rebate()).cents
+        }
+        return Money(sub.cents - off, sub.currency)
+    }
+
+    func lines() -> List<String>
+    {
+        mut out: List<String> = []
+        for item in this.items
+        {
+            out.append("  {item.count} x {item.name}: {item.total().text()}")
+        }
+        for d in this.discounts
+        {
+            out.append("  {d.name()}: -{d.off(this.subtotal()).text()}")
+        }
+        return out
+    }
+}
+
+
+// ------------------------------------------------------------------
+// Using it
+// ------------------------------------------------------------------
+
+// Only reads the order.
+func receipt(order: Order) -> String
+{
+    mut who = "?"
+    con c = order.customer
+    if c != null
+    {
+        who = c.label()
+    }
+    mut text = "order {order.number} for {who} ({order.status.value})\n"
+    for line in order.lines()
+    {
+        text += line + "\n"
+    }
+    return text + "  total: {order.total().text()}"
+}
+
+// Changes the order.
+func try_add(order: mut Order, item: LineItem)
+{
+    order.add(item) else (e)
+    {
+        print("could not add: {e.message}")
+        return
+    }
+}
+
+// Changes the order too.
+func pay(order: mut Order)
+{
+    order.status = Status.Paid
+}
+
+// Works on a copy, so the caller's cart doesn't change.
+func with_gift(items: copy List<LineItem>) -> Int
+{
+    items.append(LineItem("gift wrap", Money(200, "EUR"), 1))
+    return items.length()
+}
+
+func describe(c: Customer) -> String
+{
+    if c is VipCustomer
+    {
+        return "{c.name} is a VIP at level {c.level}"
+    }
+    return "{c.name} is a customer"
+}
+
+func main() -> Int
+{
+    con tea = Money(450, "EUR")
+    con mug = Money(1200, "EUR")
+
+    con ada = Customer("Ada")
+    con grace = VipCustomer("Grace", 2)
+    print(describe(ada))
+    print(describe(grace))
+
+    con first = Order.open(1, ada)
+    first.add(LineItem("tea", tea, 2)) else (e)
+    {
+        print(e.message)
+        return 1
+    }
+    first.add(LineItem("mug", mug, 1)) else return 1
+    first.apply(PercentOff(10))
+    print(receipt(first))
+
+    con second = Order.open(2, grace)
+    second.add(LineItem("tea", tea, 3)) else return 1
+    try_add(second, LineItem("mug", mug, 9))
+    second.apply(AmountOff(Money(500, "EUR"), Money(1000, "EUR")))
+    pay(second)
+    print(receipt(second))
+
+    con cart = [LineItem("tea", tea, 1)]
+    print("with a gift: {with_gift(cart)} items, cart still has {cart.length()}")
+
+    con status = Status.from("shipped") else Status.Open
+    print("{status} is stored as \"{status.value}\"")
+    print(tea == Money(450, "EUR"))
+    return 0
+}
+
+
+/*
+    Expected output:
+
+    Ada is a customer
+    Grace is a VIP at level 2
+    order 1 for Ada (open)
+      2 x tea: 9.00 EUR
+      1 x mug: 12.00 EUR
+      10% off: -2.10 EUR
+      total: 18.90 EUR
+    could not add: OutOfStock(name: "mug")
+    order 2 for Grace (VIP 2) (paid)
+      3 x tea: 13.50 EUR
+      5.00 EUR off above 10.00 EUR: -5.00 EUR
+      total: 7.15 EUR
+    with a gift: 2 items, cart still has 1
+    Shipped is stored as "shipped"
+    true
+
+    Exit code: 0
+*/
