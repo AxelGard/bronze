@@ -88,3 +88,9 @@ type markupContent struct {
 	Kind  string `json:"kind"`
 	Value string `json:"value"`
 }
+
+type completionItem struct {
+	Label  string `json:"label"`
+	Kind   int    `json:"kind,omitempty"`
+	Detail string `json:"detail,omitempty"`
+}

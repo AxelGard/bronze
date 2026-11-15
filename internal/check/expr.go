@@ -454,6 +454,10 @@ func (c *checker) call(e *ast.Call) Type {
 }
 
 func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
+	if c.atMarker(id) {
+		c.completeScope()
+		return Invalid
+	}
 	if v := c.scope.lookup(id.Name); v != nil {
 		c.ref(id, v.sym)
 		c.args(e)
@@ -516,6 +520,10 @@ func (c *checker) construct(e *ast.Call, cls *Class) Type {
 }
 
 func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
+	if c.atMarker(m.Name) {
+		c.completeMember(m.X)
+		return Invalid
+	}
 	t := c.value(m.X)
 	name := m.Name.Name
 	if c.mayBeNull(m.X, t) {

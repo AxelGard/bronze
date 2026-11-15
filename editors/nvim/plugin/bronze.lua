@@ -43,4 +43,21 @@ if vim.lsp.config and vim.fn.executable("bronze") == 1 then
     root_markers = { ".git" },
   })
   vim.lsp.enable("bronze")
+
+  -- Completion as you type, with Neovim's own LSP completion. Skipped when
+  -- a completion plugin (nvim-cmp, blink.cmp) is loaded, since it already
+  -- asks the server; set vim.g.bronze_autocomplete = false to turn it off.
+  vim.api.nvim_create_autocmd("LspAttach", {
+    group = vim.api.nvim_create_augroup("bronze_lsp", { clear = true }),
+    callback = function(args)
+      local client = vim.lsp.get_client_by_id(args.data.client_id)
+      if not client or client.name ~= "bronze" or vim.g.bronze_autocomplete == false then
+        return
+      end
+      if package.loaded["cmp"] or package.loaded["blink.cmp"] or not vim.lsp.completion then
+        return
+      end
+      vim.lsp.completion.enable(true, client.id, args.buf, { autotrigger = true })
+    end,
+  })
 end

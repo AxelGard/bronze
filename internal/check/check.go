@@ -25,7 +25,13 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 		enums:   map[string]*Enum{},
 		broken:  map[string]bool{},
 	}
-	decls := append(append([]ast.Decl{}, parser.Prelude()...), file.Decls...)
+	c.run(file, append(append([]ast.Decl{}, parser.Prelude()...), file.Decls...))
+	c.setHovers()
+	return c.info, c.diags
+}
+
+// run collects the declarations and checks every body.
+func (c *checker) run(file *ast.File, decls []ast.Decl) {
 	c.collect(file, decls)
 	for _, d := range decls {
 		switch d := d.(type) {
@@ -60,8 +66,6 @@ func Check(file *ast.File, src *diag.Source) (*Info, diag.List) {
 			}
 		}
 	}
-	c.setHovers()
-	return c.info, c.diags
 }
 
 type checker struct {
@@ -75,6 +79,8 @@ type checker struct {
 	errCls  *Class          // the built-in Error class
 
 	inPrelude bool // checking the prelude: don't record references
+
+	complete *Completions // set when checking for completion
 
 	fn    *funcSig // the function being checked; nil in a field's value
 	scope *scope
@@ -483,7 +489,7 @@ func (c *checker) resolveName(name *ast.Ident) Type {
 }
 
 func (c *checker) funcBody(sig *funcSig) {
-	if sig.decl.Bad {
+	if sig.decl.Bad && c.complete == nil {
 		return
 	}
 	c.fn, c.loops = sig, 0

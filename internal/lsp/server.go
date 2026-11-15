@@ -176,6 +176,12 @@ func (s *server) dispatch(m *message) (any, *responseError) {
 			return nil, err
 		}
 		return s.hover(p), nil
+	case "textDocument/completion":
+		var p textDocumentPositionParams
+		if err := decode(&p); err != nil {
+			return nil, err
+		}
+		return s.completion(p), nil
 	case "textDocument/prepareRename":
 		var p textDocumentPositionParams
 		if err := decode(&p); err != nil {
@@ -207,6 +213,7 @@ func (s *server) initialize(p initializeParams) any {
 			"textDocumentSync":   map[string]any{"openClose": true, "change": 1},
 			"definitionProvider": true,
 			"hoverProvider":      true,
+			"completionProvider": map[string]any{"triggerCharacters": []string{"."}},
 			"renameProvider":     map[string]any{"prepareProvider": true},
 		},
 		"serverInfo": map[string]any{"name": "bronze", "version": s.version},

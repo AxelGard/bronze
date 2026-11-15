@@ -18,7 +18,7 @@ Bronze is a programming language (`.brz` files) designed in this repo by its aut
 | `cmd/bronze/` | CLI entry point; the logic is in `internal/cli` |
 | `internal/{diag,lexer,ast,parser,check,interp}/` | The pipeline |
 | `internal/cli/` | `run`, `check`, `lsp`, `version`; `cli.Main` is also what the golden tests call |
-| `internal/lsp/` | Language server: diagnostics, go to definition, rename |
+| `internal/lsp/` | Language server: diagnostics, go to definition, hover, completion, rename |
 | `tests/run/`, `tests/errors/`, `tests/panics/` | Golden tests; see `tests/README.md` |
 | `website/` | User docs (MkDocs Material), published to GitHub Pages by `.github/workflows/docs.yml`. **Only what is implemented and working.** Every ```` ```bronze ```` block is run by `tests/docs_test.go`, and an ```` ```text title="Output" ```` block right after it must match exactly (stdout then stderr, file named `main.brz`). Update it when a feature lands |
 | `editors/tree-sitter-bronze/` | Tree-sitter grammar and highlight queries; see its README |
