@@ -1,0 +1,11 @@
+class Box
+{
+    static func init()
+    {
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

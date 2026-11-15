@@ -1,0 +1,32 @@
+class Temperature
+{
+    con celsius = 0.0
+
+    func init(celsius: Float)
+    {
+        this.celsius = celsius
+    }
+
+    static func from_fahrenheit(f: Float) -> Temperature
+    {
+        return Temperature((f - 32.0) * 5.0 / 9.0)
+    }
+
+    static func boiling() -> Temperature
+    {
+        return Temperature.from_fahrenheit(212.0)
+    }
+
+    func warmer(by: Float) -> Temperature
+    {
+        return Temperature(this.celsius + by)
+    }
+}
+
+func main() -> Int
+{
+    con t = Temperature.from_fahrenheit(212.0)
+    print(t.celsius)
+    print(Temperature.boiling().warmer(1.5).celsius)
+    return 0
+}

@@ -1,0 +1,2 @@
+error: unknown function `empty`
+  --> static_unqualified.brz:12:16

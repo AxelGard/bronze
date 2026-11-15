@@ -58,6 +58,9 @@ func sigHover(sig *funcSig) string {
 	if sig.mut {
 		s = "mut " + s
 	}
+	if sig.static {
+		s = "static " + s
+	}
 	switch r := sig.result.(type) {
 	case *Failable:
 		if r.Value == NoValue {

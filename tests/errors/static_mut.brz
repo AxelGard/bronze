@@ -1,0 +1,13 @@
+class Box
+{
+    mut value = 0
+
+    static mut func reset()
+    {
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

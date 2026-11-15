@@ -122,6 +122,14 @@ func (c *checker) completeScope() {
 // the dot.
 func (c *checker) completeMember(x ast.Expr) {
 	c.complete.Found = true
+	if cls := c.className(x); cls != nil {
+		for _, n := range sortedKeys(cls.Methods) {
+			if sig := cls.Methods[n]; sig.static {
+				c.complete.Items = append(c.complete.Items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(sig)})
+			}
+		}
+		return
+	}
 	if en := c.enumName(x); en != nil {
 		for _, cs := range en.Decl.Cases {
 			c.complete.Items = append(c.complete.Items, Completion{Label: cs.Name, Kind: CompleteCase, Detail: caseHover(en, cs.Name)})
@@ -153,7 +161,9 @@ func (c *checker) completeMember(x ast.Expr) {
 			items = append(items, Completion{Label: n, Kind: CompleteField, Detail: detail})
 		}
 		for _, n := range sortedKeys(t.Methods) {
-			items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
+			if !t.Methods[n].static {
+				items = append(items, Completion{Label: n, Kind: CompleteMethod, Detail: sigHover(t.Methods[n])})
+			}
 		}
 	case *Enum:
 		if t.Value != nil {

@@ -1,0 +1,2 @@
+error: `empty` is static: call it as `Box.empty(...)`
+  --> static_on_object.brz:18:19

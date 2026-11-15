@@ -97,6 +97,40 @@ func main() -> Int
 
 A class without any `init` gets an empty one, so `Player()` works for the class above.
 
+## Static methods
+
+A **`static func`** belongs to the class instead of an object. It has no `this`, and is called on the class's name, also inside the class. It is handy for other ways to create an object:
+
+```bronze
+class Temperature
+{
+    con celsius = 0.0
+
+    func init(celsius: Float)
+    {
+        this.celsius = celsius
+    }
+
+    static func from_fahrenheit(f: Float) -> Temperature
+    {
+        return Temperature((f - 32.0) * 5.0 / 9.0)
+    }
+}
+
+func main() -> Int
+{
+    con t = Temperature.from_fahrenheit(212.0)
+    print(t.celsius)
+    return 0
+}
+```
+
+```text title="Output"
+100.0
+```
+
+A static method can't be called on an object, and there are no static fields.
+
 ## Objects are shared
 
 Assigning an object or passing it to a function never copies it. Both names refer to the same object:
@@ -175,7 +209,7 @@ So a signature tells you what a function does to what you pass it. The call does
 
 ## Not yet
 
-Inheritance, interfaces, `static`, and `private`/`protected` are planned for later versions. The one kind of inheritance that works now is [`use Error`](errors.md).
+Inheritance, interfaces and `private`/`protected` are planned for later versions. The one kind of inheritance that works now is [`use Error`](errors.md).
 
 ## Next
 

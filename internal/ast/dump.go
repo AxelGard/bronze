@@ -25,11 +25,14 @@ func dump(b *strings.Builder, n Node) {
 			dump(b, d)
 		}
 	case *FuncDecl:
-		if n.Mut {
-			b.WriteString("(mut func ")
-		} else {
-			b.WriteString("(func ")
+		b.WriteByte('(')
+		if n.Static {
+			b.WriteString("static ")
 		}
+		if n.Mut {
+			b.WriteString("mut ")
+		}
+		b.WriteString("func ")
 		b.WriteString(n.Name.Name)
 		for _, p := range n.Params {
 			mode := ""

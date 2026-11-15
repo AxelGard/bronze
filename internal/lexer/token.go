@@ -79,6 +79,7 @@ const (
 	IN
 	BREAK
 	CONTINUE
+	STATIC
 )
 
 var kindNames = [...]string{
@@ -148,6 +149,7 @@ var kindNames = [...]string{
 	IN:       "`in`",
 	BREAK:    "`break`",
 	CONTINUE: "`continue`",
+	STATIC:   "`static`",
 }
 
 // String returns a description of the kind for error messages, such as
@@ -178,11 +180,12 @@ var keywords = map[string]Kind{
 	"in":       IN,
 	"break":    BREAK,
 	"continue": CONTINUE,
+	"static":   STATIC,
 }
 
 var reserved = map[string]bool{
 	"data": true, "interface": true, "namespace": true, "import": true,
-	"override": true, "static": true, "private": true, "protected": true,
+	"override": true, "private": true, "protected": true,
 	"test": true,
 	"type": true, "super": true, "copy": true,
 }

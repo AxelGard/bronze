@@ -4180,6 +4180,10 @@
     "named": false
   },
   {
+    "type": "static",
+    "named": false
+  },
+  {
     "type": "this",
     "named": true
   },

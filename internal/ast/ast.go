@@ -42,15 +42,17 @@ func (f *File) Span() diag.Span { return f.Sp }
 // FuncDecl is `func name(params) -> result ! fail { body }`, or `mut func
 // ...` for a method that changes `this`.
 type FuncDecl struct {
-	Mut    bool // `mut func`
-	MutSp  diag.Span
-	Name   *Ident
-	Params []*Param
-	Result *TypeExpr // nil if the function returns no value
-	Fail   *TypeExpr // the error type after `!`, or nil
-	Body   *Block
-	Bad    bool // the body had a syntax error
-	Sp     diag.Span
+	Static   bool // `static func`: a method of the class, not of an object
+	StaticSp diag.Span
+	Mut      bool // `mut func`
+	MutSp    diag.Span
+	Name     *Ident
+	Params   []*Param
+	Result   *TypeExpr // nil if the function returns no value
+	Fail     *TypeExpr // the error type after `!`, or nil
+	Body     *Block
+	Bad      bool // the body had a syntax error
+	Sp       diag.Span
 }
 
 // Param is `name: Type`, or `name: mut Type`.

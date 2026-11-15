@@ -1,0 +1,47 @@
+==================
+Static methods
+==================
+
+class Box
+{
+    static func empty() -> Box
+    {
+        return Box()
+    }
+}
+
+func f() -> Box
+{
+    return Box.empty()
+}
+
+---
+
+(source_file
+  (class_declaration
+    (identifier)
+    (class_body
+      (function_declaration
+        (identifier)
+        (parameter_list)
+        (return_type
+          (type
+            (identifier)))
+        (block
+          (return_statement
+            (call_expression
+              (identifier)
+              (argument_list)))))))
+  (function_declaration
+    (identifier)
+    (parameter_list)
+    (return_type
+      (type
+        (identifier)))
+    (block
+      (return_statement
+        (call_expression
+          (member_expression
+            (identifier)
+            (identifier))
+          (argument_list))))))

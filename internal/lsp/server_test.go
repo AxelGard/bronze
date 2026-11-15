@@ -286,6 +286,11 @@ func TestHover(t *testing.T) {
         this.balance -= amount
         return this.balance
     }
+
+    static func opened() -> Account
+    {
+        return Account()
+    }
 }
 
 enum Status
@@ -313,7 +318,7 @@ func role_of(s: String) -> Role
 
 func main() -> Int
 {
-    con account = Account()
+    con account = Account.opened()
     mut names: List<String> = []
     for n in 0..3
     {
@@ -342,6 +347,7 @@ func main() -> Int
 		{"withdraw", 2, "mut func withdraw(amount: Int) -> Int ! Error", "in `Account`"},
 		{"top_up", 1, "func top_up(a: mut Account, by: Int)", ""},
 		{"a.balance", 1, "a: mut Account", ""},
+		{"opened", 2, "static func opened() -> Account", "in `Account`"},
 		{"Role", 1, "enum Role: String", ""},
 		{"Admin", 1, "Role.Admin = \"admin\"", ""},
 		{"from", 1, "func from(value: String) -> Role?", "in `Role`"},

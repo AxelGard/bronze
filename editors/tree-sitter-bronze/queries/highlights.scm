@@ -55,7 +55,7 @@
 
 ; keywords
 ["func" "return"] @keyword.function
-["con" "mut" "class" "enum" "use"] @keyword
+["con" "mut" "class" "enum" "use" "static"] @keyword
 ["if" "else" "match"] @keyword.conditional
 ["while" "for" "in" (break_statement) (continue_statement)] @keyword.repeat
 ["and" "or" "not" "is"] @keyword.operator

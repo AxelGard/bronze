@@ -1,0 +1,14 @@
+enum Light
+{
+    Red
+
+    static func first() -> Light
+    {
+        return Light.Red
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

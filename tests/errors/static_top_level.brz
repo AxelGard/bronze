@@ -1,0 +1,8 @@
+static func hello()
+{
+}
+
+func main() -> Int
+{
+    return 0
+}

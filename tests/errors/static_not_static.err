@@ -1,0 +1,2 @@
+error: `get` is not static, so it is called on an object
+  --> static_not_static.brz:18:16

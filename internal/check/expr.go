@@ -149,6 +149,10 @@ func (c *checker) this(e *ast.This) Type {
 	case c.fn.class == nil:
 		c.errorf(e.Sp, "`this` can only be used inside methods")
 		return Invalid
+	case c.fn.static:
+		d := c.errorf(e.Sp, "`this` can't be used in a static method")
+		d.Notes = []string{fmt.Sprintf("`%s` belongs to the class `%s`, not to an object", c.fn.name, c.fn.class.Name)}
+		return Invalid
 	}
 	return c.fn.class
 }
@@ -208,6 +212,43 @@ func (c *checker) member(m *ast.Member) Type {
 		return Invalid
 	}
 	return c.fieldType(f)
+}
+
+// className returns the class that x names, if x is the name of a class.
+func (c *checker) className(x ast.Expr) *Class {
+	id, ok := x.(*ast.Ident)
+	if !ok || c.scope.lookup(id.Name) != nil {
+		return nil
+	}
+	return c.classes[id.Name]
+}
+
+// staticCall checks `Cls.method(...)`, a call to a static method.
+func (c *checker) staticCall(e *ast.Call, m *ast.Member, cls *Class) Type {
+	name := m.Name.Name
+	sig := cls.Methods[name]
+	switch {
+	case sig != nil && sig.static:
+		c.ref(m.Name, sig.sym)
+		c.checkArgs(e, name, sig, c.argsFor(e, sig.params))
+		return sig.result
+	case sig != nil:
+		c.ref(m.Name, sig.sym)
+		c.args(e)
+		d := c.errorf(m.Name.Sp, "`%s` is not static, so it is called on an object", name)
+		d.Help = []string{fmt.Sprintf("create one first, like `%s(...).%s(...)`, or declare it `static func %s`", cls.Name, name, name)}
+		return Invalid
+	case name == "init":
+		c.args(e)
+		d := c.errorf(m.Name.Sp, "`init` can't be called directly")
+		d.Help = []string{fmt.Sprintf("to create an object, write `%s(...)`", cls.Name)}
+		return Invalid
+	}
+	c.args(e)
+	if !cls.Decl.Bad {
+		c.errorf(m.Name.Sp, "`%s` has no static method `%s`", cls.Name, name)
+	}
+	return Invalid
 }
 
 // enumName returns the enum that x names, if x is the name of an enum.
@@ -504,7 +545,9 @@ func (c *checker) callName(e *ast.Call, id *ast.Ident) Type {
 		return Invalid
 	}
 	d := c.errorf(id.Sp, "unknown function `%s`", id.Name)
-	if c.fn != nil && (c.fn.class != nil && c.fn.class.Methods[id.Name] != nil ||
+	if c.fn != nil && c.fn.class != nil && c.fn.class.Methods[id.Name] != nil && c.fn.class.Methods[id.Name].static {
+		d.Help = []string{fmt.Sprintf("to call the static method, write `%s.%s(...)`", c.fn.class.Name, id.Name)}
+	} else if c.fn != nil && (c.fn.class != nil && c.fn.class.Methods[id.Name] != nil ||
 		c.fn.enum != nil && c.fn.enum.Methods[id.Name] != nil) {
 		d.Help = []string{fmt.Sprintf("to call the method, write `this.%s(...)`", id.Name)}
 	}
@@ -542,6 +585,10 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 	if en := c.enumName(m.X); en != nil {
 		c.ref(m.X.(*ast.Ident), en.Sym)
 		return c.enumFrom(e, m, en)
+	}
+	if cls := c.className(m.X); cls != nil {
+		c.ref(m.X.(*ast.Ident), cls.Sym)
+		return c.staticCall(e, m, cls)
 	}
 	t := c.receiver(m.X)
 	name := m.Name.Name
@@ -591,6 +638,12 @@ func (c *checker) callMethod(e *ast.Call, m *ast.Member) Type {
 		return Invalid
 	}
 	c.ref(m.Name, sig.sym)
+	if sig.static {
+		d := c.errorf(m.Name.Sp, "`%s` is static: call it as `%s.%s(...)`", name, cls.Name, name)
+		d.Notes = []string{"a static method belongs to the class, not to an object"}
+		c.args(e)
+		return sig.result
+	}
 	if sig.mut {
 		c.changes(m.X, fmt.Sprintf("`%s` is a `mut func`", name))
 	}

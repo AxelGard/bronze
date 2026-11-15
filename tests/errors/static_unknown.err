@@ -1,0 +1,2 @@
+error: `Box` has no static method `full`
+  --> static_unknown.brz:18:17

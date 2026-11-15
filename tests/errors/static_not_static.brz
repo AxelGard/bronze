@@ -1,0 +1,19 @@
+class Box
+{
+    mut value = 0
+
+    static func empty() -> Box
+    {
+        return Box()
+    }
+
+    func get() -> Int
+    {
+        return this.value
+    }
+}
+
+func main() -> Int
+{
+    return Box.get()
+}

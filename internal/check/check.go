@@ -96,6 +96,7 @@ type funcSig struct {
 	enum   *Enum  // for methods of an enum: the enum of `this`
 	isInit bool
 	mut    bool    // a `mut func`, which may change `this`
+	static bool    // a `static func`, which has no `this`
 	line   int     // where it is declared
 	sym    *Symbol // nil for init
 }
@@ -245,7 +246,7 @@ func (c *checker) collect(file *ast.File, decls []ast.Decl) {
 
 // signature resolves the parameter and result types of a function or method.
 func (c *checker) signature(fn *ast.FuncDecl, class *Class) *funcSig {
-	sig := &funcSig{name: fn.Name.Name, decl: fn, result: NoValue, class: class, mut: fn.Mut, line: fn.Name.Sp.Start.Line}
+	sig := &funcSig{name: fn.Name.Name, decl: fn, result: NoValue, class: class, mut: fn.Mut, static: fn.Static, line: fn.Name.Sp.Start.Line}
 	sig.isInit = class != nil && fn.Name.Name == "init"
 	seen := map[string]bool{}
 	for _, p := range fn.Params {

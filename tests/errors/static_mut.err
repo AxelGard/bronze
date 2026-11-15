@@ -1,0 +1,2 @@
+error: a static method can't be a `mut func`
+  --> static_mut.brz:5:12

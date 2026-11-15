@@ -1,0 +1,2 @@
+error: only methods can be static
+  --> static_top_level.brz:1:1

@@ -49,9 +49,11 @@ module.exports = grammar({
     // ------------------------------------------------------------------
     // Declarations
 
-    // `mut func` marks a method that changes `this`.
+    // `static func` is a method of the class, and `mut func` marks a method
+    // that changes `this`.
     function_declaration: ($) =>
       seq(
+        optional('static'),
         optional('mut'),
         'func',
         field('name', $.identifier),

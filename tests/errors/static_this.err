@@ -1,0 +1,2 @@
+error: `this` can't be used in a static method
+  --> static_this.brz:7:16

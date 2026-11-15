@@ -130,7 +130,7 @@ func (c *checker) roCall(e *ast.Call) int {
 // thisReadOnly reports whether `this` is read only in the function being
 // checked: in a method of a class that isn't a `mut func`.
 func (c *checker) thisReadOnly() bool {
-	return c.fn != nil && c.fn.class != nil && !c.fn.isInit && !c.fn.mut
+	return c.fn != nil && c.fn.class != nil && !c.fn.isInit && !c.fn.mut && !c.fn.static
 }
 
 // readOnlyRoot returns the variable or `this` that a read-only value was
@@ -228,7 +228,8 @@ func (c *checker) checkModes(sig *funcSig) {
 			d.Help = []string{fmt.Sprintf("remove it: `%s: %s`", p.Name.Name, c.text(p.Type))}
 		}
 	}
-	if !fn.Mut {
+	c.checkStatic(sig)
+	if !fn.Mut || fn.Static {
 		return
 	}
 	switch {
@@ -258,5 +259,26 @@ func (c *checker) checkArgModes(e *ast.Call, name string, sig *funcSig) {
 		d := c.errorf(a.Span(), "`%s` is read only, but `%s` may change it", c.text(a), name)
 		d.Notes = []string{fmt.Sprintf("parameter `%s` is declared as `mut %s`", p.Name.Name, c.text(p.Type))}
 		d.Help = c.readOnlyHelp(a)
+	}
+}
+
+// checkStatic checks where `static` is written.
+func (c *checker) checkStatic(sig *funcSig) {
+	fn := sig.decl
+	if !fn.Static {
+		return
+	}
+	switch {
+	case sig.isInit:
+		d := c.errorf(fn.StaticSp, "`init` can't be static")
+		d.Notes = []string{"`init` sets up a new object; a static method that creates one calls the class, like `" + sig.class.Name + "(...)`"}
+	case sig.enum != nil:
+		c.errorf(fn.StaticSp, "an enum's methods can't be static")
+	case sig.class == nil:
+		d := c.errorf(fn.StaticSp, "only methods can be static")
+		d.Notes = []string{"a function outside a class already has no `this`"}
+	case fn.Mut:
+		d := c.errorf(fn.MutSp, "a static method can't be a `mut func`")
+		d.Notes = []string{"it has no `this` to change"}
 	}
 }

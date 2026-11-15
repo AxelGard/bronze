@@ -743,6 +743,10 @@ func (in *interp) callExpr(x *ast.Call, e *env) Value {
 			if en, ok := in.enums[id.Name]; ok {
 				return en.from(in.expr(x.Args[0], e)) // `Role.from(x)`, the only call on an enum
 			}
+			if cls, ok := in.classes[id.Name]; ok { // a static method
+				fn := cls.methods[m.Name.Name]
+				return in.call(id.Name+"."+fn.Name.Name, fn, nil, in.args(x, e), x.Sp)
+			}
 		}
 		recv := in.expr(m.X, e)
 		args := in.args(x, e)

@@ -1,0 +1,19 @@
+class Box
+{
+    mut value = 0
+
+    static func empty() -> Box
+    {
+        return Box()
+    }
+
+    static func twice() -> Box
+    {
+        return empty()
+    }
+}
+
+func main() -> Int
+{
+    return 0
+}

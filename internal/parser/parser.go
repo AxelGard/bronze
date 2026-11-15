@@ -171,9 +171,13 @@ func (p *parser) decl() (d ast.Decl) {
 		fn := p.funcDecl()
 		p.endOfLine("declaration")
 		return fn
+	case lexer.STATIC:
+		fn := p.modFuncDecl()
+		p.endOfLine("declaration")
+		return fn
 	case lexer.MUT:
 		if p.peekKind(1) == lexer.FUNC {
-			fn := p.mutFuncDecl()
+			fn := p.modFuncDecl()
 			p.endOfLine("declaration")
 			return fn
 		}
@@ -209,12 +213,25 @@ func (p *parser) syncDecl() {
 	}
 }
 
-// mutFuncDecl parses `mut func ...`.
-func (p *parser) mutFuncDecl() *ast.FuncDecl {
-	mut := p.expect(lexer.MUT).Span
+// modFuncDecl parses a function with modifiers: `static func ...` or
+// `mut func ...`. Where they are allowed is up to the checker.
+func (p *parser) modFuncDecl() *ast.FuncDecl {
+	start := p.tok().Span
+	var static, mut diag.Span
+	isStatic, isMut := false, false
+	if p.at(lexer.STATIC) {
+		static, isStatic = p.advance().Span, true
+	}
+	if p.at(lexer.MUT) {
+		mut, isMut = p.advance().Span, true
+	}
+	if !p.at(lexer.FUNC) {
+		p.failHere("expected `func` after `%s`, found %s", p.toks[p.pos-1].Text, describe(p.tok()))
+	}
 	fn := p.funcDecl()
-	fn.Mut, fn.MutSp = true, mut
-	fn.Sp = mut.To(fn.Sp)
+	fn.Static, fn.StaticSp = isStatic, static
+	fn.Mut, fn.MutSp = isMut, mut
+	fn.Sp = start.To(fn.Sp)
 	return fn
 }
 
@@ -296,8 +313,8 @@ func (p *parser) member(c *ast.ClassDecl) {
 		}
 	}()
 	switch {
-	case p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC:
-		c.Methods = append(c.Methods, p.mutFuncDecl())
+	case p.at(lexer.STATIC), p.at(lexer.MUT) && p.peekKind(1) == lexer.FUNC:
+		c.Methods = append(c.Methods, p.modFuncDecl())
 	case p.at(lexer.CON), p.at(lexer.MUT):
 		c.Fields = append(c.Fields, p.field())
 	case p.at(lexer.FUNC):
@@ -360,8 +377,8 @@ func (p *parser) enumMember(e *ast.EnumDecl) {
 	case lexer.FUNC:
 		e.Methods = append(e.Methods, p.funcDecl())
 		p.endOfLine("method")
-	case lexer.MUT:
-		e.Methods = append(e.Methods, p.mutFuncDecl())
+	case lexer.MUT, lexer.STATIC:
+		e.Methods = append(e.Methods, p.modFuncDecl())
 		p.endOfLine("method")
 	default:
 		p.failNote("cases are written one per line, as plain names",
